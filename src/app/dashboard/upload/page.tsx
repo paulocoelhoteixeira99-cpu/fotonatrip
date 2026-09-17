@@ -216,6 +216,31 @@ export default function UploadPage() {
         />
       </label>
 
+      {/* Progress bar */}
+      {uploading && (
+        <div className="mb-6 glass rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium">
+              Enviando {doneCount + 1} de {files.length}...
+            </span>
+            <span className="text-sm text-primary font-semibold">
+              {files.length > 0 ? Math.round((doneCount / files.length) * 100) : 0}%
+            </span>
+          </div>
+          <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${files.length > 0 ? (doneCount / files.length) * 100 : 0}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted mt-2">
+            {doneCount} de {files.length} fotos enviadas
+            {files.filter((f) => f.status === "error").length > 0 &&
+              ` · ${files.filter((f) => f.status === "error").length} com erro`}
+          </p>
+        </div>
+      )}
+
       {/* File list */}
       {files.length > 0 && (
         <div className="mb-6">
@@ -223,7 +248,7 @@ export default function UploadPage() {
             <p className="text-sm text-muted">
               {files.length} foto{files.length !== 1 && "s"} selecionada
               {files.length !== 1 && "s"}
-              {doneCount > 0 && ` · ${doneCount} enviada${doneCount !== 1 ? "s" : ""}`}
+              {doneCount > 0 && !uploading && ` · ${doneCount} enviada${doneCount !== 1 ? "s" : ""}`}
             </p>
             {!uploading && !allDone && (
               <button
