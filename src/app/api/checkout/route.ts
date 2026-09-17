@@ -101,13 +101,20 @@ export async function POST(req: NextRequest) {
         auto_return: "approved",
         external_reference: order.id,
         notification_url: `${appUrl}/api/webhook/mercadopago`,
+        statement_descriptor: "FOTONATRIP",
         payer: {
-          email: email,
+          email: email || "comprador@fotonatrip.com",
         },
       },
     });
 
-    return NextResponse.json({ checkout_url: result.init_point });
+    // Use sandbox for testing, production for real payments
+    const isSandbox = process.env.MERCADOPAGO_SANDBOX !== "false";
+    const checkoutUrl = isSandbox
+      ? result.sandbox_init_point
+      : result.init_point;
+
+    return NextResponse.json({ checkout_url: checkoutUrl });
   } catch (err) {
     console.error("Mercado Pago error:", err);
     return NextResponse.json(
