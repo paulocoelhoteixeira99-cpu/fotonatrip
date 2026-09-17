@@ -74,8 +74,10 @@ export default function CarrinhoPage() {
         return;
       }
 
-      // Redirect to Mercado Pago
-      window.location.href = data.checkout_url;
+      // Redirect to embedded checkout page
+      router.push(
+        `/checkout?preference_id=${data.preference_id}&order_id=${data.order_id}&amount=${data.amount}`
+      );
     } catch {
       setError("Erro de conexao. Tente novamente.");
       setLoading(false);

@@ -108,13 +108,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Use sandbox for testing, production for real payments
-    const isSandbox = process.env.MERCADOPAGO_SANDBOX !== "false";
-    const checkoutUrl = isSandbox
-      ? result.sandbox_init_point
-      : result.init_point;
-
-    return NextResponse.json({ checkout_url: checkoutUrl });
+    return NextResponse.json({
+      preference_id: result.id,
+      order_id: order.id,
+      amount: totalCents / 100,
+    });
   } catch (err) {
     console.error("Mercado Pago error:", err);
     return NextResponse.json(
