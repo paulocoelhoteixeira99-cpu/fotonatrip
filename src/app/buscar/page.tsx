@@ -70,7 +70,7 @@ export default function BuscarPage() {
     const embeddingStr = `[${Array.from(embedding).join(",")}]`;
     const { data, error } = await supabase.rpc("search_faces_by_embedding", {
       query_embedding: embeddingStr,
-      similarity_threshold: 0.92,
+      similarity_threshold: 0.90,
       max_results: 50,
     });
 
