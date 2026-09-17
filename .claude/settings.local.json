@@ -5,7 +5,17 @@
       "Bash(npm -v)",
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
       "Bash(mkdir -p docs)",
-      "Bash(mv \"Projeto site de fotos.docx\" docs/)"
+      "Bash(mv \"Projeto site de fotos.docx\" docs/)",
+      "Bash(npm install:*)",
+      "Bash(npx next:*)",
+      "Bash(npm run:*)",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(mkdir -p \"C:\\\\Users\\\\PAULUDO\\\\Documents\\\\fotonatrip\\\\public\\\\models\")",
+      "Bash(for model:*)",
+      "Bash(do curl:*)",
+      "Bash(done)",
+      "Bash(git add:*)"
     ]
   }
 }
