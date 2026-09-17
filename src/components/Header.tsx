@@ -132,13 +132,38 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile menu button */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden p-2 text-muted hover:text-foreground transition-colors"
-        >
-          {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        {/* Mobile quick actions + menu button */}
+        <div className="md:hidden flex items-center gap-1">
+          <Link
+            href="/buscar"
+            className="p-2 text-muted hover:text-foreground transition-colors"
+          >
+            <Camera className="w-5 h-5" />
+          </Link>
+          <Link
+            href="/eventos"
+            className="p-2 text-muted hover:text-foreground transition-colors"
+          >
+            <ImageIcon className="w-5 h-5" />
+          </Link>
+          <Link
+            href="/carrinho"
+            className="relative p-2 text-muted hover:text-foreground transition-colors"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
+          </Link>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-2 text-muted hover:text-foreground transition-colors"
+          >
+            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}

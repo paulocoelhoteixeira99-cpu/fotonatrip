@@ -93,7 +93,6 @@ export async function POST(req: NextRequest) {
           unit_price: photo.price_cents / 100,
           currency_id: "BRL",
         })),
-        marketplace_fee: platformFeeCents / 100,
         back_urls: {
           success: `${appUrl}/checkout/sucesso?order=${order.id}`,
           failure: `${appUrl}/checkout/falha?order=${order.id}`,

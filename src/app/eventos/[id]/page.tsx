@@ -116,11 +116,34 @@ export default function EventoPublicPage() {
     setTotalPhotos(count || 0);
   }
 
+  // Open/close lightbox with browser history support
+  function openPhoto(photo: Photo) {
+    setSelectedPhoto(photo);
+    window.history.pushState({ lightbox: true }, "");
+  }
+
+  function closePhoto() {
+    setSelectedPhoto(null);
+  }
+
+  // Browser back button closes lightbox
+  useEffect(() => {
+    function handlePopState() {
+      if (selectedPhoto) {
+        setSelectedPhoto(null);
+      }
+    }
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [selectedPhoto]);
+
   // Keyboard nav for lightbox
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (!selectedPhoto) return;
-      if (e.key === "Escape") setSelectedPhoto(null);
+      if (e.key === "Escape") {
+        window.history.back();
+      }
       if (e.key === "ArrowRight") {
         const idx = photos.findIndex((p) => p.id === selectedPhoto.id);
         if (idx < photos.length - 1) setSelectedPhoto(photos[idx + 1]);
@@ -249,7 +272,7 @@ export default function EventoPublicPage() {
                   return (
                     <div
                       key={photo.id}
-                      onClick={() => setSelectedPhoto(photo)}
+                      onClick={() => openPhoto(photo)}
                       className="group relative aspect-[3/4] rounded-xl overflow-hidden bg-surface-light border border-border cursor-pointer"
                     >
                       <img
@@ -365,7 +388,7 @@ export default function EventoPublicPage() {
       {selectedPhoto && (
         <div
           className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center"
-          onClick={() => setSelectedPhoto(null)}
+          onClick={() => window.history.back()}
         >
           <div
             className="relative max-w-5xl max-h-[90vh] mx-4"
@@ -373,7 +396,7 @@ export default function EventoPublicPage() {
           >
             {/* Close */}
             <button
-              onClick={() => setSelectedPhoto(null)}
+              onClick={() => window.history.back()}
               className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors"
             >
               <X className="w-6 h-6" />

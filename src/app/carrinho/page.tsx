@@ -39,8 +39,8 @@ export default function CarrinhoPage() {
     return acc;
   }, {});
 
-  const platformFeeCents = Math.round(totalCents * 0.07);
-  const grandTotalCents = totalCents + platformFeeCents;
+  // MP fees are shown at checkout by Mercado Pago itself
+  // Platform 7% is internal (deducted from photographer via split)
 
   async function handleCheckout() {
     setLoading(true);
@@ -150,21 +150,20 @@ export default function CarrinhoPage() {
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted">
-                        Subtotal ({count} foto{count !== 1 ? "s" : ""})
+                        {count} foto{count !== 1 ? "s" : ""}
                       </span>
                       <span>{formatPrice(totalCents)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted">Taxa plataforma (7%)</span>
-                      <span>{formatPrice(platformFeeCents)}</span>
                     </div>
                     <hr className="border-border" />
                     <div className="flex justify-between font-semibold">
                       <span>Total</span>
                       <span className="text-lg gradient-text">
-                        {formatPrice(grandTotalCents)}
+                        {formatPrice(totalCents)}
                       </span>
                     </div>
+                    <p className="text-[10px] text-muted">
+                      Taxas do meio de pagamento podem ser aplicadas no checkout.
+                    </p>
                   </div>
 
                   {error && (
@@ -266,7 +265,7 @@ export default function CarrinhoPage() {
               ) : (
                 <>
                   <Lock className="w-4 h-4" />
-                  Finalizar compra - {formatPrice(grandTotalCents)}
+                  Finalizar compra - {formatPrice(totalCents)}
                 </>
               )}
             </button>
