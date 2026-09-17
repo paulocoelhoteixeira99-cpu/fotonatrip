@@ -267,28 +267,21 @@ export default function EventoDetailPage() {
     if (!event) return;
     setDeleting(true);
 
-    // Fetch ALL photos for this event (including watermark paths)
+    // Fetch ALL photos for this event
     const { data: allPhotos } = await supabase
       .from("photos")
       .select("id, storage_path, watermark_path")
       .eq("event_id", event.id);
 
     if (allPhotos && allPhotos.length > 0) {
-      // Delete all face embeddings first (foreign key)
-      const photoIds = allPhotos.map((p) => p.id);
-      await supabase.from("face_embeddings").delete().in("photo_id", photoIds);
-
-      // Delete all files from storage (originals + watermarks)
-      const filesToRemove = allPhotos
-        .flatMap((p) => [p.storage_path, p.watermark_path])
-        .filter(Boolean) as string[];
-      // Storage remove has batch limits, do in chunks of 100
-      for (let i = 0; i < filesToRemove.length; i += 100) {
-        await supabase.storage.from("photos").remove(filesToRemove.slice(i, i + 100));
+      // Delete each photo one by one (same logic as individual delete that works)
+      for (const photo of allPhotos) {
+        await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
+        const filesToRemove = [photo.storage_path];
+        if (photo.watermark_path) filesToRemove.push(photo.watermark_path);
+        await supabase.storage.from("photos").remove(filesToRemove);
+        await supabase.from("photos").delete().eq("id", photo.id);
       }
-
-      // Delete all photo records
-      await supabase.from("photos").delete().eq("event_id", event.id);
     }
 
     // Delete event
