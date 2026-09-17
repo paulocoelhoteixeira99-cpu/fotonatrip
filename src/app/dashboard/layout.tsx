@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  TrendingUp,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Inicio" },
   { href: "/dashboard/eventos", icon: CalendarDays, label: "Eventos" },
   { href: "/dashboard/upload", icon: ImagePlus, label: "Upload" },
+  { href: "/dashboard/vendas", icon: TrendingUp, label: "Vendas" },
   { href: "/dashboard/configuracoes", icon: Settings, label: "Configuracoes" },
 ];
 

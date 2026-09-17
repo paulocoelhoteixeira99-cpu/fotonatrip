@@ -19,6 +19,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  DollarSign,
 } from "lucide-react";
 
 interface Event {
@@ -32,6 +33,7 @@ interface Event {
   photo_count: number;
   is_active: boolean;
   cover_url: string | null;
+  price_per_photo_cents: number;
 }
 
 interface Photo {
@@ -54,6 +56,8 @@ export default function EventoDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
+  const [priceInput, setPriceInput] = useState("");
+  const [savingPrice, setSavingPrice] = useState(false);
   const supabase = createClient();
   const router = useRouter();
 
@@ -71,6 +75,7 @@ export default function EventoDetailPage() {
       }
 
       setEvent(eventData);
+      setPriceInput((eventData.price_per_photo_cents / 100).toFixed(2).replace(".", ","));
 
       const { data: photosData } = await supabase
         .from("photos")
@@ -409,6 +414,50 @@ export default function EventoDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Price per photo */}
+      <div className="glass rounded-2xl p-5 mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <DollarSign className="w-4 h-4 text-primary" />
+          Preco por foto
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted">R$</span>
+          <input
+            type="text"
+            value={priceInput}
+            onChange={(e) => setPriceInput(e.target.value)}
+            placeholder="15,00"
+            className="w-24 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
+          />
+          <button
+            onClick={async () => {
+              if (!event) return;
+              setSavingPrice(true);
+              const cents = Math.round(
+                parseFloat(priceInput.replace(",", ".")) * 100
+              );
+              if (isNaN(cents) || cents <= 0) {
+                setSavingPrice(false);
+                return;
+              }
+              await supabase
+                .from("events")
+                .update({ price_per_photo_cents: cents })
+                .eq("id", event.id);
+              setEvent({ ...event, price_per_photo_cents: cents });
+              setSavingPrice(false);
+            }}
+            disabled={savingPrice}
+            className="text-sm bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+          >
+            {savingPrice ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+        <p className="text-xs text-muted w-full">
+          Todas as fotos deste evento terao este preco. Voce recebe 93% (comissao da plataforma: 7%).
+        </p>
+      </div>
 
       {/* Upload / Reprocess status */}
       {uploading && (

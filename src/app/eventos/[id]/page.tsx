@@ -15,12 +15,15 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Download,
+  ShoppingCart,
+  Check,
   User,
 } from "lucide-react";
+import { useCart, formatPrice } from "@/lib/cart";
 
 interface Event {
   id: string;
+  photographer_id: string;
   title: string;
   description: string | null;
   location: string | null;
@@ -54,6 +57,7 @@ export default function EventoPublicPage() {
   const [page, setPage] = useState(0);
   const [totalPhotos, setTotalPhotos] = useState(0);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const { addItem, isInCart } = useCart();
   const supabase = createClient();
 
   useEffect(() => {
@@ -257,14 +261,34 @@ export default function EventoPublicPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
                           <span className="text-white text-sm font-medium">
-                            R${" "}
-                            {(photo.price_cents / 100)
-                              .toFixed(2)
-                              .replace(".", ",")}
+                            {formatPrice(photo.price_cents)}
                           </span>
-                          <span className="text-white/70 text-xs">
-                            Clique para ver
-                          </span>
+                          {isInCart(photo.id) ? (
+                            <span className="flex items-center gap-1 text-[11px] text-primary bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                              <Check className="w-3 h-3" />
+                              No carrinho
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const photographerName = photographer?.business_name || photographer?.full_name || "";
+                                addItem({
+                                  photo_id: photo.id,
+                                  event_id: event!.id,
+                                  event_title: event!.title,
+                                  photographer_name: photographerName,
+                                  photographer_id: event!.photographer_id,
+                                  price_cents: photo.price_cents,
+                                  watermark_url: url,
+                                });
+                              }}
+                              className="flex items-center gap-1 text-[11px] text-white bg-primary/80 hover:bg-primary px-2 py-1 rounded-full transition-colors"
+                            >
+                              <ShoppingCart className="w-3 h-3" />
+                              Adicionar
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -370,23 +394,41 @@ export default function EventoPublicPage() {
             <div className="flex items-center justify-between mt-4">
               <div className="text-white">
                 <span className="text-lg font-semibold">
-                  R${" "}
-                  {(selectedPhoto.price_cents / 100)
-                    .toFixed(2)
-                    .replace(".", ",")}
+                  {formatPrice(selectedPhoto.price_cents)}
                 </span>
                 <span className="text-white/50 text-sm ml-3">
                   {event.title}
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                <Link
-                  href="/buscar"
-                  className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                >
-                  <ScanFace className="w-4 h-4" />
-                  Buscar minhas fotos
-                </Link>
+                {isInCart(selectedPhoto.id) ? (
+                  <span className="flex items-center gap-2 bg-primary/20 text-primary px-5 py-2.5 rounded-xl text-sm font-medium">
+                    <Check className="w-4 h-4" />
+                    No carrinho
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const photographerName = photographer?.business_name || photographer?.full_name || "";
+                      const photoUrl = supabase.storage
+                        .from("photos")
+                        .getPublicUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path).data.publicUrl;
+                      addItem({
+                        photo_id: selectedPhoto.id,
+                        event_id: event.id,
+                        event_title: event.title,
+                        photographer_name: photographerName,
+                        photographer_id: event.photographer_id,
+                        price_cents: selectedPhoto.price_cents,
+                        watermark_url: photoUrl,
+                      });
+                    }}
+                    className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Adicionar ao carrinho
+                  </button>
+                )}
               </div>
             </div>
 

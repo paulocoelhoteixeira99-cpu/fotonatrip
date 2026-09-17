@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Menu, X, LayoutDashboard, ImageIcon } from "lucide-react";
+import { Camera, Menu, X, LayoutDashboard, ImageIcon, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useCart } from "@/lib/cart";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 
@@ -19,6 +20,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const { count: cartCount } = useCart();
   const supabase = createClient();
 
   useEffect(() => {
@@ -79,6 +81,21 @@ export default function Header() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
+          <Link
+            href="/carrinho"
+            className="relative p-2 text-muted hover:text-foreground transition-colors"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            {cartCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center"
+              >
+                {cartCount > 9 ? "9+" : cartCount}
+              </motion.span>
+            )}
+          </Link>
           {user ? (
             <>
               {role === "photographer" && (
@@ -145,6 +162,21 @@ export default function Header() {
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href="/carrinho"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm text-muted hover:text-foreground transition-colors px-4 py-3 rounded-xl hover:bg-white/5 flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Carrinho
+                </span>
+                {cartCount > 0 && (
+                  <span className="w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
               <hr className="border-border my-2" />
               {user ? (
                 <>

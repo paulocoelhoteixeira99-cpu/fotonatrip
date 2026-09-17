@@ -11,7 +11,10 @@ import {
   ImageIcon,
   Loader2,
   MapPin,
+  ShoppingCart,
+  Check,
 } from "lucide-react";
+import { useCart, formatPrice } from "@/lib/cart";
 import Link from "next/link";
 
 interface SearchResult {
@@ -34,6 +37,7 @@ export default function BuscarPage() {
   const [noFace, setNoFace] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addItem, isInCart } = useCart();
   const supabase = createClient();
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -267,25 +271,49 @@ export default function BuscarPage() {
                         key={result.photo_id}
                         className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 transition-all"
                       >
-                        <div className="aspect-[3/4] overflow-hidden">
+                        <div className="aspect-[3/4] overflow-hidden relative">
                           <img
                             src={url}
                             alt=""
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"
                           />
+                          <span className="absolute top-2 right-2 text-[10px] text-primary bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                            {Math.round(result.similarity * 100)}% match
+                          </span>
                         </div>
                         <div className="p-3">
-                          <p className="text-xs text-muted truncate mb-1">
+                          <p className="text-xs text-muted truncate mb-2">
                             {result.event_title}
                           </p>
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-semibold">
-                              R$ {(result.price_cents / 100).toFixed(2).replace(".", ",")}
+                              {formatPrice(result.price_cents)}
                             </span>
-                            <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                              {Math.round(result.similarity * 100)}% match
-                            </span>
+                            {isInCart(result.photo_id) ? (
+                              <span className="flex items-center gap-1 text-[11px] text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                                <Check className="w-3 h-3" />
+                                No carrinho
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  addItem({
+                                    photo_id: result.photo_id,
+                                    event_id: result.event_id,
+                                    event_title: result.event_title,
+                                    photographer_name: result.photographer_name,
+                                    photographer_id: "",
+                                    price_cents: result.price_cents,
+                                    watermark_url: url,
+                                  })
+                                }
+                                className="flex items-center gap-1 text-[11px] text-foreground bg-white/10 hover:bg-primary hover:text-white px-2.5 py-1 rounded-full transition-colors"
+                              >
+                                <ShoppingCart className="w-3 h-3" />
+                                Adicionar
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

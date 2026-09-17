@@ -2,22 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ImageIcon, CalendarDays, Eye, DollarSign } from "lucide-react";
+import { ImageIcon, CalendarDays, TrendingUp, DollarSign } from "lucide-react";
+import { formatPrice } from "@/lib/cart";
 import Link from "next/link";
 
 interface Stats {
   totalPhotos: number;
   totalEvents: number;
-  totalViews: number;
-  totalSales: number;
+  totalRevenueCents: number;
+  totalSalesCount: number;
 }
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({
     totalPhotos: 0,
     totalEvents: 0,
-    totalViews: 0,
-    totalSales: 0,
+    totalRevenueCents: 0,
+    totalSalesCount: 0,
   });
   const [recentEvents, setRecentEvents] = useState<
     { id: string; title: string; event_date: string; photo_count: number; is_active: boolean }[]
@@ -31,7 +32,7 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [photosRes, eventsRes] = await Promise.all([
+      const [photosRes, eventsRes, salesRes] = await Promise.all([
         supabase
           .from("photos")
           .select("id", { count: "exact", head: true })
@@ -42,13 +43,24 @@ export default function DashboardPage() {
           .eq("photographer_id", user.id)
           .order("created_at", { ascending: false })
           .limit(5),
+        supabase
+          .from("order_items")
+          .select("price_cents, orders!inner(status)")
+          .eq("photographer_id", user.id)
+          .eq("orders.status", "paid"),
       ]);
+
+      const salesData = salesRes.data || [];
+      const totalRevenueCents = salesData.reduce(
+        (sum: number, item: any) => sum + Math.round(item.price_cents * 0.93),
+        0
+      );
 
       setStats({
         totalPhotos: photosRes.count || 0,
         totalEvents: eventsRes.data?.length || 0,
-        totalViews: 0,
-        totalSales: 0,
+        totalRevenueCents,
+        totalSalesCount: salesData.length,
       });
 
       setRecentEvents(eventsRes.data || []);
@@ -60,28 +72,28 @@ export default function DashboardPage() {
   const statCards = [
     {
       label: "Fotos",
-      value: stats.totalPhotos,
+      value: String(stats.totalPhotos),
       icon: ImageIcon,
       color: "text-primary",
       bg: "bg-primary/10",
     },
     {
       label: "Eventos",
-      value: stats.totalEvents,
+      value: String(stats.totalEvents),
       icon: CalendarDays,
       color: "text-blue-400",
       bg: "bg-blue-400/10",
     },
     {
-      label: "Visualizacoes",
-      value: stats.totalViews,
-      icon: Eye,
+      label: "Fotos vendidas",
+      value: String(stats.totalSalesCount),
+      icon: TrendingUp,
       color: "text-purple-400",
       bg: "bg-purple-400/10",
     },
     {
-      label: "Vendas",
-      value: stats.totalSales,
+      label: "Receita liquida",
+      value: formatPrice(stats.totalRevenueCents),
       icon: DollarSign,
       color: "text-yellow-400",
       bg: "bg-yellow-400/10",
