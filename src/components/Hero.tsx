@@ -5,12 +5,36 @@ import { Search, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 const floatingPhotos = [
-  { rotate: -6, x: -40, y: 20, delay: 0 },
-  { rotate: 3, x: 30, y: -10, delay: 0.1 },
-  { rotate: -3, x: -20, y: 40, delay: 0.2 },
-  { rotate: 5, x: 40, y: 0, delay: 0.15 },
-  { rotate: -4, x: 0, y: 30, delay: 0.25 },
-  { rotate: 2, x: -30, y: -20, delay: 0.05 },
+  {
+    rotate: -6, x: -40, y: 20, delay: 0,
+    src: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400&h=600&fit=crop&crop=faces&q=80",
+    alt: "Grupo de amigos rindo nas montanhas",
+  },
+  {
+    rotate: 3, x: 30, y: -10, delay: 0.1,
+    src: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=600&fit=crop&q=80",
+    alt: "Lago cristalino com barcos entre montanhas",
+  },
+  {
+    rotate: -3, x: -20, y: 40, delay: 0.2,
+    src: "https://images.unsplash.com/photo-1527631746610-bca00a040d60?w=400&h=600&fit=crop&crop=faces&q=80",
+    alt: "Viajante explorando ruas europeias",
+  },
+  {
+    rotate: 5, x: 40, y: 0, delay: 0.15,
+    src: "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=400&h=600&fit=crop&crop=faces&q=80",
+    alt: "Fotografo registrando viajante com baloes de ar quente",
+  },
+  {
+    rotate: -4, x: 0, y: 30, delay: 0.25,
+    src: "https://images.unsplash.com/photo-1516939884455-1445c8652f83?w=400&h=600&fit=crop&crop=faces&q=80",
+    alt: "Aventureiro em van sob ceu estrelado",
+  },
+  {
+    rotate: 2, x: -30, y: -20, delay: 0.05,
+    src: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=400&h=600&fit=crop&q=80",
+    alt: "Praia tropical vista de cima com barcos coloridos",
+  },
 ];
 
 export default function Hero() {
@@ -104,25 +128,14 @@ export default function Hero() {
                   zIndex: 10,
                   transition: { duration: 0.2 },
                 }}
-                className="aspect-[3/4] rounded-2xl bg-gradient-to-br from-surface-light to-surface border border-border overflow-hidden cursor-pointer relative group"
+                className="aspect-[3/4] rounded-2xl bg-surface border border-border overflow-hidden cursor-pointer relative group"
               >
-                {/* Placeholder shimmer */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-                <div className="absolute inset-0 flex items-center justify-center opacity-30 group-hover:opacity-50 transition-opacity">
-                  <svg
-                    className="w-8 h-8 text-muted"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
+                <img
+                  src={photo.src}
+                  alt={photo.alt}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                />
               </motion.div>
             ))}
           </div>
