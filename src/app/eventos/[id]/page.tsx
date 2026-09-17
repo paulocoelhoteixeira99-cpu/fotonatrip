@@ -169,7 +169,7 @@ export default function EventoPublicPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-28 pb-20">
+      <main className="min-h-screen pt-28 pb-24">
         <div className="max-w-7xl mx-auto px-6">
           {/* Back */}
           <Link
@@ -441,7 +441,7 @@ export default function EventoPublicPage() {
                   );
                   setSelectedPhoto(photos[idx - 1]);
                 }}
-                className="absolute left-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                className="absolute left-2 sm:left-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -455,7 +455,7 @@ export default function EventoPublicPage() {
                   );
                   setSelectedPhoto(photos[idx + 1]);
                 }}
-                className="absolute right-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                className="absolute right-2 sm:right-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>

@@ -20,6 +20,7 @@ interface CartContextType {
   isInCart: (photo_id: string) => boolean;
   totalCents: number;
   count: number;
+  hydrated: boolean;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -73,7 +74,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, clearCart, isInCart, totalCents, count }}
+      value={{ items, addItem, removeItem, clearCart, isInCart, totalCents, count, hydrated }}
     >
       {children}
     </CartContext.Provider>

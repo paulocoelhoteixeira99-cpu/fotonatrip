@@ -11,6 +11,7 @@ import {
   XCircle,
   CalendarDays,
 } from "lucide-react";
+import { generateWatermark } from "@/lib/watermark";
 
 interface Event {
   id: string;
@@ -97,7 +98,9 @@ export default function UploadPage() {
 
       const file = files[i].file;
       const ext = file.name.split(".").pop();
-      const path = `${user.id}/${selectedEvent}/${crypto.randomUUID()}.${ext}`;
+      const fileId = crypto.randomUUID();
+      const path = `${user.id}/${selectedEvent}/${fileId}.${ext}`;
+      const watermarkPath = `watermarks/${user.id}/${selectedEvent}/${fileId}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("photos")
@@ -112,10 +115,25 @@ export default function UploadPage() {
         continue;
       }
 
+      // Generate and upload watermark
+      let finalWatermarkPath: string | null = null;
+      try {
+        const watermarkBlob = await generateWatermark(file);
+        const { error: wmError } = await supabase.storage
+          .from("photos")
+          .upload(watermarkPath, watermarkBlob, { contentType: "image/jpeg" });
+        if (!wmError) {
+          finalWatermarkPath = watermarkPath;
+        }
+      } catch (e) {
+        console.error("Watermark generation failed:", e);
+      }
+
       const { error: dbError } = await supabase.from("photos").insert({
         event_id: selectedEvent,
         photographer_id: user.id,
         storage_path: path,
+        watermark_path: finalWatermarkPath,
         original_filename: file.name,
         file_size: file.size,
         status: "ready",

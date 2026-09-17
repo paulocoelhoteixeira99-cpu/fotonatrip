@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getEmbeddingFromFile } from "@/lib/face-recognition";
 import {
-  Camera,
   Upload,
   ScanFace,
   ArrowLeft,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCart, formatPrice } from "@/lib/cart";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 interface SearchResult {
   photo_id: string;
@@ -95,27 +95,9 @@ export default function BuscarPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass py-4">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Camera className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">
-              foto<span className="gradient-text">na</span>trip
-            </span>
-          </Link>
-          <Link
-            href="/login"
-            className="text-sm text-muted hover:text-foreground transition-colors"
-          >
-            Entrar
-          </Link>
-        </div>
-      </header>
+      <Header />
 
-      <div className="pt-24 pb-20 px-6 max-w-4xl mx-auto">
+      <div className="pt-24 pb-24 px-6 max-w-4xl mx-auto">
         {/* Background glow */}
         <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
@@ -259,7 +241,7 @@ export default function BuscarPage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                   {results.map((result) => {
                     const displayPath = result.watermark_path || result.storage_path;
                     const url = supabase.storage
