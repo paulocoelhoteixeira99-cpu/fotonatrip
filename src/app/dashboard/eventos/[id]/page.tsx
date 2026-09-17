@@ -52,6 +52,7 @@ export default function EventoDetailPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
   const [processingFaces, setProcessingFaces] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -169,14 +170,17 @@ export default function EventoDetailPage() {
     const files = e.target.files;
     if (!files || files.length === 0 || !event) return;
 
+    const fileList = Array.from(files);
     setUploading(true);
+    setUploadProgress({ done: 0, total: fileList.length });
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    for (const file of Array.from(files)) {
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
       const fileId = crypto.randomUUID();
       const ext = file.name.split(".").pop();
       const path = `${user.id}/${event.id}/${fileId}.${ext}`;
@@ -189,6 +193,7 @@ export default function EventoDetailPage() {
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
+        setUploadProgress((prev) => ({ ...prev, done: prev.done + 1 }));
         continue;
       }
 
@@ -227,6 +232,8 @@ export default function EventoDetailPage() {
           .update({ status: "ready", processed_at: new Date().toISOString() })
           .eq("id", photoData.id);
       }
+
+      setUploadProgress({ done: i + 1, total: fileList.length });
     }
 
     // Reload photos
@@ -462,13 +469,27 @@ export default function EventoDetailPage() {
         </p>
       </div>
 
-      {/* Upload / Reprocess status */}
+      {/* Upload progress bar */}
       {uploading && (
-        <div className="glass rounded-xl p-4 mb-6 flex items-center gap-3">
-          <ScanFace className="w-5 h-5 text-primary animate-pulse" />
-          <span className="text-sm text-muted">
-            Enviando fotos e detectando rostos com IA...
-          </span>
+        <div className="glass rounded-2xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium flex items-center gap-2">
+              <ScanFace className="w-4 h-4 text-primary animate-pulse" />
+              Enviando {Math.min(uploadProgress.done + 1, uploadProgress.total)} de {uploadProgress.total}...
+            </span>
+            <span className="text-sm text-primary font-semibold">
+              {uploadProgress.total > 0 ? Math.round((uploadProgress.done / uploadProgress.total) * 100) : 0}%
+            </span>
+          </div>
+          <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${uploadProgress.total > 0 ? (uploadProgress.done / uploadProgress.total) * 100 : 0}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted mt-2">
+            Upload + watermark + deteccao facial por IA
+          </p>
         </div>
       )}
       {reprocessStatus && (
