@@ -50,12 +50,13 @@ export default function MinhasComprasPage() {
     const { data } = await supabase
       .from("orders")
       .select(`
-        id, status, total_cents, created_at,
+        id, status, total_cents, created_at, payment_id,
         order_items (
           id, photo_id, price_cents, downloaded_at,
           photos:photo_id (storage_path, watermark_path)
         )
       `)
+      .or("status.neq.pending,payment_id.not.is.null")
       .order("created_at", { ascending: false });
 
     if (data) {
