@@ -171,7 +171,6 @@ export default function CheckoutContent() {
         <Payment
           initialization={{
             amount: amount,
-            preferenceId: preferenceId,
           }}
           customization={{
             paymentMethods: {

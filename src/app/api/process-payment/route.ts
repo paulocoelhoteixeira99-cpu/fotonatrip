@@ -53,19 +53,25 @@ export async function POST(req: NextRequest) {
     const client = new MercadoPagoConfig({ accessToken });
     const payment = new Payment(client);
 
+    const isPix = formData.payment_method_id === "pix";
+
     const paymentBody: Record<string, unknown> = {
       transaction_amount: formData.transaction_amount,
-      token: formData.token,
       description: "Fotos profissionais - fotonatrip",
-      installments: formData.installments,
       payment_method_id: formData.payment_method_id,
-      issuer_id: formData.issuer_id,
       payer: {
         email: formData.payer?.email,
         identification: formData.payer?.identification,
       },
       external_reference: orderId,
     };
+
+    // Card-specific fields
+    if (!isPix) {
+      paymentBody.token = formData.token;
+      paymentBody.installments = formData.installments;
+      paymentBody.issuer_id = formData.issuer_id;
+    }
 
     if (applicationFee) {
       paymentBody.application_fee = applicationFee;
