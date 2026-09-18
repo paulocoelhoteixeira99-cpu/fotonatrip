@@ -89,6 +89,7 @@ export default function CheckoutContent() {
             paymentMethods: {
               creditCard: "all",
               debitCard: "all",
+              bankTransfer: "all",
               mercadoPago: "all",
             },
             visual: {
