@@ -133,20 +133,11 @@ export async function POST(req: NextRequest) {
 
     const result = await preference.create({ body: preferenceBody as never });
 
-    if (useMarketplace) {
-      // Marketplace: redirect to Checkout Pro (MP hosted page)
-      return NextResponse.json({
-        init_point: result.init_point,
-        order_id: order.id,
-        marketplace: true,
-      });
-    }
-
-    // Non-marketplace: return preference_id for Payment Brick
     return NextResponse.json({
       preference_id: result.id,
       order_id: order.id,
       amount: totalCents / 100,
+      marketplace: useMarketplace,
     });
   } catch (err) {
     console.error("Mercado Pago error:", err);

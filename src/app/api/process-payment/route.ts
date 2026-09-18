@@ -11,34 +11,69 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
 
-    const client = new MercadoPagoConfig({
-      accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN!,
-    });
-
-    const payment = new Payment(client);
-
-    const result = await payment.create({
-      body: {
-        transaction_amount: formData.transaction_amount,
-        token: formData.token,
-        description: "Fotos profissionais - fotonatrip",
-        installments: formData.installments,
-        payment_method_id: formData.payment_method_id,
-        issuer_id: formData.issuer_id,
-        payer: {
-          email: formData.payer?.email,
-          identification: formData.payer?.identification,
-        },
-        external_reference: orderId,
-      },
-    });
-
-    // Update order with payment info
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
 
+    // Check if this order uses marketplace (photographer with MP connected)
+    let accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN!;
+    let applicationFee: number | undefined;
+
+    // Get order to know the platform_fee, then check photographer
+    const { data: order } = await supabase
+      .from("orders")
+      .select("id, platform_fee_cents")
+      .eq("id", orderId)
+      .single();
+
+    if (order) {
+      // Get the photographer from order items (all items same photographer for marketplace)
+      const { data: orderItems } = await supabase
+        .from("order_items")
+        .select("photographer_id")
+        .eq("order_id", orderId)
+        .limit(1);
+
+      if (orderItems?.length) {
+        const { data: photographer } = await supabase
+          .from("photographers")
+          .select("mp_access_token, mp_user_id")
+          .eq("id", orderItems[0].photographer_id)
+          .single();
+
+        if (photographer?.mp_access_token && photographer?.mp_user_id) {
+          // Marketplace: use photographer's token + application_fee
+          accessToken = photographer.mp_access_token;
+          applicationFee = order.platform_fee_cents / 100; // 7% in BRL
+        }
+      }
+    }
+
+    const client = new MercadoPagoConfig({ accessToken });
+    const payment = new Payment(client);
+
+    const paymentBody: Record<string, unknown> = {
+      transaction_amount: formData.transaction_amount,
+      token: formData.token,
+      description: "Fotos profissionais - fotonatrip",
+      installments: formData.installments,
+      payment_method_id: formData.payment_method_id,
+      issuer_id: formData.issuer_id,
+      payer: {
+        email: formData.payer?.email,
+        identification: formData.payer?.identification,
+      },
+      external_reference: orderId,
+    };
+
+    if (applicationFee) {
+      paymentBody.application_fee = applicationFee;
+    }
+
+    const result = await payment.create({ body: paymentBody as never });
+
+    // Update order with payment info
     let orderStatus: string;
     switch (result.status) {
       case "approved":
