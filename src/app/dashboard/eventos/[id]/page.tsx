@@ -20,7 +20,13 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
+  Link2,
+  Copy,
+  Check,
+  QrCode,
+  Download,
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 
 interface Event {
   id: string;
@@ -59,6 +65,8 @@ export default function EventoDetailPage() {
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
   const [priceInput, setPriceInput] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const supabase = createClient();
   const router = useRouter();
 
@@ -467,6 +475,81 @@ export default function EventoDetailPage() {
         <p className="text-xs text-muted w-full">
           Todas as fotos deste evento terao este preco. Voce recebe 93% (comissao da plataforma: 7%).
         </p>
+      </div>
+
+      {/* Share link & QR Code */}
+      <div className="glass rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 text-sm font-medium mb-3">
+          <Link2 className="w-4 h-4 text-primary" />
+          Compartilhar evento
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            readOnly
+            value={`${typeof window !== "undefined" ? window.location.origin : "https://fotonatrip.vercel.app"}/eventos/${event.id}`}
+            className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-muted focus:outline-none select-all"
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+          />
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/eventos/${event.id}`;
+              navigator.clipboard.writeText(url);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }}
+            className="flex items-center gap-1.5 text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+          >
+            {copied ? (
+              <>
+                <Check className="w-4 h-4 text-primary" />
+                Copiado!
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" />
+                Copiar
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => setShowQR(!showQR)}
+            className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
+              showQR ? "bg-primary/10 text-primary" : "bg-white/10 hover:bg-white/15"
+            }`}
+          >
+            <QrCode className="w-4 h-4" />
+            QR Code
+          </button>
+        </div>
+        {showQR && (
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <div className="bg-white p-4 rounded-xl">
+              <QRCodeCanvas
+                value={`${typeof window !== "undefined" ? window.location.origin : "https://fotonatrip.vercel.app"}/eventos/${event.id}`}
+                size={200}
+                level="H"
+                includeMargin={false}
+              />
+            </div>
+            <button
+              onClick={() => {
+                const canvas = document.querySelector(".glass canvas") as HTMLCanvasElement;
+                if (!canvas) return;
+                const link = document.createElement("a");
+                link.download = `qrcode-${event.title.toLowerCase().replace(/\s+/g, "-")}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+              }}
+              className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-light transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Baixar QR Code
+            </button>
+            <p className="text-xs text-muted text-center">
+              Imprima ou compartilhe o QR Code para seus clientes acessarem o evento.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Upload progress bar */}
