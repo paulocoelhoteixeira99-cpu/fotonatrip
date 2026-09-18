@@ -166,9 +166,13 @@ export default function ConfiguracoesPage() {
                 <p className="text-xs text-muted">ID: {mpUserId}</p>
               </div>
             </div>
-            <p className="text-xs text-muted mb-4">
+            <p className="text-xs text-muted mb-2">
               Seus pagamentos serao recebidos diretamente na sua conta do Mercado
               Pago, com 7% de comissao da plataforma retida automaticamente.
+            </p>
+            <p className="text-xs text-yellow-400/80 bg-yellow-400/10 rounded-lg px-3 py-2 mb-4">
+              Importante: para receber pagamentos via Pix, cadastre uma chave
+              Pix na sua conta do Mercado Pago (app &gt; Pix &gt; Cadastrar chave).
             </p>
             <button
               onClick={handleDisconnectMP}
@@ -185,9 +189,14 @@ export default function ConfiguracoesPage() {
           </div>
         ) : (
           <div>
-            <p className="text-sm text-muted mb-4">
+            <p className="text-sm text-muted mb-3">
               Conecte sua conta do Mercado Pago para receber pagamentos
               diretamente. A plataforma retém apenas 7% de comissao.
+            </p>
+            <p className="text-xs text-yellow-400/80 bg-yellow-400/10 rounded-lg px-3 py-2 mb-4">
+              Antes de conectar, certifique-se de ter uma chave Pix cadastrada
+              no seu Mercado Pago (app &gt; Pix &gt; Cadastrar chave) para
+              receber pagamentos via Pix.
             </p>
             <a
               href="/api/mp/connect"

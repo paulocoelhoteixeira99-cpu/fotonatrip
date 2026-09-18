@@ -43,13 +43,9 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (photographer?.mp_access_token && photographer?.mp_user_id) {
-          // Marketplace: use photographer's token + application_fee (card only)
-          // Pix always uses platform token (photographer may not have QR enabled)
-          const isPix = formData.payment_method_id === "pix";
-          if (!isPix) {
-            accessToken = photographer.mp_access_token;
-            applicationFee = order.platform_fee_cents / 100; // 7% in BRL
-          }
+          // Marketplace: use photographer's token + application_fee
+          accessToken = photographer.mp_access_token;
+          applicationFee = order.platform_fee_cents / 100; // 7% in BRL
         }
       }
     }
