@@ -74,7 +74,13 @@ export default function CarrinhoPage() {
         return;
       }
 
-      // Redirect to embedded checkout page
+      if (data.init_point) {
+        // Marketplace: redirect to Mercado Pago Checkout Pro
+        window.location.href = data.init_point;
+        return;
+      }
+
+      // Non-marketplace: redirect to embedded checkout page
       router.push(
         `/checkout?preference_id=${data.preference_id}&order_id=${data.order_id}&amount=${data.amount}`
       );

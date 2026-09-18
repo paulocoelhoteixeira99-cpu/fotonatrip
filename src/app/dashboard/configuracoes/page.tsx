@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Link2, Unlink, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function ConfiguracoesPage() {
   const [fullName, setFullName] = useState("");
@@ -11,10 +12,27 @@ export default function ConfiguracoesPage() {
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  const [mpConnected, setMpConnected] = useState(false);
+  const [mpUserId, setMpUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [message, setMessage] = useState("");
   const supabase = createClient();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Show MP OAuth result message
+    const mpStatus = searchParams.get("mp");
+    if (mpStatus === "success") {
+      setMessage("Mercado Pago conectado com sucesso!");
+      // Clean URL
+      window.history.replaceState({}, "", "/dashboard/configuracoes");
+    } else if (mpStatus === "error") {
+      setMessage("Erro ao conectar Mercado Pago. Tente novamente.");
+      window.history.replaceState({}, "", "/dashboard/configuracoes");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function load() {
@@ -37,6 +55,8 @@ export default function ConfiguracoesPage() {
         setPhone(photographerRes.data.phone || "");
         setCity(photographerRes.data.city || "");
         setState(photographerRes.data.state || "");
+        setMpConnected(!!photographerRes.data.mp_user_id);
+        setMpUserId(photographerRes.data.mp_user_id || null);
       }
 
       setLoading(false);
@@ -78,6 +98,25 @@ export default function ConfiguracoesPage() {
     setTimeout(() => setMessage(""), 3000);
   }
 
+  async function handleDisconnectMP() {
+    if (!confirm("Tem certeza que deseja desconectar sua conta do Mercado Pago?")) return;
+    setDisconnecting(true);
+
+    try {
+      const res = await fetch("/api/mp/disconnect", { method: "POST" });
+      if (res.ok) {
+        setMpConnected(false);
+        setMpUserId(null);
+        setMessage("Mercado Pago desconectado.");
+        setTimeout(() => setMessage(""), 3000);
+      }
+    } catch {
+      setMessage("Erro ao desconectar. Tente novamente.");
+    }
+
+    setDisconnecting(false);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -92,6 +131,74 @@ export default function ConfiguracoesPage() {
       <p className="text-muted text-sm mb-8">
         Atualize suas informacoes pessoais e profissionais.
       </p>
+
+      {message && (
+        <div
+          className={`text-sm rounded-xl px-4 py-3 mb-6 flex items-center gap-2 ${
+            message.includes("Erro")
+              ? "text-red-400 bg-red-400/10"
+              : "text-primary bg-primary/10"
+          }`}
+        >
+          {message.includes("Erro") ? (
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          ) : (
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+          )}
+          {message}
+        </div>
+      )}
+
+      {/* Mercado Pago Section */}
+      <div className="glass rounded-2xl p-6 mb-6">
+        <h2 className="font-semibold text-sm text-muted uppercase tracking-wider mb-5">
+          Mercado Pago
+        </h2>
+
+        {mpConnected ? (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Conta conectada</p>
+                <p className="text-xs text-muted">ID: {mpUserId}</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted mb-4">
+              Seus pagamentos serao recebidos diretamente na sua conta do Mercado
+              Pago, com 7% de comissao da plataforma retida automaticamente.
+            </p>
+            <button
+              onClick={handleDisconnectMP}
+              disabled={disconnecting}
+              className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+            >
+              {disconnecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Unlink className="w-4 h-4" />
+              )}
+              Desconectar
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-muted mb-4">
+              Conecte sua conta do Mercado Pago para receber pagamentos
+              diretamente. A plataforma retém apenas 7% de comissao.
+            </p>
+            <a
+              href="/api/mp/connect"
+              className="inline-flex items-center gap-2 bg-[#009ee3] hover:bg-[#0088c7] text-white px-6 py-3 rounded-xl font-medium transition-colors text-sm"
+            >
+              <Link2 className="w-4 h-4" />
+              Conectar Mercado Pago
+            </a>
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSave} className="space-y-6">
         <div className="glass rounded-2xl p-6 space-y-5">
@@ -173,12 +280,6 @@ export default function ConfiguracoesPage() {
             />
           </div>
         </div>
-
-        {message && (
-          <p className="text-primary text-sm bg-primary/10 rounded-xl px-4 py-3">
-            {message}
-          </p>
-        )}
 
         <button
           type="submit"
