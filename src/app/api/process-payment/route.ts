@@ -99,11 +99,27 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", orderId);
 
-    return NextResponse.json({
+    // Build response
+    const response: Record<string, unknown> = {
       status: result.status,
       status_detail: result.status_detail,
       payment_id: result.id,
-    });
+    };
+
+    // Include Pix QR code data when available
+    const pixData = (result as unknown as Record<string, unknown>).point_of_interaction as
+      | { transaction_data?: { qr_code?: string; qr_code_base64?: string; ticket_url?: string } }
+      | undefined;
+
+    if (pixData?.transaction_data) {
+      response.pix = {
+        qr_code: pixData.transaction_data.qr_code,
+        qr_code_base64: pixData.transaction_data.qr_code_base64,
+        ticket_url: pixData.transaction_data.ticket_url,
+      };
+    }
+
+    return NextResponse.json(response);
   } catch (err: unknown) {
     console.error("Process payment error:", err);
     const message = err instanceof Error ? err.message : "Erro ao processar pagamento";

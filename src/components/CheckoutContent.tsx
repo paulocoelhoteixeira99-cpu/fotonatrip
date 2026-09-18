@@ -5,12 +5,18 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import { useCart, formatPrice } from "@/lib/cart";
 import Link from "next/link";
-import { ArrowLeft, Lock, ShieldCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, Lock, ShieldCheck, Loader2, Copy, Check } from "lucide-react";
 
 // Init only in the browser (this file is loaded with ssr: false)
 initMercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY!, {
   locale: "pt-BR",
 });
+
+interface PixData {
+  qr_code?: string;
+  qr_code_base64?: string;
+  ticket_url?: string;
+}
 
 export default function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -22,6 +28,8 @@ export default function CheckoutContent() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [brickReady, setBrickReady] = useState(false);
+  const [pixData, setPixData] = useState<PixData | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // If no preference, redirect to cart
   useEffect(() => {
@@ -30,10 +38,90 @@ export default function CheckoutContent() {
     }
   }, [preferenceId, orderId, router]);
 
+  async function copyPixCode() {
+    if (!pixData?.qr_code) return;
+    await navigator.clipboard.writeText(pixData.qr_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  }
+
   if (!preferenceId || !orderId || amount === 0) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Pix QR Code screen
+  if (pixData) {
+    return (
+      <div className="max-w-md mx-auto px-4 sm:px-6 text-center">
+        <div className="glass rounded-2xl p-6 sm:p-8">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-7 h-7 text-primary" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Pague com Pix</h2>
+          <p className="text-muted text-sm mb-6">
+            Escaneie o QR Code ou copie o codigo para pagar{" "}
+            <span className="font-semibold text-foreground">
+              {formatPrice(amount * 100)}
+            </span>
+          </p>
+
+          {pixData.qr_code_base64 && (
+            <div className="bg-white rounded-xl p-4 inline-block mb-6">
+              <img
+                src={`data:image/png;base64,${pixData.qr_code_base64}`}
+                alt="QR Code Pix"
+                className="w-48 h-48"
+              />
+            </div>
+          )}
+
+          {pixData.qr_code && (
+            <div className="mb-6">
+              <div className="bg-white/5 border border-border rounded-xl p-3 mb-3">
+                <p className="text-xs text-muted break-all font-mono leading-relaxed">
+                  {pixData.qr_code}
+                </p>
+              </div>
+              <button
+                onClick={copyPixCode}
+                className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary-dark text-white py-3 rounded-xl font-medium transition-colors"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copiado!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copiar codigo Pix
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          <p className="text-xs text-muted mb-4">
+            Apos o pagamento, suas fotos serao liberadas automaticamente.
+          </p>
+
+          <Link
+            href={`/checkout/sucesso?order=${orderId}&status=pending`}
+            onClick={() => clearCart()}
+            className="text-sm text-primary hover:text-primary-dark transition-colors"
+          >
+            Ja paguei
+          </Link>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 mt-6 text-xs text-muted">
+          <ShieldCheck className="w-4 h-4" />
+          Pagamento seguro processado pelo Mercado Pago
+        </div>
       </div>
     );
   }
@@ -125,8 +213,12 @@ export default function CheckoutContent() {
                   "Pagamento recusado. Verifique os dados e tente novamente."
                 );
                 setProcessing(false);
+              } else if (data.pix) {
+                // Pix: show QR code
+                setPixData(data.pix);
+                setProcessing(false);
               } else {
-                // pending / in_process
+                // Other pending payments
                 clearCart();
                 router.push(
                   `/checkout/sucesso?order=${orderId}&status=pending`
@@ -137,10 +229,15 @@ export default function CheckoutContent() {
               setProcessing(false);
             }
           }}
-          onReady={() => setBrickReady(true)}
+          onReady={() => {
+            setBrickReady(true);
+            setError(null);
+          }}
           onError={(error) => {
             console.error("Payment Brick error:", error);
-            setError("Erro ao carregar formulario de pagamento. Tente recarregar a pagina.");
+            if (!brickReady) {
+              setError("Erro ao carregar formulario de pagamento. Tente recarregar a pagina.");
+            }
           }}
         />
       </div>
