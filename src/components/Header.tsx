@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Menu, X, LayoutDashboard, ImageIcon, ShoppingCart } from "lucide-react";
+import { Camera, Menu, X, LayoutDashboard, ImageIcon, ShoppingCart, ShoppingBag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCart } from "@/lib/cart";
 import Link from "next/link";
@@ -98,6 +98,13 @@ export default function Header() {
           </Link>
           {user ? (
             <>
+              <Link
+                href="/minhas-compras"
+                className="text-sm text-muted hover:text-foreground transition-colors px-4 py-2 flex items-center gap-1.5"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                Minhas compras
+              </Link>
               {role === "photographer" && (
                 <Link
                   href="/dashboard"
@@ -205,6 +212,14 @@ export default function Header() {
               <hr className="border-border my-2" />
               {user ? (
                 <>
+                  <Link
+                    href="/minhas-compras"
+                    onClick={() => setMenuOpen(false)}
+                    className="text-sm text-muted hover:text-foreground transition-colors px-4 py-3 rounded-xl hover:bg-white/5 flex items-center gap-2"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    Minhas compras
+                  </Link>
                   {role === "photographer" && (
                     <Link
                       href="/dashboard"

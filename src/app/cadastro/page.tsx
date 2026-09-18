@@ -9,7 +9,7 @@ import { Camera, Eye, EyeOff, Loader2, User, CameraIcon } from "lucide-react";
 type Role = "client" | "photographer";
 
 export default function CadastroPage() {
-  const [role, setRole] = useState<Role>("photographer");
+  const [role, setRole] = useState<Role>("client");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -105,19 +105,6 @@ export default function CadastroPage() {
           <div className="grid grid-cols-2 gap-3 mb-8">
             <button
               type="button"
-              onClick={() => setRole("photographer")}
-              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
-                role === "photographer"
-                  ? "border-primary bg-primary/10 text-foreground"
-                  : "border-border bg-white/5 text-muted hover:border-muted"
-              }`}
-            >
-              <CameraIcon className="w-6 h-6" />
-              <span className="text-sm font-medium">Fotografo</span>
-              <span className="text-xs text-muted">Vender fotos</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setRole("client")}
               className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
                 role === "client"
@@ -128,6 +115,19 @@ export default function CadastroPage() {
               <User className="w-6 h-6" />
               <span className="text-sm font-medium">Cliente</span>
               <span className="text-xs text-muted">Comprar fotos</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole("photographer")}
+              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
+                role === "photographer"
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-white/5 text-muted hover:border-muted"
+              }`}
+            >
+              <CameraIcon className="w-6 h-6" />
+              <span className="text-sm font-medium">Fotografo</span>
+              <span className="text-xs text-muted">Vender fotos</span>
             </button>
           </div>
 
