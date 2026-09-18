@@ -55,12 +55,23 @@ export async function POST(req: NextRequest) {
 
     const isPix = formData.payment_method_id === "pix";
 
+    // For Pix, get payer email from the order if not provided
+    let payerEmail = formData.payer?.email;
+    if (isPix && !payerEmail && order) {
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("client_email")
+        .eq("id", orderId)
+        .single();
+      payerEmail = orderData?.client_email;
+    }
+
     const paymentBody: Record<string, unknown> = {
       transaction_amount: formData.transaction_amount,
       description: "Fotos profissionais - fotonatrip",
       payment_method_id: formData.payment_method_id,
       payer: {
-        email: formData.payer?.email,
+        email: payerEmail || formData.payer?.email,
         identification: formData.payer?.identification,
       },
       external_reference: orderId,

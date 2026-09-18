@@ -5,7 +5,16 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import { useCart, formatPrice } from "@/lib/cart";
 import Link from "next/link";
-import { ArrowLeft, Lock, ShieldCheck, Loader2, Copy, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Lock,
+  ShieldCheck,
+  Loader2,
+  Copy,
+  Check,
+  CreditCard,
+  QrCode,
+} from "lucide-react";
 
 // Init only in the browser (this file is loaded with ssr: false)
 initMercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY!, {
@@ -30,6 +39,8 @@ export default function CheckoutContent() {
   const [brickReady, setBrickReady] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [copied, setCopied] = useState(false);
+  const [payMethod, setPayMethod] = useState<"card" | "pix">("card");
+  const [pixLoading, setPixLoading] = useState(false);
 
   // If no preference, redirect to cart
   useEffect(() => {
@@ -43,6 +54,52 @@ export default function CheckoutContent() {
     await navigator.clipboard.writeText(pixData.qr_code);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
+  }
+
+  async function handlePixPayment() {
+    setPixLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/process-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          formData: {
+            transaction_amount: amount,
+            payment_method_id: "pix",
+            payer: {
+              email: items[0]?.event_title
+                ? undefined
+                : undefined,
+            },
+          },
+          orderId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Erro ao gerar Pix");
+        setPixLoading(false);
+        return;
+      }
+
+      if (data.pix) {
+        setPixData(data.pix);
+      } else if (data.status === "approved") {
+        clearCart();
+        router.push(`/checkout/sucesso?order=${orderId}`);
+      } else {
+        clearCart();
+        router.push(`/checkout/sucesso?order=${orderId}&status=pending`);
+      }
+    } catch {
+      setError("Erro de conexao. Tente novamente.");
+    }
+
+    setPixLoading(false);
   }
 
   if (!preferenceId || !orderId || amount === 0) {
@@ -59,7 +116,7 @@ export default function CheckoutContent() {
       <div className="max-w-md mx-auto px-4 sm:px-6 text-center">
         <div className="glass rounded-2xl p-6 sm:p-8">
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-7 h-7 text-primary" />
+            <QrCode className="w-7 h-7 text-primary" />
           </div>
           <h2 className="text-xl font-bold mb-2">Pague com Pix</h2>
           <p className="text-muted text-sm mb-6">
@@ -140,12 +197,38 @@ export default function CheckoutContent() {
         <Lock className="w-5 h-5 text-primary" />
         <h1 className="text-2xl font-bold">Pagamento</h1>
       </div>
-      <p className="text-muted text-sm mb-8">
+      <p className="text-muted text-sm mb-6">
         {items.length} foto{items.length !== 1 ? "s" : ""} &middot;{" "}
         <span className="font-semibold text-foreground">
           {formatPrice(amount * 100)}
         </span>
       </p>
+
+      {/* Payment method tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setPayMethod("card")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            payMethod === "card"
+              ? "bg-primary text-white"
+              : "glass text-muted hover:text-foreground"
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          Cartao
+        </button>
+        <button
+          onClick={() => setPayMethod("pix")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            payMethod === "pix"
+              ? "bg-primary text-white"
+              : "glass text-muted hover:text-foreground"
+          }`}
+        >
+          <QrCode className="w-4 h-4" />
+          Pix
+        </button>
+      </div>
 
       {error && (
         <div className="text-sm text-red-400 bg-red-400/10 rounded-xl p-4 mb-6">
@@ -153,93 +236,125 @@ export default function CheckoutContent() {
         </div>
       )}
 
-      {processing && (
-        <div className="flex items-center justify-center gap-3 py-10">
-          <Loader2 className="w-5 h-5 animate-spin text-primary" />
-          <span className="text-sm text-muted">Processando pagamento...</span>
-        </div>
+      {/* Card payment via Brick */}
+      {payMethod === "card" && (
+        <>
+          {processing && (
+            <div className="flex items-center justify-center gap-3 py-10">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              <span className="text-sm text-muted">Processando pagamento...</span>
+            </div>
+          )}
+
+          {!brickReady && !processing && (
+            <div className="flex items-center justify-center gap-3 py-10">
+              <Loader2 className="w-5 h-5 animate-spin text-muted" />
+              <span className="text-sm text-muted">Carregando formulario...</span>
+            </div>
+          )}
+
+          <div className={processing ? "hidden" : ""}>
+            <Payment
+              initialization={{
+                amount: amount,
+              }}
+              customization={{
+                paymentMethods: {
+                  creditCard: "all",
+                  debitCard: "all",
+                },
+                visual: {
+                  style: {
+                    theme: "dark",
+                  },
+                },
+              }}
+              onSubmit={async ({ formData }) => {
+                setProcessing(true);
+                setError(null);
+
+                try {
+                  const res = await fetch("/api/process-payment", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ formData, orderId }),
+                  });
+
+                  const data = await res.json();
+
+                  if (!res.ok) {
+                    setError(data.error || "Erro ao processar pagamento");
+                    setProcessing(false);
+                    return;
+                  }
+
+                  if (data.status === "approved") {
+                    clearCart();
+                    router.push(`/checkout/sucesso?order=${orderId}`);
+                  } else if (data.status === "rejected") {
+                    setError(
+                      "Pagamento recusado. Verifique os dados e tente novamente."
+                    );
+                    setProcessing(false);
+                  } else {
+                    clearCart();
+                    router.push(
+                      `/checkout/sucesso?order=${orderId}&status=pending`
+                    );
+                  }
+                } catch {
+                  setError("Erro de conexao. Tente novamente.");
+                  setProcessing(false);
+                }
+              }}
+              onReady={() => {
+                setBrickReady(true);
+                setError(null);
+              }}
+              onError={(error) => {
+                console.error("Payment Brick error:", error);
+                if (!brickReady) {
+                  setError("Erro ao carregar formulario. Tente recarregar a pagina.");
+                }
+              }}
+            />
+          </div>
+        </>
       )}
 
-      {!brickReady && !processing && (
-        <div className="flex items-center justify-center gap-3 py-10">
-          <Loader2 className="w-5 h-5 animate-spin text-muted" />
-          <span className="text-sm text-muted">Carregando formulario de pagamento...</span>
+      {/* Pix payment */}
+      {payMethod === "pix" && (
+        <div className="glass rounded-2xl p-6 sm:p-8 text-center">
+          <QrCode className="w-12 h-12 text-primary mx-auto mb-4" />
+          <h3 className="font-semibold mb-2">Pagamento instantaneo</h3>
+          <p className="text-muted text-sm mb-6">
+            Clique no botao abaixo para gerar o QR Code Pix no valor de{" "}
+            <span className="font-semibold text-foreground">
+              {formatPrice(amount * 100)}
+            </span>
+          </p>
+          <button
+            onClick={handlePixPayment}
+            disabled={pixLoading}
+            className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary-dark text-white py-3.5 rounded-xl font-medium transition-colors disabled:opacity-50"
+          >
+            {pixLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Gerando Pix...
+              </>
+            ) : (
+              <>
+                <QrCode className="w-4 h-4" />
+                Gerar QR Code Pix
+              </>
+            )}
+          </button>
+          <p className="text-xs text-muted mt-4">
+            O Pix tem limite diario de transferencias. Consulte o app do seu banco.
+          </p>
         </div>
       )}
-
-      <div className={processing ? "hidden" : ""}>
-        <Payment
-          initialization={{
-            amount: amount,
-          }}
-          customization={{
-            paymentMethods: {
-              creditCard: "all",
-              debitCard: "all",
-              bankTransfer: "all",
-              mercadoPago: "all",
-            },
-            visual: {
-              style: {
-                theme: "dark",
-              },
-            },
-          }}
-          onSubmit={async ({ formData }) => {
-            setProcessing(true);
-            setError(null);
-
-            try {
-              const res = await fetch("/api/process-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ formData, orderId }),
-              });
-
-              const data = await res.json();
-
-              if (!res.ok) {
-                setError(data.error || "Erro ao processar pagamento");
-                setProcessing(false);
-                return;
-              }
-
-              if (data.status === "approved") {
-                clearCart();
-                router.push(`/checkout/sucesso?order=${orderId}`);
-              } else if (data.status === "rejected") {
-                setError(
-                  "Pagamento recusado. Verifique os dados e tente novamente."
-                );
-                setProcessing(false);
-              } else if (data.pix) {
-                // Pix: show QR code
-                setPixData(data.pix);
-                setProcessing(false);
-              } else {
-                // Other pending payments
-                clearCart();
-                router.push(
-                  `/checkout/sucesso?order=${orderId}&status=pending`
-                );
-              }
-            } catch {
-              setError("Erro de conexao. Tente novamente.");
-              setProcessing(false);
-            }
-          }}
-          onReady={() => {
-            setBrickReady(true);
-            setError(null);
-          }}
-          onError={(error) => {
-            console.error("Payment Brick error:", error);
-            if (!brickReady) {
-              setError("Erro ao carregar formulario de pagamento. Tente recarregar a pagina.");
-            }
-          }}
-        />
-      </div>
 
       <div className="flex items-center justify-center gap-2 mt-8 text-xs text-muted">
         <ShieldCheck className="w-4 h-4" />
