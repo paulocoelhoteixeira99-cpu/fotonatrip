@@ -16,15 +16,24 @@ import {
   QrCode,
 } from "lucide-react";
 
-// Init only in the browser (this file is loaded with ssr: false)
 initMercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY!, {
   locale: "pt-BR",
 });
 
+// MP processing fee rates
+const FEE_RATE = {
+  card: 0.0499, // 4.99%
+  pix: 0.0099, // 0.99%
+};
+
+function calcAdjusted(base: number, rate: number) {
+  // Round up to next cent to guarantee fee is covered
+  return Math.ceil((base * 100) / (1 - rate)) / 100;
+}
+
 interface PixData {
   qr_code?: string;
   qr_code_base64?: string;
-  ticket_url?: string;
 }
 
 export default function CheckoutContent() {
@@ -33,28 +42,25 @@ export default function CheckoutContent() {
   const { items, clearCart } = useCart();
   const preferenceId = searchParams.get("preference_id");
   const orderId = searchParams.get("order_id");
-  const amount = parseFloat(searchParams.get("amount") || "0");
+  const baseAmount = parseFloat(searchParams.get("amount") || "0");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [brickReady, setBrickReady] = useState(false);
-  const [pixData, setPixData] = useState<PixData | null>(null);
-  const [copied, setCopied] = useState(false);
   const [payMethod, setPayMethod] = useState<"card" | "pix">("card");
+  const [pixData, setPixData] = useState<PixData | null>(null);
   const [pixLoading, setPixLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // If no preference, redirect to cart
+  const cardAmount = calcAdjusted(baseAmount, FEE_RATE.card);
+  const pixAmount = calcAdjusted(baseAmount, FEE_RATE.pix);
+  const currentAmount = payMethod === "card" ? cardAmount : pixAmount;
+  const currentFee = +(currentAmount - baseAmount).toFixed(2);
+
   useEffect(() => {
     if (!preferenceId || !orderId) {
       router.replace("/carrinho");
     }
   }, [preferenceId, orderId, router]);
-
-  async function copyPixCode() {
-    if (!pixData?.qr_code) return;
-    await navigator.clipboard.writeText(pixData.qr_code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
-  }
 
   async function handlePixPayment() {
     setPixLoading(true);
@@ -66,13 +72,9 @@ export default function CheckoutContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           formData: {
-            transaction_amount: amount,
+            transaction_amount: pixAmount,
             payment_method_id: "pix",
-            payer: {
-              email: items[0]?.event_title
-                ? undefined
-                : undefined,
-            },
+            payer: {},
           },
           orderId,
         }),
@@ -98,11 +100,17 @@ export default function CheckoutContent() {
     } catch {
       setError("Erro de conexao. Tente novamente.");
     }
-
     setPixLoading(false);
   }
 
-  if (!preferenceId || !orderId || amount === 0) {
+  async function copyPixCode() {
+    if (!pixData?.qr_code) return;
+    await navigator.clipboard.writeText(pixData.qr_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  }
+
+  if (!preferenceId || !orderId || baseAmount === 0) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -122,7 +130,7 @@ export default function CheckoutContent() {
           <p className="text-muted text-sm mb-6">
             Escaneie o QR Code ou copie o codigo para pagar{" "}
             <span className="font-semibold text-foreground">
-              {formatPrice(amount * 100)}
+              {formatPrice(pixAmount * 100)}
             </span>
           </p>
 
@@ -197,12 +205,31 @@ export default function CheckoutContent() {
         <Lock className="w-5 h-5 text-primary" />
         <h1 className="text-2xl font-bold">Pagamento</h1>
       </div>
-      <p className="text-muted text-sm mb-6">
-        {items.length} foto{items.length !== 1 ? "s" : ""} &middot;{" "}
-        <span className="font-semibold text-foreground">
-          {formatPrice(amount * 100)}
-        </span>
-      </p>
+
+      {/* Price breakdown */}
+      <div className="glass rounded-xl p-4 mb-6">
+        <div className="flex justify-between text-sm mb-1">
+          <span className="text-muted">
+            {items.length} foto{items.length !== 1 ? "s" : ""}
+          </span>
+          <span>{formatPrice(baseAmount * 100)}</span>
+        </div>
+        <div className="flex justify-between text-sm mb-2">
+          <span className="text-muted">
+            Taxa de processamento ({payMethod === "card" ? "cartao" : "Pix"})
+          </span>
+          <span className="text-yellow-400">
+            + {formatPrice(currentFee * 100)}
+          </span>
+        </div>
+        <hr className="border-border mb-2" />
+        <div className="flex justify-between font-semibold">
+          <span>Total</span>
+          <span className="gradient-text text-lg">
+            {formatPrice(currentAmount * 100)}
+          </span>
+        </div>
+      </div>
 
       {/* Payment method tabs */}
       <div className="flex gap-2 mb-6">
@@ -256,7 +283,7 @@ export default function CheckoutContent() {
           <div className={processing ? "hidden" : ""}>
             <Payment
               initialization={{
-                amount: amount,
+                amount: cardAmount,
               }}
               customization={{
                 paymentMethods: {
@@ -311,8 +338,8 @@ export default function CheckoutContent() {
                 setBrickReady(true);
                 setError(null);
               }}
-              onError={(error) => {
-                console.error("Payment Brick error:", error);
+              onError={(err) => {
+                console.error("Payment Brick error:", err);
                 if (!brickReady) {
                   setError("Erro ao carregar formulario. Tente recarregar a pagina.");
                 }
@@ -326,11 +353,11 @@ export default function CheckoutContent() {
       {payMethod === "pix" && (
         <div className="glass rounded-2xl p-6 sm:p-8 text-center">
           <QrCode className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h3 className="font-semibold mb-2">Pagamento instantaneo</h3>
+          <h3 className="font-semibold mb-2">Pagamento instantaneo via Pix</h3>
           <p className="text-muted text-sm mb-6">
             Clique no botao abaixo para gerar o QR Code Pix no valor de{" "}
             <span className="font-semibold text-foreground">
-              {formatPrice(amount * 100)}
+              {formatPrice(pixAmount * 100)}
             </span>
           </p>
           <button
