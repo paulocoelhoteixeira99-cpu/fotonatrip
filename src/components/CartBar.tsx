@@ -2,13 +2,16 @@
 
 import { useCart, formatPrice } from "@/lib/cart";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function CartBar() {
   const { count, totalCents, hydrated } = useCart();
+  const pathname = usePathname();
 
-  if (!hydrated || count === 0) return null;
+  // Hide on cart and checkout pages (they have their own bottom buttons)
+  if (!hydrated || count === 0 || pathname === "/carrinho" || pathname.startsWith("/checkout")) return null;
 
   return (
     <AnimatePresence>
