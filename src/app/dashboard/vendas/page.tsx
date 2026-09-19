@@ -214,9 +214,10 @@ export default function VendasPage() {
             );
           })}
         </div>
-        <div className="flex justify-between mt-2 text-[10px] text-muted">
-          <span>{dailySales[0]?.date.slice(5).replace("-", "/")}</span>
-          <span>Hoje</span>
+        <div className="mt-2 text-[10px] text-muted">
+          <span>
+            {dailySales[0]?.date.slice(8)}/{dailySales[0]?.date.slice(5, 7)}
+          </span>
         </div>
       </div>
 
