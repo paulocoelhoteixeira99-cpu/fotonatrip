@@ -86,13 +86,20 @@ export default function VendasPage() {
     );
     setMonthRevenueCents(monthTotal);
 
-    // Daily sales for chart (last 30 days) — use local dates for comparison
+    // Daily sales for chart — from first sale to today (min 7, max 30 days)
     function toLocalDate(d: Date) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
 
+    const today = new Date();
+    const earliest = salesMapped.length > 0
+      ? new Date(salesMapped[salesMapped.length - 1].created_at)
+      : today;
+    const diffDays = Math.ceil((today.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24));
+    const numDays = Math.min(Math.max(diffDays + 1, 7), 30);
+
     const days: DailySales[] = [];
-    for (let i = 29; i >= 0; i--) {
+    for (let i = numDays - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = toLocalDate(date);
@@ -177,7 +184,9 @@ export default function VendasPage() {
 
       {/* Chart - last 30 days */}
       <div className="glass rounded-2xl p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-6">Ultimos 30 dias</h2>
+        <h2 className="text-lg font-semibold mb-6">
+          Ultimos {dailySales.length} dias
+        </h2>
         <div className="flex items-end gap-[3px] h-40">
           {dailySales.map((day) => {
             const height = maxDayRevenue > 0
