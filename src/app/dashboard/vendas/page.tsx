@@ -99,7 +99,7 @@ export default function VendasPage() {
     const numDays = Math.min(diffDays + 1, 30);
 
     const days: DailySales[] = [];
-    for (let i = numDays - 1; i >= 0; i--) {
+    for (let i = 0; i < numDays; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = toLocalDate(date);
