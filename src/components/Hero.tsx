@@ -67,19 +67,29 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] max-w-5xl"
         >
-          Suas fotos de viagem,{" "}
-          <span className="gradient-text">encontradas por IA</span>
+          Os momentos passam.{" "}
+          <span className="gradient-text">As fotos ficam.</span>
         </motion.h1>
+
+        {/* Tagline */}
+        <motion.p
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.15 }}
+          className="mt-4 text-xl md:text-2xl text-muted/80 font-medium"
+        >
+          Sua viagem, eternizada em cada detalhe.
+        </motion.p>
 
         {/* Subtitle */}
         <motion.p
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-6 text-lg md:text-xl text-muted max-w-2xl leading-relaxed"
+          transition={{ duration: 0.6, delay: 0.25 }}
+          className="mt-4 text-lg md:text-xl text-muted max-w-2xl leading-relaxed"
         >
-          Tire uma selfie e encontre todas as fotos profissionais feitas de voce
-          durante sua viagem. Simples, rapido e magico.
+          Tire uma selfie e encontre, em segundos, todas as fotos profissionais
+          feitas de você durante a viagem. Simples, rápido e mágico.
         </motion.p>
 
         {/* CTAs */}
