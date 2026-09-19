@@ -214,8 +214,8 @@ export default function VendasPage() {
             );
           })}
         </div>
-        <div className="mt-2 text-[10px] text-muted">
-          <span>
+        <div className="mt-2 text-[10px] text-muted" style={{ width: `${100 / 30}%` }}>
+          <span className="block text-center">
             {dailySales[0]?.date.slice(8)}/{dailySales[0]?.date.slice(5, 7)}
           </span>
         </div>
