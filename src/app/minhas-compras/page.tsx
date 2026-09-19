@@ -92,11 +92,20 @@ export default function MinhasComprasPage() {
       .update({ downloaded_at: new Date().toISOString() })
       .eq("id", item.id);
 
-    // Download
-    const a = document.createElement("a");
-    a.href = data.signedUrl;
-    a.download = `fotonatrip-${item.photo_id.slice(0, 8)}.jpg`;
-    a.click();
+    // Fetch as blob to force download (cross-origin URLs ignore a.download)
+    try {
+      const res = await fetch(data.signedUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `fotonatrip-${item.photo_id.slice(0, 8)}.jpg`;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // Fallback: open in new tab
+      window.open(data.signedUrl, "_blank");
+    }
 
     setDownloading(null);
   }
@@ -181,8 +190,8 @@ export default function MinhasComprasPage() {
                           : "";
 
                         return (
-                          <div key={item.id} className="relative group">
-                            <div className="aspect-[3/4] rounded-xl overflow-hidden bg-surface-light">
+                          <div key={item.id} className="flex flex-col gap-2">
+                            <div className="relative group aspect-[3/4] rounded-xl overflow-hidden bg-surface-light">
                               {url && (
                                 <img
                                   src={url}
@@ -191,23 +200,39 @@ export default function MinhasComprasPage() {
                                   loading="lazy"
                                 />
                               )}
+                              {/* Desktop hover overlay */}
+                              {order.status === "paid" && (
+                                <button
+                                  onClick={() => handleDownload(item)}
+                                  disabled={downloading === item.id}
+                                  className="absolute inset-0 items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl hidden md:flex"
+                                >
+                                  {downloading === item.id ? (
+                                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <Download className="w-6 h-6 text-white" />
+                                      <span className="text-white text-xs font-medium">
+                                        Baixar original
+                                      </span>
+                                    </div>
+                                  )}
+                                </button>
+                              )}
                             </div>
+                            {/* Always-visible download button */}
                             {order.status === "paid" && (
                               <button
                                 onClick={() => handleDownload(item)}
                                 disabled={downloading === item.id}
-                                className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
+                                className="flex items-center justify-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                               >
                                 {downloading === item.id ? (
-                                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 ) : (
-                                  <div className="flex flex-col items-center gap-1">
-                                    <Download className="w-6 h-6 text-white" />
-                                    <span className="text-white text-xs font-medium">
-                                      Baixar original
-                                    </span>
-                                  </div>
+                                  <Download className="w-3.5 h-3.5" />
                                 )}
+                                Baixar
                               </button>
                             )}
                           </div>
