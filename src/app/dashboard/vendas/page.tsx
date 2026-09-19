@@ -48,33 +48,23 @@ export default function VendasPage() {
       .select(`
         id, photo_id, price_cents, created_at,
         orders!inner(status),
-        photos:photo_id(event_id),
-        events:photos(event_id(title))
+        photos!inner(event_id, events(title))
       `)
       .eq("photographer_id", user.id)
       .eq("orders.status", "paid")
       .order("created_at", { ascending: false });
 
-    if (!data) {
+    if (!data || data.length === 0) {
       setLoading(false);
       return;
     }
-
-    // Also get event titles via a separate query
-    const eventIds = [...new Set(data.map((s: any) => s.photos?.event_id).filter(Boolean))];
-    const { data: eventsData } = await supabase
-      .from("events")
-      .select("id, title")
-      .in("id", eventIds.length > 0 ? eventIds : ["__none__"]);
-
-    const eventMap = new Map(eventsData?.map((e: any) => [e.id, e.title]) || []);
 
     const salesMapped: Sale[] = data.map((item: any) => ({
       id: item.id,
       photo_id: item.photo_id,
       price_cents: item.price_cents,
       created_at: item.created_at,
-      event_title: eventMap.get(item.photos?.event_id) || "Evento",
+      event_title: item.photos?.events?.title || "Evento",
     }));
 
     setSales(salesMapped);
