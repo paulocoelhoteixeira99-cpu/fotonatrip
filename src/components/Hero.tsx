@@ -47,19 +47,6 @@ export default function Hero() {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-6 py-20 flex flex-col items-center text-center">
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="glass px-4 py-2 rounded-full flex items-center gap-2 mb-8"
-        >
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm text-muted">
-            Busca por reconhecimento facial
-          </span>
-        </motion.div>
-
         {/* Heading */}
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
@@ -92,11 +79,24 @@ export default function Hero() {
           feitas de você durante a viagem. Simples, rápido e mágico.
         </motion.p>
 
+        {/* Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="glass px-4 py-2 rounded-full flex items-center gap-2 mt-6"
+        >
+          <Sparkles className="w-4 h-4 text-primary" />
+          <span className="text-sm text-muted">
+            Busca por reconhecimento facial
+          </span>
+        </motion.div>
+
         {/* CTAs */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          transition={{ duration: 0.6, delay: 0.35 }}
           className="mt-10 flex flex-col sm:flex-row gap-4"
         >
           <Link

@@ -101,7 +101,7 @@ export default function DashboardLayout({
             <img
               src="/logo-fotonatrip.png"
               alt="fotonatrip"
-              className="h-8 w-auto"
+              className="h-10 w-auto"
             />
           </Link>
           <button

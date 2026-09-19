@@ -11,7 +11,7 @@ export default function Footer() {
               <img
                 src="/logo-fotonatrip.png"
                 alt="fotonatrip"
-                className="h-8 w-auto"
+                className="h-10 w-auto"
               />
             </Link>
             <p className="mt-4 text-sm text-muted leading-relaxed">

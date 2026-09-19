@@ -61,7 +61,7 @@ export default function Header() {
           <img
             src="/logo-fotonatrip.png"
             alt="fotonatrip"
-            className="h-9 w-auto"
+            className="h-10 w-auto"
           />
         </Link>
 
