@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Menu, X, LayoutDashboard, ImageIcon, ShoppingCart, ShoppingBag } from "lucide-react";
+import { Menu, X, LayoutDashboard, ImageIcon, ShoppingCart, ShoppingBag, ScanFace } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCart } from "@/lib/cart";
 import Link from "next/link";
@@ -58,12 +58,11 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-            <Camera className="w-5 h-5 text-primary" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">
-            foto<span className="gradient-text">na</span>trip
-          </span>
+          <img
+            src="/logo-fotonatrip.png"
+            alt="fotonatrip"
+            className="h-9 w-auto"
+          />
         </Link>
 
         {/* Desktop nav */}
@@ -145,7 +144,7 @@ export default function Header() {
             href="/buscar"
             className="p-2 text-muted hover:text-foreground transition-colors"
           >
-            <Camera className="w-5 h-5" />
+            <ScanFace className="w-5 h-5" />
           </Link>
           <Link
             href="/eventos"

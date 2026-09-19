@@ -135,6 +135,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       preference_id: result.id,
+      init_point: result.init_point,
       order_id: order.id,
       amount: totalCents / 100,
       marketplace: useMarketplace,

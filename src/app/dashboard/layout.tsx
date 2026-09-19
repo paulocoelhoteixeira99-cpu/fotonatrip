@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  Camera,
   LayoutDashboard,
   CalendarDays,
   Settings,
@@ -99,12 +98,11 @@ export default function DashboardLayout({
         {/* Logo */}
         <div className="p-6 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Camera className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">
-              foto<span className="gradient-text">na</span>trip
-            </span>
+            <img
+              src="/logo-fotonatrip.png"
+              alt="fotonatrip"
+              className="h-8 w-auto"
+            />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}

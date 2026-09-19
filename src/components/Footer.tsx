@@ -1,4 +1,3 @@
-import { Camera } from "lucide-react";
 import Link from "next/link";
 
 export default function Footer() {
@@ -9,12 +8,11 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Camera className="w-4 h-4 text-primary" />
-              </div>
-              <span className="text-lg font-bold tracking-tight">
-                foto<span className="gradient-text">na</span>trip
-              </span>
+              <img
+                src="/logo-fotonatrip.png"
+                alt="fotonatrip"
+                className="h-8 w-auto"
+              />
             </Link>
             <p className="mt-4 text-sm text-muted leading-relaxed">
               Encontre suas fotos de viagem com inteligencia artificial.

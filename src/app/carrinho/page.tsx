@@ -75,9 +75,15 @@ export default function CarrinhoPage() {
       }
 
       // Redirect to embedded checkout page
-      router.push(
-        `/checkout?preference_id=${data.preference_id}&order_id=${data.order_id}&amount=${data.amount}`
-      );
+      const params = new URLSearchParams({
+        preference_id: data.preference_id,
+        order_id: data.order_id,
+        amount: String(data.amount),
+      });
+      if (data.init_point) {
+        params.set("init_point", data.init_point);
+      }
+      router.push(`/checkout?${params.toString()}`);
     } catch {
       setError("Erro de conexao. Tente novamente.");
       setLoading(false);

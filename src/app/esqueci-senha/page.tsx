@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { Camera, ArrowLeft, Loader2, Mail } from "lucide-react";
+import { ArrowLeft, Loader2, Mail } from "lucide-react";
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState("");
@@ -38,13 +38,12 @@ export default function EsqueciSenhaPage() {
       </div>
 
       <div className="relative w-full max-w-md">
-        <Link href="/" className="flex items-center justify-center gap-2 mb-10">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Camera className="w-5 h-5 text-primary" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight">
-            foto<span className="gradient-text">na</span>trip
-          </span>
+        <Link href="/" className="flex items-center justify-center mb-10">
+          <img
+            src="/logo-fotonatrip.png"
+            alt="fotonatrip"
+            className="h-12 w-auto"
+          />
         </Link>
 
         <div className="glass rounded-3xl p-8">

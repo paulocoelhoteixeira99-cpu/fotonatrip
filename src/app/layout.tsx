@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   description:
     "Tire uma selfie e encontre todas as fotos profissionais feitas de voce durante sua viagem. Busca por reconhecimento facial.",
   keywords: ["fotos", "viagem", "reconhecimento facial", "fotografo", "eventos"],
+  openGraph: {
+    title: "fotonatrip - Encontre suas fotos de viagem com IA",
+    description:
+      "Tire uma selfie e encontre todas as fotos profissionais feitas de voce durante sua viagem.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
