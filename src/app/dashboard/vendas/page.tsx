@@ -86,14 +86,17 @@ export default function VendasPage() {
     );
     setMonthRevenueCents(monthTotal);
 
-    // Daily sales for chart (last 30 days)
+    // Daily sales for chart (last 30 days) — use local dates for comparison
+    function toLocalDate(d: Date) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
     const days: DailySales[] = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().slice(0, 10);
+      const dateStr = toLocalDate(date);
       const daySales = salesMapped.filter(
-        (s) => s.created_at.slice(0, 10) === dateStr
+        (s) => toLocalDate(new Date(s.created_at)) === dateStr
       );
       days.push({
         date: dateStr,
