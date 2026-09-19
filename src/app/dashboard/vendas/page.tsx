@@ -90,6 +90,10 @@ export default function VendasPage() {
     function toLocalDate(d: Date) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
+
+    // Debug: log what dates the sales have
+    console.log("Sales dates:", salesMapped.map(s => ({ raw: s.created_at, local: toLocalDate(new Date(s.created_at)) })));
+
     const days: DailySales[] = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
@@ -104,6 +108,8 @@ export default function VendasPage() {
         count: daySales.length,
       });
     }
+    console.log("Chart range:", days[0]?.date, "→", days[days.length - 1]?.date);
+    console.log("Days with sales:", days.filter(d => d.count > 0));
     setDailySales(days);
 
     setLoading(false);
