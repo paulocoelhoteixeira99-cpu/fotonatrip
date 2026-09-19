@@ -66,6 +66,8 @@ export async function POST(req: NextRequest) {
       payerEmail = orderData?.client_email;
     }
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.vercel.app";
+
     const paymentBody: Record<string, unknown> = {
       transaction_amount: formData.transaction_amount,
       description: "Fotos profissionais - fotonatrip",
@@ -75,6 +77,7 @@ export async function POST(req: NextRequest) {
         identification: formData.payer?.identification,
       },
       external_reference: orderId,
+      notification_url: `${appUrl}/api/webhook/mercadopago`,
     };
 
     // Card-specific fields
