@@ -2,7 +2,6 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  // Simple secret check to prevent unauthorized access
   const { secret } = await req.json();
   if (secret !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,21 +11,6 @@ export async function POST(req: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-
-  // Get all storage file names
-  const { data: allFiles, error: queryError } = await supabase.rpc("get_orphan_storage_files");
-
-  if (queryError) {
-    // Fallback: query directly
-    const { data: orphans, error } = await supabase
-      .from("storage.objects" as any)
-      .select("name")
-      .eq("bucket_id", "photos");
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-  }
 
   // Get all referenced paths from photos table
   const { data: photos } = await supabase
@@ -39,8 +23,8 @@ export async function POST(req: Request) {
     if (p.watermark_path) referencedPaths.add(p.watermark_path);
   }
 
-  // List all files in storage bucket by listing folders recursively
-  const orphanPaths: string[] = [];
+  // List all files in storage bucket recursively
+  const allFiles: string[] = [];
 
   async function listFolder(prefix: string) {
     const { data: items, error } = await supabase.storage
@@ -51,11 +35,9 @@ export async function POST(req: Request) {
 
     for (const item of items) {
       const fullPath = prefix ? `${prefix}/${item.name}` : item.name;
-      if (item.metadata) {
-        // It's a file
-        if (!referencedPaths.has(fullPath)) {
-          orphanPaths.push(fullPath);
-        }
+      if (item.id) {
+        // It's a file (has an id)
+        allFiles.push(fullPath);
       } else {
         // It's a folder, recurse
         await listFolder(fullPath);
@@ -65,8 +47,16 @@ export async function POST(req: Request) {
 
   await listFolder("");
 
+  // Find orphans
+  const orphanPaths = allFiles.filter((path) => !referencedPaths.has(path));
+
   if (orphanPaths.length === 0) {
-    return NextResponse.json({ message: "No orphan files found", deleted: 0 });
+    return NextResponse.json({
+      total_files: allFiles.length,
+      referenced: referencedPaths.size,
+      orphans: 0,
+      deleted: 0,
+    });
   }
 
   // Delete in batches of 100
@@ -84,7 +74,9 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({
-    found: orphanPaths.length,
+    total_files: allFiles.length,
+    referenced: referencedPaths.size,
+    orphans: orphanPaths.length,
     deleted: totalDeleted,
     errors: errors.length > 0 ? errors : undefined,
     sample: orphanPaths.slice(0, 5),
