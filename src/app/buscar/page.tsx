@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getEmbeddingFromFile } from "@/lib/face-recognition";
+import { getPhotoUrl } from "@/lib/photos";
 import {
   Upload,
   ScanFace,
@@ -54,13 +55,11 @@ function BuscarContent() {
   const searchParams = useSearchParams();
   const eventoParam = searchParams.get("evento");
 
-  // Event selection
   const [events, setEvents] = useState<EventOption[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [eventSearch, setEventSearch] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(null);
 
-  // Selfie + search
   const [selfie, setSelfie] = useState<string | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [searching, setSearching] = useState(false);
@@ -72,7 +71,6 @@ function BuscarContent() {
   const { addItem, isInCart } = useCart();
   const supabase = createClient();
 
-  // Load events on mount
   useEffect(() => {
     loadEvents();
   }, []);
@@ -88,7 +86,6 @@ function BuscarContent() {
     const eventList = data || [];
     setEvents(eventList);
 
-    // If evento param is in URL, auto-select it
     if (eventoParam) {
       const found = eventList.find((e) => e.id === eventoParam);
       if (found) setSelectedEvent(found);
@@ -131,10 +128,10 @@ function BuscarContent() {
       return;
     }
 
-    const embeddingStr = `[${Array.from(embedding).join(",")}]`;
+    const embeddingStr = `[${embedding.join(",")}]`;
     const { data, error } = await supabase.rpc("search_faces_by_embedding", {
       query_embedding: embeddingStr,
-      similarity_threshold: 0.91,
+      similarity_threshold: 0.4,
       max_results: 50,
       filter_event_id: selectedEvent.id,
     });
@@ -143,7 +140,6 @@ function BuscarContent() {
       console.error("Search error:", error.message, error.details, error.hint);
     }
 
-    console.log(`Search returned ${data?.length || 0} results`);
     setResults(data || []);
     setSearching(false);
     setSearched(true);
@@ -168,7 +164,6 @@ function BuscarContent() {
       <Header />
 
       <div className="pt-24 pb-24 px-6 max-w-4xl mx-auto">
-        {/* Background glow */}
         <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative">
@@ -223,7 +218,6 @@ function BuscarContent() {
           {/* STEP 1: Event Selection */}
           {!selectedEvent ? (
             <div>
-              {/* Search events */}
               <div className="relative max-w-lg mx-auto mb-8">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
@@ -252,7 +246,6 @@ function BuscarContent() {
                       onClick={() => setSelectedEvent(event)}
                       className="group glass rounded-2xl overflow-hidden text-left hover:-translate-y-1 hover:border-primary/50 transition-all duration-300"
                     >
-                      {/* Cover */}
                       <div className="aspect-[16/9] bg-surface-light relative overflow-hidden">
                         {event.cover_url ? (
                           <img
@@ -267,13 +260,9 @@ function BuscarContent() {
                         )}
                         <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
                           <ImageIcon className="w-3 h-3 text-white" />
-                          <span className="text-xs text-white font-medium">
-                            {event.photo_count}
-                          </span>
+                          <span className="text-xs text-white font-medium">{event.photo_count}</span>
                         </div>
                       </div>
-
-                      {/* Info */}
                       <div className="p-4">
                         <h3 className="font-semibold mb-1.5 group-hover:text-primary transition-colors">
                           {event.title}
@@ -289,9 +278,7 @@ function BuscarContent() {
                           {event.event_date && (
                             <span className="flex items-center gap-1">
                               <CalendarDays className="w-3.5 h-3.5" />
-                              {new Date(
-                                event.event_date + "T00:00:00"
-                              ).toLocaleDateString("pt-BR")}
+                              {new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")}
                             </span>
                           )}
                         </div>
@@ -302,21 +289,13 @@ function BuscarContent() {
               )}
             </div>
           ) : !selfie ? (
-            /* STEP 2: Selfie Upload */
             <div>
-              {/* Selected event badge */}
               <div className="flex items-center justify-center gap-2 mb-8">
                 <div className="glass rounded-full px-4 py-2 flex items-center gap-2 text-sm">
                   <CalendarDays className="w-4 h-4 text-primary" />
                   <span className="text-muted">Evento:</span>
                   <span className="font-medium">{selectedEvent.title}</span>
-                  <button
-                    onClick={resetAll}
-                    className="ml-1 text-muted hover:text-foreground transition-colors text-xs"
-                    title="Trocar evento"
-                  >
-                    (trocar)
-                  </button>
+                  <button onClick={resetAll} className="ml-1 text-muted hover:text-foreground transition-colors text-xs" title="Trocar evento">(trocar)</button>
                 </div>
               </div>
 
@@ -326,24 +305,13 @@ function BuscarContent() {
                     <Upload className="w-8 h-8 text-primary" />
                   </div>
                   <p className="font-medium mb-2">Envie uma selfie</p>
-                  <p className="text-sm text-muted">
-                    Tire uma foto ou escolha da galeria
-                  </p>
+                  <p className="text-sm text-muted">Tire uma foto ou escolha da galeria</p>
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" capture="user" onChange={handleFileSelect} className="hidden" />
               </label>
             </div>
           ) : !searched ? (
-            /* Selfie preview + search */
             <div className="text-center">
-              {/* Selected event badge */}
               <div className="flex items-center justify-center gap-2 mb-8">
                 <div className="glass rounded-full px-4 py-2 flex items-center gap-2 text-sm">
                   <CalendarDays className="w-4 h-4 text-primary" />
@@ -353,34 +321,23 @@ function BuscarContent() {
               </div>
 
               <div className="w-48 h-48 rounded-full overflow-hidden mx-auto mb-8 border-4 border-primary/20 glow-green">
-                <img
-                  src={selfie}
-                  alt="Sua selfie"
-                  className="w-full h-full object-cover"
-                />
+                <img src={selfie} alt="Sua selfie" className="w-full h-full object-cover" />
               </div>
 
               {noFace && (
                 <div className="glass rounded-xl p-4 mb-6 max-w-md mx-auto">
                   <p className="text-sm text-red-400">
-                    Nao conseguimos detectar um rosto na foto. Tente outra selfie
-                    com o rosto bem visivel.
+                    Nao conseguimos detectar um rosto na foto. Tente outra selfie com o rosto bem visivel.
                   </p>
                 </div>
               )}
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={handleSearch}
-                  disabled={searching}
-                  className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-3.5 rounded-xl font-medium transition-colors disabled:opacity-50 glow-green"
-                >
+                <button onClick={handleSearch} disabled={searching} className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-3.5 rounded-xl font-medium transition-colors disabled:opacity-50 glow-green">
                   {searching ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      {loadingModels
-                        ? "Carregando IA..."
-                        : "Buscando..."}
+                      {loadingModels ? "Analisando rosto..." : "Buscando..."}
                     </>
                   ) : (
                     <>
@@ -389,11 +346,7 @@ function BuscarContent() {
                     </>
                   )}
                 </button>
-                <button
-                  onClick={reset}
-                  disabled={searching}
-                  className="flex items-center justify-center gap-2 glass hover:bg-white/10 px-8 py-3.5 rounded-xl font-medium transition-colors disabled:opacity-50"
-                >
+                <button onClick={reset} disabled={searching} className="flex items-center justify-center gap-2 glass hover:bg-white/10 px-8 py-3.5 rounded-xl font-medium transition-colors disabled:opacity-50">
                   Trocar foto
                 </button>
               </div>
@@ -401,15 +354,13 @@ function BuscarContent() {
               {searching && (
                 <p className="text-sm text-muted mt-6 animate-pulse">
                   {loadingModels
-                    ? "Carregando modelos de reconhecimento facial (primeira vez pode demorar)..."
+                    ? "Analisando seu rosto com IA..."
                     : `Comparando seu rosto com as fotos do evento "${selectedEvent.title}"...`}
                 </p>
               )}
             </div>
           ) : (
-            /* STEP 3: Results */
             <div>
-              {/* Selected event badge */}
               <div className="flex items-center justify-center gap-2 mb-6">
                 <div className="glass rounded-full px-4 py-2 flex items-center gap-2 text-sm">
                   <CalendarDays className="w-4 h-4 text-primary" />
@@ -426,25 +377,13 @@ function BuscarContent() {
                       : "Nenhuma foto encontrada"}
                   </h2>
                   {results.length > 0 && (
-                    <p className="text-sm text-muted mt-1">
-                      Mostrando as fotos com maior similaridade.
-                    </p>
+                    <p className="text-sm text-muted mt-1">Mostrando as fotos com maior similaridade.</p>
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={reset}
-                    className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
-                  >
-                    Nova selfie
-                  </button>
+                  <button onClick={reset} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Nova selfie</button>
                   <span className="text-border">|</span>
-                  <button
-                    onClick={resetAll}
-                    className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
-                  >
-                    Outro evento
-                  </button>
+                  <button onClick={resetAll} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Outro evento</button>
                 </div>
               </div>
 
@@ -452,56 +391,31 @@ function BuscarContent() {
                 <div className="glass rounded-3xl p-10 text-center">
                   <ImageIcon className="w-12 h-12 text-muted/30 mx-auto mb-4" />
                   <p className="text-muted text-sm mb-6 max-w-sm mx-auto">
-                    Nao encontramos fotos suas neste evento. Tente com outra selfie
-                    ou verifique se selecionou o evento correto.
+                    Nao encontramos fotos suas neste evento. Tente com outra selfie ou verifique se selecionou o evento correto.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button
-                      onClick={reset}
-                      className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
-                    >
-                      Tentar outra selfie
-                    </button>
-                    <button
-                      onClick={resetAll}
-                      className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
-                    >
-                      Trocar evento
-                    </button>
+                    <button onClick={reset} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Tentar outra selfie</button>
+                    <button onClick={resetAll} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Trocar evento</button>
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                   {results.map((result) => {
                     const displayPath = result.watermark_path || result.storage_path;
-                    const url = supabase.storage
-                      .from("photos")
-                      .getPublicUrl(displayPath).data.publicUrl;
+                    const url = getPhotoUrl(displayPath);
 
                     return (
-                      <div
-                        key={result.photo_id}
-                        className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 transition-all"
-                      >
+                      <div key={result.photo_id} className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 transition-all">
                         <div className="aspect-[3/4] overflow-hidden relative">
-                          <img
-                            src={url}
-                            alt=""
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                          />
+                          <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                           <span className="absolute top-2 right-2 text-[10px] text-primary bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
                             {Math.round(result.similarity * 100)}% match
                           </span>
                         </div>
                         <div className="p-3">
-                          <p className="text-xs text-muted truncate mb-2">
-                            {result.event_title}
-                          </p>
+                          <p className="text-xs text-muted truncate mb-2">{result.event_title}</p>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold">
-                              {formatPrice(result.price_cents)}
-                            </span>
+                            <span className="text-sm font-semibold">{formatPrice(result.price_cents)}</span>
                             {isInCart(result.photo_id) ? (
                               <span className="flex items-center gap-1 text-[11px] text-primary bg-primary/10 px-2.5 py-1 rounded-full">
                                 <Check className="w-3 h-3" />
@@ -509,17 +423,15 @@ function BuscarContent() {
                               </span>
                             ) : (
                               <button
-                                onClick={() =>
-                                  addItem({
-                                    photo_id: result.photo_id,
-                                    event_id: result.event_id,
-                                    event_title: result.event_title,
-                                    photographer_name: result.photographer_name,
-                                    photographer_id: "",
-                                    price_cents: result.price_cents,
-                                    watermark_url: url,
-                                  })
-                                }
+                                onClick={() => addItem({
+                                  photo_id: result.photo_id,
+                                  event_id: result.event_id,
+                                  event_title: result.event_title,
+                                  photographer_name: result.photographer_name,
+                                  photographer_id: "",
+                                  price_cents: result.price_cents,
+                                  watermark_url: url,
+                                })}
                                 className="flex items-center gap-1 text-[11px] text-foreground bg-white/10 hover:bg-primary hover:text-white px-2.5 py-1 rounded-full transition-colors"
                               >
                                 <ShoppingCart className="w-3 h-3" />

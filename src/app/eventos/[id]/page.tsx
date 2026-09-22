@@ -20,6 +20,7 @@ import {
   User,
 } from "lucide-react";
 import { useCart, formatPrice } from "@/lib/cart";
+import { getPhotoUrl } from "@/lib/photos";
 
 interface Event {
   id: string;
@@ -265,9 +266,7 @@ export default function EventoPublicPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {photos.map((photo) => {
                   const displayPath = photo.watermark_path || photo.storage_path;
-                  const url = supabase.storage
-                    .from("photos")
-                    .getPublicUrl(displayPath).data.publicUrl;
+                  const url = getPhotoUrl(displayPath);
 
                   return (
                     <div
@@ -404,11 +403,7 @@ export default function EventoPublicPage() {
 
             {/* Image (watermarked) */}
             <img
-              src={
-                supabase.storage
-                  .from("photos")
-                  .getPublicUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path).data.publicUrl
-              }
+              src={getPhotoUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path)}
               alt=""
               className="max-h-[80vh] w-auto rounded-xl select-none pointer-events-none"
             />
@@ -433,9 +428,7 @@ export default function EventoPublicPage() {
                   <button
                     onClick={() => {
                       const photographerName = photographer?.business_name || photographer?.full_name || "";
-                      const photoUrl = supabase.storage
-                        .from("photos")
-                        .getPublicUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path).data.publicUrl;
+                      const photoUrl = getPhotoUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path);
                       addItem({
                         photo_id: selectedPhoto.id,
                         event_id: event.id,

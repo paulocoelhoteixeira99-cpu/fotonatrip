@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getAllEmbeddingsFromFile } from "@/lib/face-recognition";
-import { generateWatermark } from "@/lib/watermark";
+import { processPhoto } from "@/lib/face-recognition";
+import { getPhotoUrl } from "@/lib/photos";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -59,7 +59,6 @@ export default function EventoDetailPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
-  const [processingFaces, setProcessingFaces] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
@@ -99,81 +98,6 @@ export default function EventoDetailPage() {
     load();
   }, [id]);
 
-  async function processPhotoFaces(photoId: string, file: File) {
-    try {
-      setProcessingFaces(photoId);
-      console.log(`[FACE] Processing faces for photo ${photoId}...`);
-      const faces = await getAllEmbeddingsFromFile(file);
-      console.log(`[FACE] Detected ${faces.length} face(s)`);
-
-      for (const face of faces) {
-        const embeddingArray = Array.from(face.descriptor);
-        console.log(`[FACE] Embedding length: ${embeddingArray.length}, sample: [${embeddingArray.slice(0, 3).join(", ")}...]`);
-        const embedding = `[${embeddingArray.join(",")}]`;
-        const { error: insertError } = await supabase.from("face_embeddings").insert({
-          photo_id: photoId,
-          embedding,
-          bbox_x: face.box.x,
-          bbox_y: face.box.y,
-          bbox_w: face.box.width,
-          bbox_h: face.box.height,
-        });
-        if (insertError) {
-          console.error(`[FACE] Error saving embedding:`, insertError.message, insertError.details, insertError.hint);
-        } else {
-          console.log(`[FACE] Embedding saved successfully for photo ${photoId}`);
-        }
-      }
-
-      return faces.length;
-    } catch (err) {
-      console.error("[FACE] Face processing error:", err);
-      return 0;
-    } finally {
-      setProcessingFaces(null);
-    }
-  }
-
-  async function processPhotoFromUrl(photoId: string, storagePath: string) {
-    const url = supabase.storage.from("photos").getPublicUrl(storagePath).data.publicUrl;
-
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const file = new File([blob], "photo.jpg", { type: blob.type });
-
-    return processPhotoFaces(photoId, file);
-  }
-
-  const [reprocessing, setReprocessing] = useState(false);
-  const [reprocessStatus, setReprocessStatus] = useState("");
-
-  async function handleReprocessAll() {
-    setReprocessing(true);
-    setReprocessStatus("Carregando modelos de IA...");
-
-    let totalFaces = 0;
-    for (let i = 0; i < photos.length; i++) {
-      const photo = photos[i];
-      setReprocessStatus(`Processando foto ${i + 1} de ${photos.length}...`);
-
-      // Delete existing embeddings for this photo
-      await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
-
-      const faceCount = await processPhotoFromUrl(photo.id, photo.storage_path);
-      totalFaces += faceCount;
-
-      if (faceCount > 0) {
-        await supabase
-          .from("photos")
-          .update({ status: "ready", processed_at: new Date().toISOString() })
-          .eq("id", photo.id);
-      }
-    }
-
-    setReprocessStatus(`Concluido! ${totalFaces} rosto(s) detectado(s) em ${photos.length} fotos.`);
-    setReprocessing(false);
-  }
-
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0 || !event) return;
@@ -189,56 +113,45 @@ export default function EventoDetailPage() {
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      const fileId = crypto.randomUUID();
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/${event.id}/${fileId}.${ext}`;
-      const watermarkPath = `${user.id}/${event.id}/${fileId}_wm.jpg`;
 
-      // Upload original
-      const { error: uploadError } = await supabase.storage
-        .from("photos")
-        .upload(path, file);
+      // Process via DO server (upload + watermark + face detection)
+      const result = await processPhoto(file, user.id, event.id);
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        setUploadProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+      if (!result) {
+        console.error("Failed to process photo:", file.name);
+        setUploadProgress({ done: i + 1, total: fileList.length });
         continue;
       }
 
-      // Generate and upload watermarked version
-      try {
-        const watermarkBlob = await generateWatermark(file);
-        await supabase.storage
-          .from("photos")
-          .upload(watermarkPath, watermarkBlob, { contentType: "image/jpeg" });
-      } catch (err) {
-        console.error("Watermark error:", err);
-      }
-
+      // Save photo record to Supabase
       const { data: photoData } = await supabase
         .from("photos")
         .insert({
           event_id: event.id,
           photographer_id: user.id,
-          storage_path: path,
-          watermark_path: watermarkPath,
+          storage_path: result.original_path,
+          watermark_path: result.watermark_path,
           original_filename: file.name,
-          file_size: file.size,
-          status: "processing",
+          file_size: result.file_size,
+          status: "ready",
+          processed_at: new Date().toISOString(),
         })
         .select()
         .single();
 
-      if (photoData) {
-        // Process faces in the browser
-        const faceCount = await processPhotoFaces(photoData.id, file);
-        console.log(`Detected ${faceCount} face(s) in ${file.name}`);
-
-        // Mark as ready
-        await supabase
-          .from("photos")
-          .update({ status: "ready", processed_at: new Date().toISOString() })
-          .eq("id", photoData.id);
+      // Save face embeddings
+      if (photoData && result.embeddings.length > 0) {
+        for (const face of result.embeddings) {
+          const embedding = `[${face.embedding.join(",")}]`;
+          await supabase.from("face_embeddings").insert({
+            photo_id: photoData.id,
+            embedding,
+            bbox_x: face.bbox[0],
+            bbox_y: face.bbox[1],
+            bbox_w: face.bbox[2] - face.bbox[0],
+            bbox_h: face.bbox[3] - face.bbox[1],
+          });
+        }
       }
 
       setUploadProgress({ done: i + 1, total: fileList.length });
@@ -258,22 +171,13 @@ export default function EventoDetailPage() {
 
   async function handleSetCover(storagePath: string) {
     if (!event) return;
-    const url = supabase.storage.from("photos").getPublicUrl(storagePath).data.publicUrl;
+    const url = getPhotoUrl(storagePath);
     await supabase.from("events").update({ cover_url: url }).eq("id", event.id);
     setEvent({ ...event, cover_url: url });
   }
 
-  async function handleDeletePhoto(photoId: string, storagePath: string) {
-    // Find the photo to get watermark path
-    const photo = photos.find((p) => p.id === photoId);
-    const filesToRemove = [storagePath];
-    if (photo?.watermark_path) filesToRemove.push(photo.watermark_path);
-
-    // Delete face embeddings first (foreign key constraint)
+  async function handleDeletePhoto(photoId: string) {
     await supabase.from("face_embeddings").delete().eq("photo_id", photoId);
-    // Delete files from storage
-    await supabase.storage.from("photos").remove(filesToRemove);
-    // Delete photo record
     await supabase.from("photos").delete().eq("id", photoId);
     setPhotos((prev) => prev.filter((p) => p.id !== photoId));
   }
@@ -282,27 +186,75 @@ export default function EventoDetailPage() {
     if (!event) return;
     setDeleting(true);
 
-    // Fetch ALL photos for this event
     const { data: allPhotos } = await supabase
       .from("photos")
-      .select("id, storage_path, watermark_path")
+      .select("id")
       .eq("event_id", event.id);
 
     if (allPhotos && allPhotos.length > 0) {
-      // Delete each photo one by one (same logic as individual delete that works)
       for (const photo of allPhotos) {
         await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
-        const filesToRemove = [photo.storage_path];
-        if (photo.watermark_path) filesToRemove.push(photo.watermark_path);
-        await supabase.storage.from("photos").remove(filesToRemove);
         await supabase.from("photos").delete().eq("id", photo.id);
       }
     }
 
-    // Delete event
     await supabase.from("events").delete().eq("id", event.id);
-
     router.push("/dashboard/eventos");
+  }
+
+  const [reprocessing, setReprocessing] = useState(false);
+  const [reprocessStatus, setReprocessStatus] = useState("");
+
+  async function handleReprocessAll() {
+    setReprocessing(true);
+    setReprocessStatus("Reprocessando rostos via IA...");
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !event) return;
+
+    let totalFaces = 0;
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i];
+      setReprocessStatus(`Processando foto ${i + 1} de ${photos.length}...`);
+
+      // Delete existing embeddings
+      await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
+
+      // Download photo from CDN and re-extract embeddings
+      const photoUrl = getPhotoUrl(photo.storage_path);
+      const res = await fetch(photoUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "photo.jpg", { type: blob.type });
+
+      // Use the server to extract embeddings only
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+      const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const extractRes = await fetch(`${API_URL}/extract-embedding`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${API_KEY}` },
+        body: formData,
+      });
+
+      if (extractRes.ok) {
+        const data = await extractRes.json();
+        if (data.embedding) {
+          const embedding = `[${data.embedding.join(",")}]`;
+          await supabase.from("face_embeddings").insert({
+            photo_id: photo.id,
+            embedding,
+          });
+          totalFaces++;
+        }
+      }
+    }
+
+    setReprocessStatus(`Concluido! ${totalFaces} rosto(s) detectado(s) em ${photos.length} fotos.`);
+    setReprocessing(false);
   }
 
   if (loading) {
@@ -452,17 +404,9 @@ export default function EventoDetailPage() {
             onClick={async () => {
               if (!event) return;
               setSavingPrice(true);
-              const cents = Math.round(
-                parseFloat(priceInput.replace(",", ".")) * 100
-              );
-              if (isNaN(cents) || cents <= 0) {
-                setSavingPrice(false);
-                return;
-              }
-              await supabase
-                .from("events")
-                .update({ price_per_photo_cents: cents })
-                .eq("id", event.id);
+              const cents = Math.round(parseFloat(priceInput.replace(",", ".")) * 100);
+              if (isNaN(cents) || cents <= 0) { setSavingPrice(false); return; }
+              await supabase.from("events").update({ price_per_photo_cents: cents }).eq("id", event.id);
               setEvent({ ...event, price_per_photo_cents: cents });
               setSavingPrice(false);
             }}
@@ -499,23 +443,11 @@ export default function EventoDetailPage() {
             }}
             className="flex items-center gap-1.5 text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
           >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4 text-primary" />
-                Copiado!
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4" />
-                Copiar
-              </>
-            )}
+            {copied ? (<><Check className="w-4 h-4 text-primary" />Copiado!</>) : (<><Copy className="w-4 h-4" />Copiar</>)}
           </button>
           <button
             onClick={() => setShowQR(!showQR)}
-            className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
-              showQR ? "bg-primary/10 text-primary" : "bg-white/10 hover:bg-white/15"
-            }`}
+            className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${showQR ? "bg-primary/10 text-primary" : "bg-white/10 hover:bg-white/15"}`}
           >
             <QrCode className="w-4 h-4" />
             QR Code
@@ -558,7 +490,7 @@ export default function EventoDetailPage() {
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium flex items-center gap-2">
               <ScanFace className="w-4 h-4 text-primary animate-pulse" />
-              Enviando {Math.min(uploadProgress.done + 1, uploadProgress.total)} de {uploadProgress.total}...
+              Processando {Math.min(uploadProgress.done + 1, uploadProgress.total)} de {uploadProgress.total}...
             </span>
             <span className="text-sm text-primary font-semibold">
               {uploadProgress.total > 0 ? Math.round((uploadProgress.done / uploadProgress.total) * 100) : 0}%
@@ -571,17 +503,13 @@ export default function EventoDetailPage() {
             />
           </div>
           <p className="text-xs text-muted mt-2">
-            Upload + watermark + deteccao facial por IA
+            Upload + watermark + deteccao facial por IA (servidor)
           </p>
         </div>
       )}
       {reprocessStatus && (
         <div className="glass rounded-xl p-4 mb-6 flex items-center gap-3">
-          {reprocessing ? (
-            <ScanFace className="w-5 h-5 text-primary animate-pulse" />
-          ) : (
-            <ScanFace className="w-5 h-5 text-primary" />
-          )}
+          <ScanFace className={`w-5 h-5 text-primary ${reprocessing ? "animate-pulse" : ""}`} />
           <span className="text-sm text-muted">{reprocessStatus}</span>
         </div>
       )}
@@ -598,10 +526,8 @@ export default function EventoDetailPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {photos.map((photo) => {
-            const url = supabase.storage
-              .from("photos")
-              .getPublicUrl(photo.storage_path).data.publicUrl;
-            const isCover = event.cover_url === url;
+            const url = getPhotoUrl(photo.watermark_path || photo.storage_path);
+            const isCover = event.cover_url === url || event.cover_url === getPhotoUrl(photo.storage_path);
 
             return (
               <div
@@ -611,20 +537,13 @@ export default function EventoDetailPage() {
                   isCover ? "border-primary" : "border-border"
                 }`}
               >
-                <img
-                  src={url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                {/* Cover badge */}
+                <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
                 {isCover && (
                   <div className="absolute top-2 left-2 bg-primary rounded-full px-2.5 py-1 flex items-center gap-1">
                     <Star className="w-3 h-3 text-white fill-white" />
                     <span className="text-[10px] text-white font-medium">Capa</span>
                   </div>
                 )}
-                {/* Hover actions */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                   {!isCover && (
                     <button
@@ -636,7 +555,7 @@ export default function EventoDetailPage() {
                     </button>
                   )}
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id, photo.storage_path); }}
+                    onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); }}
                     className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-colors"
                     title="Excluir foto"
                   >
@@ -661,47 +580,29 @@ export default function EventoDetailPage() {
           className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center"
           onClick={() => setPreviewPhoto(null)}
         >
-          <div
-            className="relative max-w-5xl max-h-[90vh] mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setPreviewPhoto(null)}
-              className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors"
-            >
+          <div className="relative max-w-5xl max-h-[90vh] mx-4" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setPreviewPhoto(null)} className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors">
               <X className="w-6 h-6" />
             </button>
 
             <img
-              src={
-                supabase.storage
-                  .from("photos")
-                  .getPublicUrl(previewPhoto.storage_path).data.publicUrl
-              }
+              src={getPhotoUrl(previewPhoto.storage_path)}
               alt=""
               className="max-h-[80vh] w-auto rounded-xl"
             />
 
-            {/* Actions bar */}
             <div className="flex items-center justify-between mt-4">
-              <p className="text-white/50 text-sm">
-                {previewPhoto.original_filename}
-              </p>
+              <p className="text-white/50 text-sm">{previewPhoto.original_filename}</p>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    handleSetCover(previewPhoto.storage_path);
-                  }}
+                  onClick={() => handleSetCover(previewPhoto.storage_path)}
                   className="flex items-center gap-1.5 bg-primary/80 hover:bg-primary text-white px-4 py-2 rounded-lg text-sm transition-colors"
                 >
                   <Star className="w-4 h-4" />
                   Definir como capa
                 </button>
                 <button
-                  onClick={() => {
-                    handleDeletePhoto(previewPhoto.id, previewPhoto.storage_path);
-                    setPreviewPhoto(null);
-                  }}
+                  onClick={() => { handleDeletePhoto(previewPhoto.id); setPreviewPhoto(null); }}
                   className="flex items-center gap-1.5 bg-red-500/80 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -710,7 +611,6 @@ export default function EventoDetailPage() {
               </div>
             </div>
 
-            {/* Navigation */}
             {photos.findIndex((p) => p.id === previewPhoto.id) > 0 && (
               <button
                 onClick={() => {

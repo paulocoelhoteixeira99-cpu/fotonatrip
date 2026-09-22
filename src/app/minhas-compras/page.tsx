@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice } from "@/lib/cart";
+import { getPhotoUrl } from "@/lib/photos";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
@@ -75,16 +76,7 @@ export default function MinhasComprasPage() {
   async function handleDownload(item: OrderWithItems["items"][0]) {
     setDownloading(item.id);
 
-    // Get signed URL for original photo (not watermarked)
-    const { data, error } = await supabase.storage
-      .from("photos")
-      .createSignedUrl(item.photo.storage_path, 300); // 5 min expiry
-
-    if (error || !data?.signedUrl) {
-      alert("Erro ao gerar link de download. Tente novamente.");
-      setDownloading(null);
-      return;
-    }
+    const photoUrl = getPhotoUrl(item.photo.storage_path);
 
     // Track download
     await supabase
@@ -94,7 +86,7 @@ export default function MinhasComprasPage() {
 
     // Fetch as blob to force download (cross-origin URLs ignore a.download)
     try {
-      const res = await fetch(data.signedUrl);
+      const res = await fetch(photoUrl);
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -103,8 +95,7 @@ export default function MinhasComprasPage() {
       a.click();
       URL.revokeObjectURL(blobUrl);
     } catch {
-      // Fallback: open in new tab
-      window.open(data.signedUrl, "_blank");
+      window.open(photoUrl, "_blank");
     }
 
     setDownloading(null);
@@ -185,9 +176,7 @@ export default function MinhasComprasPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4">
                       {order.items.map((item) => {
                         const thumbUrl = item.photo?.watermark_path || item.photo?.storage_path;
-                        const url = thumbUrl
-                          ? supabase.storage.from("photos").getPublicUrl(thumbUrl).data.publicUrl
-                          : "";
+                        const url = thumbUrl ? getPhotoUrl(thumbUrl) : "";
 
                         return (
                           <div key={item.id} className="flex flex-col gap-2">

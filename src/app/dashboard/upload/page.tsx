@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { processPhoto } from "@/lib/face-recognition";
 import { useRouter } from "next/navigation";
 import {
   Upload,
@@ -11,7 +12,6 @@ import {
   XCircle,
   CalendarDays,
 } from "lucide-react";
-import { generateWatermark } from "@/lib/watermark";
 
 interface Event {
   id: string;
@@ -97,16 +97,11 @@ export default function UploadPage() {
       );
 
       const file = files[i].file;
-      const ext = file.name.split(".").pop();
-      const fileId = crypto.randomUUID();
-      const path = `${user.id}/${selectedEvent}/${fileId}.${ext}`;
-      const watermarkPath = `watermarks/${user.id}/${selectedEvent}/${fileId}.jpg`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("photos")
-        .upload(path, file);
+      // Process via DO server
+      const result = await processPhoto(file, user.id, selectedEvent);
 
-      if (uploadError) {
+      if (!result) {
         setFiles((prev) =>
           prev.map((f, idx) =>
             idx === i ? { ...f, status: "error" } : f
@@ -115,29 +110,32 @@ export default function UploadPage() {
         continue;
       }
 
-      // Generate and upload watermark
-      let finalWatermarkPath: string | null = null;
-      try {
-        const watermarkBlob = await generateWatermark(file);
-        const { error: wmError } = await supabase.storage
-          .from("photos")
-          .upload(watermarkPath, watermarkBlob, { contentType: "image/jpeg" });
-        if (!wmError) {
-          finalWatermarkPath = watermarkPath;
-        }
-      } catch (e) {
-        console.error("Watermark generation failed:", e);
-      }
-
-      const { error: dbError } = await supabase.from("photos").insert({
+      // Save photo record
+      const { data: photoData, error: dbError } = await supabase.from("photos").insert({
         event_id: selectedEvent,
         photographer_id: user.id,
-        storage_path: path,
-        watermark_path: finalWatermarkPath,
+        storage_path: result.original_path,
+        watermark_path: result.watermark_path,
         original_filename: file.name,
-        file_size: file.size,
+        file_size: result.file_size,
         status: "ready",
-      });
+        processed_at: new Date().toISOString(),
+      }).select().single();
+
+      // Save face embeddings
+      if (photoData && result.embeddings.length > 0) {
+        for (const face of result.embeddings) {
+          const embedding = `[${face.embedding.join(",")}]`;
+          await supabase.from("face_embeddings").insert({
+            photo_id: photoData.id,
+            embedding,
+            bbox_x: face.bbox[0],
+            bbox_y: face.bbox[1],
+            bbox_w: face.bbox[2] - face.bbox[0],
+            bbox_h: face.bbox[3] - face.bbox[1],
+          });
+        }
+      }
 
       setFiles((prev) =>
         prev.map((f, idx) =>
@@ -156,7 +154,7 @@ export default function UploadPage() {
     <div className="max-w-4xl">
       <h1 className="text-2xl font-bold mb-2">Upload de fotos</h1>
       <p className="text-muted text-sm mb-8">
-        Selecione o evento e envie suas fotos em lote.
+        Selecione o evento e envie suas fotos em lote. O processamento (watermark + deteccao facial) e feito automaticamente no servidor.
       </p>
 
       {/* Event selector */}
@@ -199,12 +197,8 @@ export default function UploadPage() {
       <label className="block glass rounded-2xl border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer mb-6">
         <div className="flex flex-col items-center justify-center py-16 px-6">
           <Upload className="w-10 h-10 text-muted mb-4" />
-          <p className="text-sm font-medium mb-1">
-            Clique para selecionar fotos
-          </p>
-          <p className="text-xs text-muted">
-            JPG, PNG ou WebP. Multiplas fotos de uma vez.
-          </p>
+          <p className="text-sm font-medium mb-1">Clique para selecionar fotos</p>
+          <p className="text-xs text-muted">JPG, PNG ou WebP. Multiplas fotos de uma vez.</p>
         </div>
         <input
           type="file"
@@ -221,7 +215,7 @@ export default function UploadPage() {
         <div className="mb-6 glass rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium">
-              Enviando {doneCount + 1} de {files.length}...
+              Processando {doneCount + 1} de {files.length}...
             </span>
             <span className="text-sm text-primary font-semibold">
               {files.length > 0 ? Math.round((doneCount / files.length) * 100) : 0}%
@@ -234,7 +228,7 @@ export default function UploadPage() {
             />
           </div>
           <p className="text-xs text-muted mt-2">
-            {doneCount} de {files.length} fotos enviadas
+            {doneCount} de {files.length} fotos processadas (upload + watermark + IA)
             {files.filter((f) => f.status === "error").length > 0 &&
               ` · ${files.filter((f) => f.status === "error").length} com erro`}
           </p>
@@ -269,11 +263,7 @@ export default function UploadPage() {
                 key={i}
                 className="relative aspect-square rounded-xl overflow-hidden bg-surface-light border border-border group"
               >
-                <img
-                  src={f.preview}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                <img src={f.preview} alt="" className="w-full h-full object-cover" />
                 {f.status === "uploading" && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -313,7 +303,7 @@ export default function UploadPage() {
           {uploading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Enviando...
+              Processando...
             </>
           ) : (
             <>
@@ -329,7 +319,7 @@ export default function UploadPage() {
           <CheckCircle2 className="w-10 h-10 text-primary mx-auto mb-3" />
           <p className="font-medium mb-1">Upload concluido!</p>
           <p className="text-sm text-muted mb-4">
-            Todas as fotos foram enviadas com sucesso.
+            Todas as fotos foram processadas com sucesso.
           </p>
           <button
             onClick={() => router.push(`/dashboard/eventos/${selectedEvent}`)}
