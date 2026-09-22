@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state"); // photographer user id
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.com.br";
   const configUrl = `${appUrl}/dashboard/configuracoes`;
 
   if (!code || !state) {

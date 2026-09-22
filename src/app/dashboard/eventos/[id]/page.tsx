@@ -486,7 +486,7 @@ export default function EventoDetailPage() {
         <div className="flex items-center gap-2">
           <input
             readOnly
-            value={`${typeof window !== "undefined" ? window.location.origin : "https://fotonatrip.vercel.app"}/eventos/${event.id}`}
+            value={`${typeof window !== "undefined" ? window.location.origin : "https://fotonatrip.com.br"}/eventos/${event.id}`}
             className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-muted focus:outline-none select-all"
             onClick={(e) => (e.target as HTMLInputElement).select()}
           />
@@ -525,7 +525,7 @@ export default function EventoDetailPage() {
           <div className="mt-4 flex flex-col items-center gap-3">
             <div className="bg-white p-4 rounded-xl">
               <QRCodeCanvas
-                value={`${typeof window !== "undefined" ? window.location.origin : "https://fotonatrip.vercel.app"}/eventos/${event.id}`}
+                value={`${typeof window !== "undefined" ? window.location.origin : "https://fotonatrip.com.br"}/eventos/${event.id}`}
                 size={200}
                 level="H"
                 includeMargin={false}

@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       payerEmail = orderData?.client_email;
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.vercel.app";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.com.br";
 
     const paymentBody: Record<string, unknown> = {
       transaction_amount: formData.transaction_amount,

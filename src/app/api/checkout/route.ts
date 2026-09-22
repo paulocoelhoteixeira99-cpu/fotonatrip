@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Create Mercado Pago preference
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.com.br";
 
   try {
     // Use photographer's token for marketplace, platform's token otherwise

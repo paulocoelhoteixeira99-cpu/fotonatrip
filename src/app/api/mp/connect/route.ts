@@ -7,7 +7,7 @@ export async function GET() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.com.br";
 
   if (!user) {
     return NextResponse.redirect(`${appUrl}/login`);
