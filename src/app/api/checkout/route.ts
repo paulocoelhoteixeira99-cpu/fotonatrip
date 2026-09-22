@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       notification_url: `${appUrl}/api/webhook/mercadopago`,
       statement_descriptor: "FOTONATRIP",
       payer: {
-        email: email || "comprador@fotonatrip.com",
+        email: email || "fotonatrip2026@gmail.com",
       },
     };
 

@@ -66,13 +66,13 @@ export default function Footer() {
             <h4 className="text-sm font-semibold mb-4">Contato</h4>
             <ul className="space-y-3">
               <li>
-                <a href="mailto:contato@fotonatrip.com" className="text-sm text-muted hover:text-foreground transition-colors">
-                  contato@fotonatrip.com
+                <a href="mailto:fotonatrip2026@gmail.com" className="text-sm text-muted hover:text-foreground transition-colors">
+                  fotonatrip2026@gmail.com
                 </a>
               </li>
               <li>
-                <a href="https://instagram.com/fotonatrip" target="_blank" rel="noopener noreferrer" className="text-sm text-muted hover:text-foreground transition-colors">
-                  Instagram
+                <a href="https://instagram.com/fotonatrip_oficial" target="_blank" rel="noopener noreferrer" className="text-sm text-muted hover:text-foreground transition-colors">
+                  @fotonatrip_oficial
                 </a>
               </li>
             </ul>
