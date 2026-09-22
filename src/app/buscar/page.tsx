@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getEmbeddingFromFile } from "@/lib/face-recognition";
 import {
@@ -9,13 +9,35 @@ import {
   ArrowLeft,
   ImageIcon,
   Loader2,
-  MapPin,
   ShoppingCart,
   Check,
+  CalendarDays,
+  MapPin,
+  Search,
 } from "lucide-react";
 import { useCart, formatPrice } from "@/lib/cart";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
+
+export default function BuscarPage() {
+  return (
+    <Suspense>
+      <BuscarContent />
+    </Suspense>
+  );
+}
+
+interface EventOption {
+  id: string;
+  title: string;
+  location: string | null;
+  city: string | null;
+  state: string | null;
+  event_date: string | null;
+  photo_count: number;
+  cover_url: string | null;
+}
 
 interface SearchResult {
   photo_id: string;
@@ -28,7 +50,17 @@ interface SearchResult {
   price_cents: number;
 }
 
-export default function BuscarPage() {
+function BuscarContent() {
+  const searchParams = useSearchParams();
+  const eventoParam = searchParams.get("evento");
+
+  // Event selection
+  const [events, setEvents] = useState<EventOption[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [eventSearch, setEventSearch] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(null);
+
+  // Selfie + search
   const [selfie, setSelfie] = useState<string | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [searching, setSearching] = useState(false);
@@ -39,6 +71,40 @@ export default function BuscarPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addItem, isInCart } = useCart();
   const supabase = createClient();
+
+  // Load events on mount
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  async function loadEvents() {
+    setLoadingEvents(true);
+    const { data } = await supabase
+      .from("events")
+      .select("id, title, location, city, state, event_date, photo_count, cover_url")
+      .eq("is_active", true)
+      .order("event_date", { ascending: false, nullsFirst: false });
+
+    const eventList = data || [];
+    setEvents(eventList);
+
+    // If evento param is in URL, auto-select it
+    if (eventoParam) {
+      const found = eventList.find((e) => e.id === eventoParam);
+      if (found) setSelectedEvent(found);
+    }
+
+    setLoadingEvents(false);
+  }
+
+  const filteredEvents = eventSearch
+    ? events.filter(
+        (e) =>
+          e.title.toLowerCase().includes(eventSearch.toLowerCase()) ||
+          e.location?.toLowerCase().includes(eventSearch.toLowerCase()) ||
+          e.city?.toLowerCase().includes(eventSearch.toLowerCase())
+      )
+    : events;
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -51,12 +117,11 @@ export default function BuscarPage() {
   }
 
   async function handleSearch() {
-    if (!selfieFile) return;
+    if (!selfieFile || !selectedEvent) return;
     setSearching(true);
     setLoadingModels(true);
     setNoFace(false);
 
-    // Get face embedding from selfie
     const embedding = await getEmbeddingFromFile(selfieFile);
     setLoadingModels(false);
 
@@ -66,12 +131,12 @@ export default function BuscarPage() {
       return;
     }
 
-    // Search in Supabase via pgvector
     const embeddingStr = `[${Array.from(embedding).join(",")}]`;
     const { data, error } = await supabase.rpc("search_faces_by_embedding", {
       query_embedding: embeddingStr,
       similarity_threshold: 0.91,
       max_results: 50,
+      filter_event_id: selectedEvent.id,
     });
 
     if (error) {
@@ -93,6 +158,11 @@ export default function BuscarPage() {
     setNoFace(false);
   }
 
+  function resetAll() {
+    reset();
+    setSelectedEvent(null);
+  }
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -103,7 +173,7 @@ export default function BuscarPage() {
 
         <div className="relative">
           <Link
-            href="/"
+            href={selectedEvent && !searched ? `/eventos/${selectedEvent.id}` : "/"}
             className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-8"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -118,35 +188,170 @@ export default function BuscarPage() {
               Encontre suas fotos
             </h1>
             <p className="text-muted max-w-md mx-auto">
-              Envie uma selfie e nossa IA vai encontrar todas as fotos
-              profissionais onde voce aparece.
+              {!selectedEvent
+                ? "Selecione o evento para buscar suas fotos."
+                : !selfie
+                ? "Envie uma selfie e nossa IA vai encontrar suas fotos neste evento."
+                : ""}
             </p>
           </div>
 
-          {!selfie ? (
-            /* Upload area */
-            <label className="block glass rounded-3xl border-2 border-dashed border-border hover:border-primary/50 transition-all cursor-pointer group max-w-lg mx-auto">
-              <div className="flex flex-col items-center justify-center py-20 px-6">
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Upload className="w-8 h-8 text-primary" />
-                </div>
-                <p className="font-medium mb-2">Envie uma selfie</p>
-                <p className="text-sm text-muted">
-                  Tire uma foto ou escolha da galeria
-                </p>
+          {/* Step indicator */}
+          <div className="flex items-center justify-center gap-3 mb-10">
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              !selectedEvent ? "bg-primary text-white" : "bg-primary/10 text-primary"
+            }`}>
+              <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">1</span>
+              Evento
+            </div>
+            <div className="w-8 h-px bg-border" />
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              selectedEvent && !searched ? "bg-primary text-white" : selectedEvent ? "bg-primary/10 text-primary" : "bg-white/5 text-muted"
+            }`}>
+              <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">2</span>
+              Selfie
+            </div>
+            <div className="w-8 h-px bg-border" />
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              searched ? "bg-primary text-white" : "bg-white/5 text-muted"
+            }`}>
+              <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">3</span>
+              Fotos
+            </div>
+          </div>
+
+          {/* STEP 1: Event Selection */}
+          {!selectedEvent ? (
+            <div>
+              {/* Search events */}
+              <div className="relative max-w-lg mx-auto mb-8">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                <input
+                  type="text"
+                  value={eventSearch}
+                  onChange={(e) => setEventSearch(e.target.value)}
+                  placeholder="Buscar por evento, local ou cidade..."
+                  className="w-full bg-white/5 border border-border rounded-2xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
+                />
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="user"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-            </label>
+
+              {loadingEvents ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : filteredEvents.length === 0 ? (
+                <div className="text-center py-16">
+                  <CalendarDays className="w-12 h-12 text-muted/30 mx-auto mb-4" />
+                  <p className="text-muted">Nenhum evento encontrado.</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                  {filteredEvents.map((event) => (
+                    <button
+                      key={event.id}
+                      onClick={() => setSelectedEvent(event)}
+                      className="group glass rounded-2xl overflow-hidden text-left hover:-translate-y-1 hover:border-primary/50 transition-all duration-300"
+                    >
+                      {/* Cover */}
+                      <div className="aspect-[16/9] bg-surface-light relative overflow-hidden">
+                        {event.cover_url ? (
+                          <img
+                            src={event.cover_url}
+                            alt={event.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-transparent">
+                            <ImageIcon className="w-10 h-10 text-muted/20" />
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
+                          <ImageIcon className="w-3 h-3 text-white" />
+                          <span className="text-xs text-white font-medium">
+                            {event.photo_count}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Info */}
+                      <div className="p-4">
+                        <h3 className="font-semibold mb-1.5 group-hover:text-primary transition-colors">
+                          {event.title}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+                          {(event.location || event.city) && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5" />
+                              {event.location || event.city}
+                              {event.state && ` - ${event.state}`}
+                            </span>
+                          )}
+                          {event.event_date && (
+                            <span className="flex items-center gap-1">
+                              <CalendarDays className="w-3.5 h-3.5" />
+                              {new Date(
+                                event.event_date + "T00:00:00"
+                              ).toLocaleDateString("pt-BR")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : !selfie ? (
+            /* STEP 2: Selfie Upload */
+            <div>
+              {/* Selected event badge */}
+              <div className="flex items-center justify-center gap-2 mb-8">
+                <div className="glass rounded-full px-4 py-2 flex items-center gap-2 text-sm">
+                  <CalendarDays className="w-4 h-4 text-primary" />
+                  <span className="text-muted">Evento:</span>
+                  <span className="font-medium">{selectedEvent.title}</span>
+                  <button
+                    onClick={resetAll}
+                    className="ml-1 text-muted hover:text-foreground transition-colors text-xs"
+                    title="Trocar evento"
+                  >
+                    (trocar)
+                  </button>
+                </div>
+              </div>
+
+              <label className="block glass rounded-3xl border-2 border-dashed border-border hover:border-primary/50 transition-all cursor-pointer group max-w-lg mx-auto">
+                <div className="flex flex-col items-center justify-center py-20 px-6">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Upload className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="font-medium mb-2">Envie uma selfie</p>
+                  <p className="text-sm text-muted">
+                    Tire uma foto ou escolha da galeria
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </label>
+            </div>
           ) : !searched ? (
             /* Selfie preview + search */
             <div className="text-center">
+              {/* Selected event badge */}
+              <div className="flex items-center justify-center gap-2 mb-8">
+                <div className="glass rounded-full px-4 py-2 flex items-center gap-2 text-sm">
+                  <CalendarDays className="w-4 h-4 text-primary" />
+                  <span className="text-muted">Evento:</span>
+                  <span className="font-medium">{selectedEvent.title}</span>
+                </div>
+              </div>
+
               <div className="w-48 h-48 rounded-full overflow-hidden mx-auto mb-8 border-4 border-primary/20 glow-green">
                 <img
                   src={selfie}
@@ -197,13 +402,22 @@ export default function BuscarPage() {
                 <p className="text-sm text-muted mt-6 animate-pulse">
                   {loadingModels
                     ? "Carregando modelos de reconhecimento facial (primeira vez pode demorar)..."
-                    : "Comparando seu rosto com as fotos da plataforma..."}
+                    : `Comparando seu rosto com as fotos do evento "${selectedEvent.title}"...`}
                 </p>
               )}
             </div>
           ) : (
-            /* Results */
+            /* STEP 3: Results */
             <div>
+              {/* Selected event badge */}
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <div className="glass rounded-full px-4 py-2 flex items-center gap-2 text-sm">
+                  <CalendarDays className="w-4 h-4 text-primary" />
+                  <span className="text-muted">Evento:</span>
+                  <span className="font-medium">{selectedEvent.title}</span>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-semibold">
@@ -217,28 +431,44 @@ export default function BuscarPage() {
                     </p>
                   )}
                 </div>
-                <button
-                  onClick={reset}
-                  className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
-                >
-                  Nova busca
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={reset}
+                    className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
+                  >
+                    Nova selfie
+                  </button>
+                  <span className="text-border">|</span>
+                  <button
+                    onClick={resetAll}
+                    className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
+                  >
+                    Outro evento
+                  </button>
+                </div>
               </div>
 
               {results.length === 0 ? (
                 <div className="glass rounded-3xl p-10 text-center">
                   <ImageIcon className="w-12 h-12 text-muted/30 mx-auto mb-4" />
                   <p className="text-muted text-sm mb-6 max-w-sm mx-auto">
-                    Ainda nao encontramos fotos suas. Isso pode acontecer se
-                    nenhum fotografo parceiro registrou o evento que voce
-                    participou.
+                    Nao encontramos fotos suas neste evento. Tente com outra selfie
+                    ou verifique se selecionou o evento correto.
                   </p>
-                  <button
-                    onClick={reset}
-                    className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
-                  >
-                    Tentar novamente
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={reset}
+                      className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
+                    >
+                      Tentar outra selfie
+                    </button>
+                    <button
+                      onClick={resetAll}
+                      className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
+                    >
+                      Trocar evento
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">

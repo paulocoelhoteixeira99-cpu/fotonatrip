@@ -246,7 +246,7 @@ export default function EventoPublicPage() {
             </div>
 
             <Link
-              href="/buscar"
+              href={`/buscar?evento=${event.id}`}
               className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl font-medium transition-colors glow-green hover:scale-105 whitespace-nowrap w-fit"
             >
               <ScanFace className="w-5 h-5" />
