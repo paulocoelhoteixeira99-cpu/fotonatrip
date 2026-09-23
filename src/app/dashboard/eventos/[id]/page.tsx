@@ -65,6 +65,7 @@ export default function EventoDetailPage() {
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
   const [priceInput, setPriceInput] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
+  const [priceSaved, setPriceSaved] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const supabase = createClient();
@@ -441,24 +442,31 @@ export default function EventoDetailPage() {
           <input
             type="text"
             value={priceInput}
-            onChange={(e) => setPriceInput(e.target.value)}
+            onChange={(e) => { setPriceInput(e.target.value); setPriceSaved(false); }}
             placeholder="15,00"
             className="w-24 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
           />
           <button
             onClick={async () => {
-              if (!event) return;
+              if (!event || priceSaved) return;
               setSavingPrice(true);
               const cents = Math.round(parseFloat(priceInput.replace(",", ".")) * 100);
               if (isNaN(cents) || cents <= 0) { setSavingPrice(false); return; }
               await supabase.from("events").update({ price_per_photo_cents: cents }).eq("id", event.id);
               setEvent({ ...event, price_per_photo_cents: cents });
               setSavingPrice(false);
+              setPriceSaved(true);
             }}
             disabled={savingPrice}
-            className="text-sm bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+            className={`text-sm px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+              priceSaved
+                ? "bg-primary/15 text-primary border border-primary/30 cursor-default"
+                : "bg-primary hover:bg-primary-dark text-white disabled:opacity-50"
+            }`}
           >
-            {savingPrice ? "Salvando..." : "Salvar"}
+            {savingPrice ? "Salvando..." : priceSaved ? (
+              <><Check className="w-3.5 h-3.5" />Salvo</>
+            ) : "Salvar"}
           </button>
         </div>
         <p className="text-xs text-muted w-full">
@@ -579,8 +587,8 @@ export default function EventoDetailPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {photos.map((photo) => {
-            const url = getPhotoUrl(photo.watermark_path || photo.storage_path);
-            const isCover = event.cover_url === url || event.cover_url === getPhotoUrl(photo.storage_path);
+            const url = getPhotoUrl(photo.storage_path);
+            const isCover = event.cover_url === url;
 
             return (
               <div

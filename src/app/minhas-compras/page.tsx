@@ -76,17 +76,9 @@ export default function MinhasComprasPage() {
   async function handleDownload(item: OrderWithItems["items"][0]) {
     setDownloading(item.id);
 
-    const photoUrl = getPhotoUrl(item.photo.storage_path);
-
-    // Track download
-    await supabase
-      .from("order_items")
-      .update({ downloaded_at: new Date().toISOString() })
-      .eq("id", item.id);
-
-    // Fetch as blob to force download (cross-origin URLs ignore a.download)
     try {
-      const res = await fetch(photoUrl);
+      const res = await fetch(`/api/download?photo_id=${item.photo_id}`);
+      if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -95,6 +87,8 @@ export default function MinhasComprasPage() {
       a.click();
       URL.revokeObjectURL(blobUrl);
     } catch {
+      // Fallback: open CDN URL directly
+      const photoUrl = getPhotoUrl(item.photo.storage_path);
       window.open(photoUrl, "_blank");
     }
 
