@@ -12,7 +12,6 @@
     "@mercadopago/sdk-react": "^1.0.7",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
-    "face-api.js": "^0.22.2",
     "framer-motion": "^13.4.0",
     "lucide-react": "^1.46.0",
     "mercadopago": "^3.6.1",

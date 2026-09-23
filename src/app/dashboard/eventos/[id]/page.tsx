@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { processPhoto } from "@/lib/face-recognition";
-import { getPhotoUrl } from "@/lib/photos";
+import { getPhotoUrl, deletePhotoFiles } from "@/lib/photos";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -206,8 +206,14 @@ export default function EventoDetailPage() {
   }
 
   async function handleDeletePhoto(photoId: string) {
+    const photo = photos.find((p) => p.id === photoId);
     await supabase.from("face_embeddings").delete().eq("photo_id", photoId);
     await supabase.from("photos").delete().eq("id", photoId);
+    if (photo) {
+      const paths = [photo.storage_path];
+      if (photo.watermark_path) paths.push(photo.watermark_path);
+      deletePhotoFiles(paths);
+    }
     setPhotos((prev) => prev.filter((p) => p.id !== photoId));
   }
 
@@ -217,14 +223,24 @@ export default function EventoDetailPage() {
 
     const { data: allPhotos } = await supabase
       .from("photos")
-      .select("id")
+      .select("id, storage_path, watermark_path")
       .eq("event_id", event.id);
 
     if (allPhotos && allPhotos.length > 0) {
+      // Collect all file paths to delete from DO Spaces
+      const paths: string[] = [];
+      for (const photo of allPhotos) {
+        paths.push(photo.storage_path);
+        if (photo.watermark_path) paths.push(photo.watermark_path);
+      }
+
       for (const photo of allPhotos) {
         await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
         await supabase.from("photos").delete().eq("id", photo.id);
       }
+
+      // Delete files from DO Spaces
+      deletePhotoFiles(paths);
     }
 
     await supabase.from("events").delete().eq("id", event.id);
