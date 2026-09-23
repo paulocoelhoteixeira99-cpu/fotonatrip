@@ -4,13 +4,14 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2, User, CameraIcon, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, User, CameraIcon, CheckCircle, Phone, Info } from "lucide-react";
 
 type Role = "client" | "photographer";
 
 export default function CadastroPage() {
   const [role, setRole] = useState<Role>("client");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -38,6 +39,7 @@ export default function CadastroPage() {
         data: {
           full_name: fullName,
           role,
+          ...(role === "photographer" && phone ? { phone } : {}),
         },
       },
     });
@@ -130,6 +132,17 @@ export default function CadastroPage() {
             </button>
           </div>
 
+          {role === "photographer" && (
+            <div className="flex items-start gap-3 bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6">
+              <Info className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-muted">
+                Os eventos e fotos sao mantidos por <strong className="text-foreground">3 meses</strong> apos a criacao.
+                Depois desse periodo, fotos nao compradas sao removidas automaticamente para liberar espaco.
+                Fotos ja compradas ficam disponiveis para sempre no cadastro do cliente.
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSignup} className="space-y-5">
             <div>
               <label className="text-sm text-muted mb-2 block">Nome completo</label>
@@ -142,6 +155,23 @@ export default function CadastroPage() {
                 className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
               />
             </div>
+
+            {role === "photographer" && (
+              <div>
+                <label className="text-sm text-muted mb-2 block flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" />
+                  Telefone / WhatsApp
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(11) 99999-9999"
+                  required
+                  className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-sm text-muted mb-2 block">Email</label>
