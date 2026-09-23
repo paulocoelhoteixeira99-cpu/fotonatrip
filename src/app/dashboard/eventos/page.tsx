@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { Plus, CalendarDays, Search } from "lucide-react";
+import { Plus, CalendarDays, Search, CalendarClock } from "lucide-react";
 
 interface Event {
   id: string;
@@ -12,7 +12,8 @@ interface Event {
   location: string | null;
   event_date: string | null;
   photo_count: number;
-  is_active: boolean;
+  status: string;
+  scheduled_at: string | null;
   created_at: string;
 }
 
@@ -45,6 +46,12 @@ export default function EventosPage() {
   const filtered = events.filter((e) =>
     e.title.toLowerCase().includes(search.toLowerCase())
   );
+
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    active: { label: "Ativo", className: "bg-primary/10 text-primary" },
+    inactive: { label: "Inativo", className: "bg-muted/10 text-muted" },
+    scheduled: { label: "Agendado", className: "bg-yellow-500/10 text-yellow-400" },
+  };
 
   return (
     <div>
@@ -102,42 +109,47 @@ export default function EventosPage() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((event) => (
-            <Link
-              key={event.id}
-              href={`/dashboard/eventos/${event.id}`}
-              className="glass rounded-2xl p-6 hover:bg-white/5 transition-all group"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <CalendarDays className="w-5 h-5 text-primary" />
+          {filtered.map((event) => {
+            const cfg = statusConfig[event.status] || statusConfig.inactive;
+            return (
+              <Link
+                key={event.id}
+                href={`/dashboard/eventos/${event.id}`}
+                className="glass rounded-2xl p-6 hover:bg-white/5 transition-all group"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <CalendarDays className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className={`text-xs px-3 py-1 rounded-full ${cfg.className}`}>
+                    {cfg.label}
+                  </span>
                 </div>
-                <span
-                  className={`text-xs px-3 py-1 rounded-full ${
-                    event.is_active
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted/10 text-muted"
-                  }`}
-                >
-                  {event.is_active ? "Ativo" : "Inativo"}
-                </span>
-              </div>
-              <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
-                {event.title}
-              </h3>
-              {event.location && (
-                <p className="text-xs text-muted mb-3">{event.location}</p>
-              )}
-              <div className="flex items-center gap-4 text-xs text-muted">
-                <span>
-                  {event.event_date
-                    ? new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")
-                    : "Sem data"}
-                </span>
-                <span>{event.photo_count} fotos</span>
-              </div>
-            </Link>
-          ))}
+                <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                  {event.title}
+                </h3>
+                {event.location && (
+                  <p className="text-xs text-muted mb-3">{event.location}</p>
+                )}
+                <div className="flex items-center gap-4 text-xs text-muted">
+                  <span>
+                    {event.event_date
+                      ? new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")
+                      : "Sem data"}
+                  </span>
+                  <span>{event.photo_count} fotos</span>
+                </div>
+                {event.status === "scheduled" && event.scheduled_at && (
+                  <div className="flex items-center gap-1.5 mt-2 text-xs text-yellow-400">
+                    <CalendarClock className="w-3.5 h-3.5" />
+                    Ativa em {new Date(event.scheduled_at).toLocaleDateString("pt-BR", {
+                      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                    })}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

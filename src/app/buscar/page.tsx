@@ -15,8 +15,9 @@ import {
   CalendarDays,
   MapPin,
   Search,
+  Package,
 } from "lucide-react";
-import { useCart, formatPrice } from "@/lib/cart";
+import { useCart, formatPrice, type CartItem } from "@/lib/cart";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
@@ -49,6 +50,7 @@ interface SearchResult {
   event_title: string;
   photographer_name: string;
   price_cents: number;
+  package_price_cents: number | null;
 }
 
 function BuscarContent() {
@@ -68,7 +70,7 @@ function BuscarContent() {
   const [noFace, setNoFace] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addItem, isInCart } = useCart();
+  const { addItem, addPackage, isInCart, isPackageInCart } = useCart();
   const supabase = createClient();
 
   useEffect(() => {
@@ -80,7 +82,7 @@ function BuscarContent() {
     const { data } = await supabase
       .from("events")
       .select("id, title, location, city, state, event_date, photo_count, cover_url")
-      .eq("is_active", true)
+      .eq("status", "active")
       .order("event_date", { ascending: false, nullsFirst: false });
 
     const eventList = data || [];
@@ -399,6 +401,57 @@ function BuscarContent() {
                   </div>
                 </div>
               ) : (
+                <>
+                {/* Package banner */}
+                {results[0]?.package_price_cents && selectedEvent && (
+                  <div className="glass rounded-2xl p-5 mb-6 border border-primary/20">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Package className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">
+                            Pacote com todas as {results.length} fotos
+                          </p>
+                          <p className="text-xs text-muted">
+                            De {formatPrice(results.reduce((s, r) => s + r.price_cents, 0))} por apenas{" "}
+                            <span className="text-primary font-semibold">{formatPrice(results[0].package_price_cents!)}</span>
+                          </p>
+                        </div>
+                      </div>
+                      {isPackageInCart(selectedEvent.id) ? (
+                        <span className="flex items-center justify-center gap-2 bg-primary/10 text-primary px-5 py-2.5 rounded-xl text-sm font-medium">
+                          <Check className="w-4 h-4" />
+                          Pacote no carrinho
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            const firstUrl = getPhotoUrl(results[0].watermark_path || results[0].storage_path);
+                            addPackage({
+                              photo_id: `pkg_${selectedEvent.id}`,
+                              event_id: selectedEvent.id,
+                              event_title: selectedEvent.title,
+                              photographer_name: results[0].photographer_name,
+                              photographer_id: "",
+                              price_cents: results[0].package_price_cents!,
+                              watermark_url: firstUrl,
+                              is_package: true,
+                              package_photo_ids: results.map((r) => r.photo_id),
+                              package_photo_count: results.length,
+                            });
+                          }}
+                          className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors glow-green whitespace-nowrap"
+                        >
+                          <Package className="w-4 h-4" />
+                          Comprar pacote
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                   {results.map((result) => {
                     const displayPath = result.watermark_path || result.storage_path;
@@ -444,6 +497,7 @@ function BuscarContent() {
                     );
                   })}
                 </div>
+                </>
               )}
             </div>
           )}

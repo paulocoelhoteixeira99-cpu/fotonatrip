@@ -10,16 +10,22 @@ export interface CartItem {
   photographer_id: string;
   price_cents: number;
   watermark_url: string;
+  is_package?: boolean;
+  package_photo_ids?: string[];
+  package_photo_count?: number;
 }
 
 interface CartContextType {
   items: CartItem[];
   addItem: (item: CartItem) => void;
+  addPackage: (pkg: CartItem) => void;
   removeItem: (photo_id: string) => void;
   clearCart: () => void;
   isInCart: (photo_id: string) => boolean;
+  isPackageInCart: (event_id: string) => boolean;
   totalCents: number;
   count: number;
+  photoCount: number;
   hydrated: boolean;
 }
 
@@ -52,7 +58,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback((item: CartItem) => {
     setItems((prev) => {
       if (prev.some((i) => i.photo_id === item.photo_id)) return prev;
+      // Don't add individual if package for same event exists
+      if (prev.some((i) => i.is_package && i.event_id === item.event_id)) return prev;
       return [...prev, item];
+    });
+  }, []);
+
+  const addPackage = useCallback((pkg: CartItem) => {
+    setItems((prev) => {
+      // Remove individual photos from same event
+      const filtered = prev.filter((i) => i.event_id !== pkg.event_id);
+      return [...filtered, { ...pkg, is_package: true }];
     });
   }, []);
 
@@ -65,16 +81,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isInCart = useCallback(
-    (photo_id: string) => items.some((i) => i.photo_id === photo_id),
+    (photo_id: string) => items.some((i) =>
+      i.photo_id === photo_id ||
+      (i.is_package && i.package_photo_ids?.includes(photo_id))
+    ),
+    [items]
+  );
+
+  const isPackageInCart = useCallback(
+    (event_id: string) => items.some((i) => i.is_package && i.event_id === event_id),
     [items]
   );
 
   const totalCents = items.reduce((sum, item) => sum + item.price_cents, 0);
   const count = items.length;
+  const photoCount = items.reduce((sum, item) =>
+    sum + (item.is_package ? (item.package_photo_count || 0) : 1), 0
+  );
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, clearCart, isInCart, totalCents, count, hydrated }}
+      value={{ items, addItem, addPackage, removeItem, clearCart, isInCart, isPackageInCart, totalCents, count, photoCount, hydrated }}
     >
       {children}
     </CartContext.Provider>

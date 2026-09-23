@@ -12,20 +12,28 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { items } = body as {
-    items: { photo_id: string; event_id: string; photographer_id: string }[];
+  const { items, packages } = body as {
+    items?: { photo_id: string; event_id: string; photographer_id: string }[];
+    packages?: { event_id: string; photo_ids: string[]; photographer_id: string }[];
   };
 
-  if (!items?.length) {
+  const hasItems = items && items.length > 0;
+  const hasPackages = packages && packages.length > 0;
+
+  if (!hasItems && !hasPackages) {
     return NextResponse.json({ error: "Carrinho vazio" }, { status: 400 });
   }
 
+  // Collect all photo IDs (individual + package)
+  const individualPhotoIds = items?.map((i) => i.photo_id) || [];
+  const packagePhotoIds = packages?.flatMap((p) => p.photo_ids) || [];
+  const allPhotoIds = [...individualPhotoIds, ...packagePhotoIds];
+
   // Fetch photos with real prices from DB
-  const photoIds = items.map((i) => i.photo_id);
   const { data: photos, error: photosError } = await supabase
     .from("photos")
     .select("id, price_cents, event_id, photographer_id, watermark_path, storage_path")
-    .in("id", photoIds)
+    .in("id", allPhotoIds)
     .eq("status", "ready");
 
   if (photosError || !photos?.length) {
@@ -33,7 +41,50 @@ export async function POST(req: NextRequest) {
   }
 
   // Calculate totals
-  const totalCents = photos.reduce((sum, p) => sum + p.price_cents, 0);
+  // Individual photos: sum of their prices
+  const individualPhotos = photos.filter((p) => individualPhotoIds.includes(p.id));
+  let totalCents = individualPhotos.reduce((sum, p) => sum + p.price_cents, 0);
+
+  // Packages: use event's package_price_cents
+  const mpItems: { id: string; title: string; quantity: number; unit_price: number; currency_id: string }[] = [];
+
+  for (const photo of individualPhotos) {
+    mpItems.push({
+      id: photo.id,
+      title: "Foto profissional - fotonatrip",
+      quantity: 1,
+      unit_price: photo.price_cents / 100,
+      currency_id: "BRL",
+    });
+  }
+
+  const packageEventIds = packages?.map((p) => p.event_id) || [];
+  let packageEvents: { id: string; package_price_cents: number; title: string }[] = [];
+
+  if (packageEventIds.length > 0) {
+    const { data: events } = await supabase
+      .from("events")
+      .select("id, package_price_cents, title")
+      .in("id", packageEventIds);
+    packageEvents = events || [];
+  }
+
+  for (const pkg of packages || []) {
+    const eventData = packageEvents.find((e) => e.id === pkg.event_id);
+    if (!eventData?.package_price_cents) continue;
+
+    totalCents += eventData.package_price_cents;
+    const pkgPhotoCount = pkg.photo_ids.length;
+
+    mpItems.push({
+      id: `pkg_${pkg.event_id}`,
+      title: `Pacote ${pkgPhotoCount} fotos - ${eventData.title}`,
+      quantity: 1,
+      unit_price: eventData.package_price_cents / 100,
+      currency_id: "BRL",
+    });
+  }
+
   const platformFeeCents = Math.round(totalCents * 0.07); // 7% commission
 
   // Get user email
@@ -75,13 +126,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erro ao criar pedido" }, { status: 500 });
   }
 
-  // Create order items
-  const orderItems = photos.map((photo) => ({
-    order_id: order.id,
-    photo_id: photo.id,
-    photographer_id: photo.photographer_id,
-    price_cents: photo.price_cents,
-  }));
+  // Create order items for ALL photos (individual + package)
+  const orderItems = photos.map((photo) => {
+    // For package photos, distribute package price evenly (for record keeping)
+    const pkg = packages?.find((p) => p.photo_ids.includes(photo.id));
+    let priceCents = photo.price_cents;
+    if (pkg) {
+      const eventData = packageEvents.find((e) => e.id === pkg.event_id);
+      if (eventData?.package_price_cents) {
+        priceCents = Math.round(eventData.package_price_cents / pkg.photo_ids.length);
+      }
+    }
+
+    return {
+      order_id: order.id,
+      photo_id: photo.id,
+      photographer_id: photo.photographer_id,
+      price_cents: priceCents,
+    };
+  });
 
   const { error: itemsError } = await supabase
     .from("order_items")
@@ -105,13 +168,7 @@ export async function POST(req: NextRequest) {
     const preference = new Preference(client);
 
     const preferenceBody: Record<string, unknown> = {
-      items: photos.map((photo) => ({
-        id: photo.id,
-        title: `Foto profissional - fotonatrip`,
-        quantity: 1,
-        unit_price: photo.price_cents / 100,
-        currency_id: "BRL",
-      })),
+      items: mpItems,
       back_urls: {
         success: `${appUrl}/checkout/sucesso?order=${order.id}`,
         failure: `${appUrl}/checkout/falha?order=${order.id}`,

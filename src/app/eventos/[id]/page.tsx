@@ -77,7 +77,7 @@ export default function EventoPublicPage() {
       .from("events")
       .select("*")
       .eq("id", id)
-      .eq("is_active", true)
+      .eq("status", "active")
       .single();
 
     if (data) {

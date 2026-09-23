@@ -25,6 +25,8 @@ import {
   Check,
   QrCode,
   Download,
+  CalendarClock,
+  Package,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -37,9 +39,11 @@ interface Event {
   state: string | null;
   event_date: string | null;
   photo_count: number;
-  is_active: boolean;
+  status: string;
+  scheduled_at: string | null;
   cover_url: string | null;
   price_per_photo_cents: number;
+  package_price_cents: number | null;
 }
 
 interface Photo {
@@ -64,8 +68,10 @@ export default function EventoDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
   const [priceInput, setPriceInput] = useState("");
+  const [packagePriceInput, setPackagePriceInput] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
   const [priceSaved, setPriceSaved] = useState(true);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const supabase = createClient();
@@ -86,6 +92,12 @@ export default function EventoDetailPage() {
 
       setEvent(eventData);
       setPriceInput((eventData.price_per_photo_cents / 100).toFixed(2).replace(".", ","));
+      if (eventData.package_price_cents) {
+        setPackagePriceInput((eventData.package_price_cents / 100).toFixed(2).replace(".", ","));
+      }
+      if (eventData.scheduled_at) {
+        setScheduledAt(eventData.scheduled_at.slice(0, 16));
+      }
 
       const { data: photosData } = await supabase
         .from("photos")
@@ -431,46 +443,133 @@ export default function EventoDetailPage() {
         </div>
       )}
 
-      {/* Price per photo */}
-      <div className="glass rounded-2xl p-5 mb-6 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 text-sm text-muted">
+      {/* Event status */}
+      <div className="glass rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 text-sm font-medium mb-3">
+          <CalendarClock className="w-4 h-4 text-primary" />
+          Status do evento
+        </div>
+        <div className="flex gap-2 mb-3">
+          {(["active", "inactive", "scheduled"] as const).map((s) => {
+            const labels = { active: "Ativo", inactive: "Inativo", scheduled: "Agendado" };
+            const isActive = event.status === s;
+            const colors = {
+              active: isActive ? "bg-primary text-white" : "glass hover:bg-white/10 text-muted",
+              inactive: isActive ? "bg-muted/30 text-foreground" : "glass hover:bg-white/10 text-muted",
+              scheduled: isActive ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" : "glass hover:bg-white/10 text-muted",
+            };
+            return (
+              <button
+                key={s}
+                onClick={async () => {
+                  const updates: Record<string, unknown> = { status: s };
+                  if (s !== "scheduled") updates.scheduled_at = null;
+                  await supabase.from("events").update(updates).eq("id", event.id);
+                  setEvent({ ...event, status: s, scheduled_at: s !== "scheduled" ? null : event.scheduled_at });
+                }}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors border border-transparent ${colors[s]}`}
+              >
+                {labels[s]}
+              </button>
+            );
+          })}
+        </div>
+        {event.status === "scheduled" && (
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={async (e) => {
+                setScheduledAt(e.target.value);
+                if (e.target.value) {
+                  const iso = new Date(e.target.value).toISOString();
+                  await supabase.from("events").update({ scheduled_at: iso }).eq("id", event.id);
+                  setEvent({ ...event, scheduled_at: iso });
+                }
+              }}
+              className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors [color-scheme:dark]"
+            />
+          </div>
+        )}
+        <p className="text-xs text-muted mt-2">
+          {event.status === "active" && "Evento visivel para clientes no site."}
+          {event.status === "inactive" && "Evento oculto. Clientes nao conseguem ver."}
+          {event.status === "scheduled" && "Evento sera ativado automaticamente na data definida."}
+        </p>
+      </div>
+
+      {/* Price per photo + Package */}
+      <div className="glass rounded-2xl p-5 mb-6 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium">
           <DollarSign className="w-4 h-4 text-primary" />
-          Preco por foto
+          Precos
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted">R$</span>
-          <input
-            type="text"
-            value={priceInput}
-            onChange={(e) => { setPriceInput(e.target.value); setPriceSaved(false); }}
-            placeholder="15,00"
-            className="w-24 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
-          />
-          <button
-            onClick={async () => {
-              if (!event || priceSaved) return;
-              setSavingPrice(true);
-              const cents = Math.round(parseFloat(priceInput.replace(",", ".")) * 100);
-              if (isNaN(cents) || cents <= 0) { setSavingPrice(false); return; }
-              await supabase.from("events").update({ price_per_photo_cents: cents }).eq("id", event.id);
-              setEvent({ ...event, price_per_photo_cents: cents });
-              setSavingPrice(false);
-              setPriceSaved(true);
-            }}
-            disabled={savingPrice}
-            className={`text-sm px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
-              priceSaved
-                ? "bg-primary/15 text-primary border border-primary/30 cursor-default"
-                : "bg-primary hover:bg-primary-dark text-white disabled:opacity-50"
-            }`}
-          >
-            {savingPrice ? "Salvando..." : priceSaved ? (
-              <><Check className="w-3.5 h-3.5" />Salvo</>
-            ) : "Salvar"}
-          </button>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            Preco por foto
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted">R$</span>
+            <input
+              type="text"
+              value={priceInput}
+              onChange={(e) => { setPriceInput(e.target.value); setPriceSaved(false); }}
+              placeholder="15,00"
+              className="w-24 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
+            />
+            <button
+              onClick={async () => {
+                if (!event || priceSaved) return;
+                setSavingPrice(true);
+                const cents = Math.round(parseFloat(priceInput.replace(",", ".")) * 100);
+                if (isNaN(cents) || cents <= 0) { setSavingPrice(false); return; }
+
+                const packageCents = packagePriceInput
+                  ? Math.round(parseFloat(packagePriceInput.replace(",", ".")) * 100)
+                  : null;
+
+                await supabase.from("events").update({
+                  price_per_photo_cents: cents,
+                  package_price_cents: packageCents,
+                }).eq("id", event.id);
+                setEvent({ ...event, price_per_photo_cents: cents, package_price_cents: packageCents });
+                setSavingPrice(false);
+                setPriceSaved(true);
+              }}
+              disabled={savingPrice}
+              className={`text-sm px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                priceSaved
+                  ? "bg-primary/15 text-primary border border-primary/30 cursor-default"
+                  : "bg-primary hover:bg-primary-dark text-white disabled:opacity-50"
+              }`}
+            >
+              {savingPrice ? "Salvando..." : priceSaved ? (
+                <><Check className="w-3.5 h-3.5" />Salvo</>
+              ) : "Salvar"}
+            </button>
+          </div>
         </div>
-        <p className="text-xs text-muted w-full">
-          Todas as fotos deste evento terao este preco. Voce recebe 93% (comissao da plataforma: 7%).
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Package className="w-3.5 h-3.5" />
+            Pacote (todas as fotos)
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted">R$</span>
+            <input
+              type="text"
+              value={packagePriceInput}
+              onChange={(e) => { setPackagePriceInput(e.target.value); setPriceSaved(false); }}
+              placeholder="Opcional"
+              className="w-24 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
+            />
+          </div>
+        </div>
+
+        <p className="text-xs text-muted">
+          Voce recebe 93% (comissao da plataforma: 7%). O pacote permite ao cliente comprar todas as fotos reconhecidas por um preco unico.
         </p>
       </div>
 

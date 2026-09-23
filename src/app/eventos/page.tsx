@@ -49,7 +49,7 @@ export default function EventosPage() {
         "id, title, description, location, city, state, event_date, photo_count, cover_url",
         { count: "exact" }
       )
-      .eq("is_active", true)
+      .eq("status", "active")
       .order("event_date", { ascending: false, nullsFirst: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 

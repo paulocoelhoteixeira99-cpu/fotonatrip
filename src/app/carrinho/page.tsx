@@ -15,10 +15,11 @@ import {
   ScanFace,
   Loader2,
   Lock,
+  Package,
 } from "lucide-react";
 
 export default function CarrinhoPage() {
-  const { items, removeItem, totalCents, count, clearCart, hydrated } = useCart();
+  const { items, removeItem, totalCents, count, photoCount, clearCart, hydrated } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
@@ -58,9 +59,14 @@ export default function CarrinhoPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({
+          items: items.filter((i) => !i.is_package).map((i) => ({
             photo_id: i.photo_id,
             event_id: i.event_id,
+            photographer_id: i.photographer_id,
+          })),
+          packages: items.filter((i) => i.is_package).map((i) => ({
+            event_id: i.event_id,
+            photo_ids: i.package_photo_ids || [],
             photographer_id: i.photographer_id,
           })),
         }),
@@ -121,7 +127,7 @@ export default function CarrinhoPage() {
           </h1>
           <p className="text-muted mb-8 sm:mb-10">
             {count > 0
-              ? `${count} foto${count !== 1 ? "s" : ""} selecionada${count !== 1 ? "s" : ""}`
+              ? `${photoCount} foto${photoCount !== 1 ? "s" : ""} selecionada${photoCount !== 1 ? "s" : ""}`
               : "Seu carrinho esta vazio"}
           </p>
 
@@ -158,7 +164,7 @@ export default function CarrinhoPage() {
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted">
-                        {count} foto{count !== 1 ? "s" : ""}
+                        {photoCount} foto{photoCount !== 1 ? "s" : ""}
                       </span>
                       <span>{formatPrice(totalCents)}</span>
                     </div>
@@ -219,16 +225,26 @@ export default function CarrinhoPage() {
                           key={item.photo_id}
                           className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4"
                         >
-                          <div className="w-12 h-15 sm:w-16 sm:h-20 rounded-lg overflow-hidden bg-surface-light flex-shrink-0">
-                            <img
-                              src={item.watermark_url}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
+                          <div className={`rounded-lg overflow-hidden bg-surface-light flex-shrink-0 ${
+                            item.is_package ? "w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center bg-primary/10" : "w-12 h-15 sm:w-16 sm:h-20"
+                          }`}>
+                            {item.is_package ? (
+                              <Package className="w-6 h-6 text-primary" />
+                            ) : (
+                              <img src={item.watermark_url} alt="" className="w-full h-full object-cover" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm truncate">{item.event_title}</p>
-                            <p className="text-xs text-muted">Foto com marca d&apos;agua</p>
+                            <p className="text-sm truncate">
+                              {item.is_package
+                                ? `Pacote - ${item.package_photo_count} fotos`
+                                : item.event_title}
+                            </p>
+                            <p className="text-xs text-muted">
+                              {item.is_package
+                                ? "Todas as fotos reconhecidas"
+                                : "Foto com marca d\u0027agua"}
+                            </p>
                           </div>
                           <span className="text-sm font-semibold whitespace-nowrap">
                             {formatPrice(item.price_cents)}

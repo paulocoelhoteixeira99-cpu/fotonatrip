@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, CalendarClock, DollarSign, Package } from "lucide-react";
 import Link from "next/link";
+
+type EventStatus = "active" | "inactive" | "scheduled";
 
 export default function NovoEventoPage() {
   const [title, setTitle] = useState("");
@@ -13,6 +15,10 @@ export default function NovoEventoPage() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [status, setStatus] = useState<EventStatus>("active");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [priceInput, setPriceInput] = useState("15,00");
+  const [packagePriceInput, setPackagePriceInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -33,6 +39,29 @@ export default function NovoEventoPage() {
       return;
     }
 
+    const priceCents = Math.round(parseFloat(priceInput.replace(",", ".")) * 100);
+    if (isNaN(priceCents) || priceCents <= 0) {
+      setError("Informe um preco valido por foto.");
+      setLoading(false);
+      return;
+    }
+
+    const packageCents = packagePriceInput
+      ? Math.round(parseFloat(packagePriceInput.replace(",", ".")) * 100)
+      : null;
+
+    if (packageCents !== null && (isNaN(packageCents) || packageCents <= 0)) {
+      setError("Informe um preco valido para o pacote ou deixe em branco.");
+      setLoading(false);
+      return;
+    }
+
+    if (status === "scheduled" && !scheduledAt) {
+      setError("Informe a data de ativacao para eventos agendados.");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.from("events").insert({
       photographer_id: user.id,
       title,
@@ -41,6 +70,10 @@ export default function NovoEventoPage() {
       city: city || null,
       state: state || null,
       event_date: eventDate || null,
+      status,
+      scheduled_at: status === "scheduled" ? new Date(scheduledAt).toISOString() : null,
+      price_per_photo_cents: priceCents,
+      package_price_cents: packageCents,
     });
 
     if (error) {
@@ -137,6 +170,89 @@ export default function NovoEventoPage() {
             onChange={(e) => setEventDate(e.target.value)}
             className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
           />
+        </div>
+
+        {/* Status */}
+        <div>
+          <label className="text-sm text-muted mb-2 block">
+            Status do evento
+          </label>
+          <div className="flex gap-2">
+            {(["active", "inactive", "scheduled"] as const).map((s) => {
+              const labels = { active: "Ativo", inactive: "Inativo", scheduled: "Agendado" };
+              const colors = {
+                active: status === s ? "bg-primary text-white" : "glass hover:bg-white/10 text-muted",
+                inactive: status === s ? "bg-muted/30 text-foreground" : "glass hover:bg-white/10 text-muted",
+                scheduled: status === s ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" : "glass hover:bg-white/10 text-muted",
+              };
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatus(s)}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors border border-transparent ${colors[s]}`}
+                >
+                  {labels[s]}
+                </button>
+              );
+            })}
+          </div>
+          {status === "scheduled" && (
+            <div className="mt-3">
+              <label className="text-xs text-muted mb-1.5 block flex items-center gap-1.5">
+                <CalendarClock className="w-3.5 h-3.5" />
+                Data e hora de ativacao
+              </label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Pricing */}
+        <div className="glass rounded-2xl p-5 space-y-4">
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-primary" />
+            Precos
+          </h3>
+
+          <div>
+            <label className="text-xs text-muted mb-1.5 block">Preco por foto *</label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted">R$</span>
+              <input
+                type="text"
+                value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
+                placeholder="15,00"
+                className="w-32 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted mb-1.5 block flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5" />
+              Preco do pacote (todas as fotos reconhecidas)
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted">R$</span>
+              <input
+                type="text"
+                value={packagePriceInput}
+                onChange={(e) => setPackagePriceInput(e.target.value)}
+                placeholder="Opcional"
+                className="w-32 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
+              />
+            </div>
+            <p className="text-xs text-muted mt-1.5">
+              Se preenchido, o cliente tera a opcao de comprar todas as suas fotos reconhecidas por este valor.
+            </p>
+          </div>
         </div>
 
         {error && (
