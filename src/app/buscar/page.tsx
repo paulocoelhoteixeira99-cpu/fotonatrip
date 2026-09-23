@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import { getEmbeddingFromFile } from "@/lib/face-recognition";
 import { getPhotoUrl } from "@/lib/photos";
 import {
-  Upload,
   ScanFace,
   ArrowLeft,
   ImageIcon,
@@ -16,6 +15,8 @@ import {
   MapPin,
   Search,
   Package,
+  Camera,
+  Image as ImageLucide,
 } from "lucide-react";
 import { useCart, formatPrice, type CartItem } from "@/lib/cart";
 import Link from "next/link";
@@ -69,7 +70,8 @@ function BuscarContent() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [noFace, setNoFace] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const { addItem, addPackage, isInCart, isPackageInCart } = useCart();
   const supabase = createClient();
 
@@ -301,16 +303,35 @@ function BuscarContent() {
                 </div>
               </div>
 
-              <label className="block glass rounded-3xl border-2 border-dashed border-border hover:border-primary/50 transition-all cursor-pointer group max-w-lg mx-auto">
-                <div className="flex flex-col items-center justify-center py-20 px-6">
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <Upload className="w-8 h-8 text-primary" />
+              <div className="glass rounded-3xl border-2 border-dashed border-border max-w-lg mx-auto">
+                <div className="flex flex-col items-center justify-center py-16 px-6">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                    <ScanFace className="w-8 h-8 text-primary" />
                   </div>
                   <p className="font-medium mb-2">Envie uma selfie</p>
-                  <p className="text-sm text-muted">Tire uma foto ou escolha da galeria</p>
+                  <p className="text-sm text-muted mb-8">Tire uma foto ou escolha da galeria</p>
+                  <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-3 rounded-xl font-medium transition-colors"
+                    >
+                      <Camera className="w-5 h-5" />
+                      Tirar foto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 glass hover:bg-white/10 px-5 py-3 rounded-xl font-medium transition-colors border border-border"
+                    >
+                      <ImageLucide className="w-5 h-5" />
+                      Galeria
+                    </button>
+                  </div>
+                  <input ref={cameraInputRef} type="file" accept="image/*" capture="user" onChange={handleFileSelect} className="hidden" />
+                  <input ref={galleryInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*" capture="user" onChange={handleFileSelect} className="hidden" />
-              </label>
+              </div>
             </div>
           ) : !searched ? (
             <div className="text-center">
@@ -398,6 +419,14 @@ function BuscarContent() {
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button onClick={reset} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Tentar outra selfie</button>
                     <button onClick={resetAll} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Trocar evento</button>
+                  </div>
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <Link
+                      href={`/eventos/${selectedEvent.id}`}
+                      className="text-sm text-muted hover:text-primary transition-colors"
+                    >
+                      Ver todas as fotos do evento, incluindo fotos sem rosto identificado
+                    </Link>
                   </div>
                 </div>
               ) : (
@@ -496,6 +525,15 @@ function BuscarContent() {
                       </div>
                     );
                   })}
+                </div>
+
+                <div className="mt-8 text-center">
+                  <Link
+                    href={`/eventos/${selectedEvent.id}`}
+                    className="text-sm text-muted hover:text-primary transition-colors"
+                  >
+                    Ver todas as fotos do evento, incluindo fotos sem rosto identificado
+                  </Link>
                 </div>
                 </>
               )}
