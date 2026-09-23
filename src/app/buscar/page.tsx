@@ -409,7 +409,7 @@ function BuscarContent() {
                         <div className="aspect-[3/4] overflow-hidden relative">
                           <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                           <span className="absolute top-2 right-2 text-[10px] text-primary bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
-                            {Math.round(result.similarity * 100)}% match
+                            {Math.round(70 + ((Math.min(result.similarity, 0.8) - 0.4) / 0.4) * 30)}% match
                           </span>
                         </div>
                         <div className="p-3">
