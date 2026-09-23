@@ -122,7 +122,7 @@ export default function EventoPublicPage() {
 
   async function loadUnidentifiedPhotos() {
     if (unidentifiedPhotos.length > 0) {
-      setShowUnidentified(!showUnidentified);
+      setShowUnidentified(true);
       return;
     }
     setLoadingUnidentified(true);
@@ -290,97 +290,110 @@ export default function EventoPublicPage() {
             </Link>
           </div>
 
-          {/* Unidentified photos button */}
-          <div className="flex items-center gap-3 mb-8">
+          {/* Filter tabs */}
+          <div className="flex items-center gap-2 mb-8">
+            <button
+              onClick={() => { setShowUnidentified(false); setPage(0); }}
+              className={`flex items-center gap-2 text-sm px-5 py-2.5 rounded-xl font-medium transition-colors ${
+                !showUnidentified
+                  ? "bg-primary text-white"
+                  : "glass hover:bg-white/10 text-muted"
+              }`}
+            >
+              <ImageIcon className="w-4 h-4" />
+              Todas as fotos
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${!showUnidentified ? "bg-white/20" : "bg-white/5"}`}>
+                {totalPhotos}
+              </span>
+            </button>
             <button
               onClick={loadUnidentifiedPhotos}
               disabled={loadingUnidentified}
               className={`flex items-center gap-2 text-sm px-5 py-2.5 rounded-xl font-medium transition-colors ${
                 showUnidentified
-                  ? "bg-primary/10 text-primary border border-primary/30"
-                  : "glass hover:bg-white/10 text-muted hover:text-foreground"
+                  ? "bg-primary text-white"
+                  : "glass hover:bg-white/10 text-muted"
               }`}
             >
               {loadingUnidentified ? (
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <ImageIcon className="w-4 h-4" />
+                <ScanFace className="w-4 h-4" />
               )}
-              Fotos sem rosto identificado
-              {unidentifiedPhotos.length > 0 && ` (${unidentifiedPhotos.length})`}
+              Sem rosto identificado
+              {unidentifiedPhotos.length > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${showUnidentified ? "bg-white/20" : "bg-white/5"}`}>
+                  {unidentifiedPhotos.length}
+                </span>
+              )}
             </button>
           </div>
 
           {/* Unidentified photos grid */}
-          {showUnidentified && (
-            <div className="mb-12">
-              <h2 className="text-lg font-semibold mb-2">Fotos sem rosto identificado</h2>
-              <p className="text-sm text-muted mb-6">Paisagens, fotos de costas ou rostos nao detectados pela IA.</p>
-              {unidentifiedPhotos.length === 0 ? (
-                <div className="glass rounded-2xl p-10 text-center">
-                  <p className="text-muted text-sm">Todas as fotos deste evento possuem rostos identificados.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                  {unidentifiedPhotos.map((photo) => {
-                    const displayPath = photo.watermark_path || photo.storage_path;
-                    const url = getPhotoUrl(displayPath);
+          {showUnidentified ? (
+            unidentifiedPhotos.length === 0 ? (
+              <div className="glass rounded-2xl p-10 text-center">
+                <ImageIcon className="w-12 h-12 text-muted/30 mx-auto mb-4" />
+                <p className="text-muted text-sm">Todas as fotos deste evento possuem rostos identificados.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {unidentifiedPhotos.map((photo) => {
+                  const displayPath = photo.watermark_path || photo.storage_path;
+                  const url = getPhotoUrl(displayPath);
 
-                    return (
-                      <div
-                        key={photo.id}
-                        onClick={() => openPhoto(photo)}
-                        className="group relative aspect-[3/4] rounded-xl overflow-hidden bg-surface-light border border-border cursor-pointer"
-                      >
-                        <img
-                          src={url}
-                          alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                            <span className="text-white text-sm font-medium">
-                              {formatPrice(photo.price_cents)}
+                  return (
+                    <div
+                      key={photo.id}
+                      onClick={() => openPhoto(photo)}
+                      className="group relative aspect-[3/4] rounded-xl overflow-hidden bg-surface-light border border-border cursor-pointer"
+                    >
+                      <img
+                        src={url}
+                        alt=""
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                          <span className="text-white text-sm font-medium">
+                            {formatPrice(photo.price_cents)}
+                          </span>
+                          {isInCart(photo.id) ? (
+                            <span className="flex items-center gap-1 text-[11px] text-primary bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                              <Check className="w-3 h-3" />
+                              No carrinho
                             </span>
-                            {isInCart(photo.id) ? (
-                              <span className="flex items-center gap-1 text-[11px] text-primary bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
-                                <Check className="w-3 h-3" />
-                                No carrinho
-                              </span>
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const photographerName = photographer?.business_name || photographer?.full_name || "";
-                                  addItem({
-                                    photo_id: photo.id,
-                                    event_id: event!.id,
-                                    event_title: event!.title,
-                                    photographer_name: photographerName,
-                                    photographer_id: event!.photographer_id,
-                                    price_cents: photo.price_cents,
-                                    watermark_url: url,
-                                  });
-                                }}
-                                className="flex items-center gap-1 text-[11px] text-white bg-primary/80 hover:bg-primary px-2 py-1 rounded-full transition-colors"
-                              >
-                                <ShoppingCart className="w-3 h-3" />
-                                Adicionar
-                              </button>
-                            )}
-                          </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const photographerName = photographer?.business_name || photographer?.full_name || "";
+                                addItem({
+                                  photo_id: photo.id,
+                                  event_id: event!.id,
+                                  event_title: event!.title,
+                                  photographer_name: photographerName,
+                                  photographer_id: event!.photographer_id,
+                                  price_cents: photo.price_cents,
+                                  watermark_url: url,
+                                });
+                              }}
+                              className="flex items-center gap-1 text-[11px] text-white bg-primary/80 hover:bg-primary px-2 py-1 rounded-full transition-colors"
+                            >
+                              <ShoppingCart className="w-3 h-3" />
+                              Adicionar
+                            </button>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Photos grid */}
-          {photos.length === 0 ? (
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : /* Photos grid */
+          photos.length === 0 ? (
             <div className="text-center py-20">
               <ImageIcon className="w-12 h-12 text-muted/30 mx-auto mb-4" />
               <p className="text-muted">Nenhuma foto disponivel neste evento.</p>
