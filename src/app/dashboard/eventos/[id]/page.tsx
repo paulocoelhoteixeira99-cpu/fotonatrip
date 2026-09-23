@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { processPhoto } from "@/lib/face-recognition";
 import { getPhotoUrl } from "@/lib/photos";
@@ -59,6 +59,7 @@ export default function EventoDetailPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
+  const abortRef = useRef<AbortController | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
@@ -106,29 +107,33 @@ export default function EventoDetailPage() {
     setUploading(true);
     setUploadProgress({ done: 0, total: fileList.length });
 
+    const abort = new AbortController();
+    abortRef.current = abort;
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
+    let doneCount = 0;
+    const CONCURRENT = 3;
 
-      // Process via DO server (upload + watermark + face detection)
-      const result = await processPhoto(file, user.id, event.id);
+    async function uploadOne(file: File) {
+      if (abort.signal.aborted) return;
+
+      const result = await processPhoto(file, user!.id, event!.id, abort.signal);
 
       if (!result) {
-        console.error("Failed to process photo:", file.name);
-        setUploadProgress({ done: i + 1, total: fileList.length });
-        continue;
+        doneCount++;
+        setUploadProgress({ done: doneCount, total: fileList.length });
+        return;
       }
 
-      // Save photo record to Supabase
       const { data: photoData } = await supabase
         .from("photos")
         .insert({
-          event_id: event.id,
-          photographer_id: user.id,
+          event_id: event!.id,
+          photographer_id: user!.id,
           storage_path: result.original_path,
           watermark_path: result.watermark_path,
           original_filename: file.name,
@@ -139,23 +144,41 @@ export default function EventoDetailPage() {
         .select()
         .single();
 
-      // Save face embeddings
       if (photoData && result.embeddings.length > 0) {
-        for (const face of result.embeddings) {
-          const embedding = `[${face.embedding.join(",")}]`;
-          await supabase.from("face_embeddings").insert({
-            photo_id: photoData.id,
-            embedding,
-            bbox_x: face.bbox[0],
-            bbox_y: face.bbox[1],
-            bbox_w: face.bbox[2] - face.bbox[0],
-            bbox_h: face.bbox[3] - face.bbox[1],
-          });
-        }
+        const rows = result.embeddings.map((face) => ({
+          photo_id: photoData.id,
+          embedding: `[${face.embedding.join(",")}]`,
+          bbox_x: face.bbox[0],
+          bbox_y: face.bbox[1],
+          bbox_w: face.bbox[2] - face.bbox[0],
+          bbox_h: face.bbox[3] - face.bbox[1],
+        }));
+        await supabase.from("face_embeddings").insert(rows);
       }
 
-      setUploadProgress({ done: i + 1, total: fileList.length });
+      doneCount++;
+      setUploadProgress({ done: doneCount, total: fileList.length });
     }
+
+    // Process in parallel with concurrency limit
+    const queue = [...fileList];
+    const workers = Array.from({ length: CONCURRENT }, async () => {
+      while (queue.length > 0 && !abort.signal.aborted) {
+        const file = queue.shift()!;
+        try {
+          await uploadOne(file);
+        } catch (err) {
+          if ((err as Error).name !== "AbortError") {
+            console.error("Upload error:", err);
+          }
+          doneCount++;
+          setUploadProgress({ done: doneCount, total: fileList.length });
+        }
+      }
+    });
+
+    await Promise.all(workers);
+    abortRef.current = null;
 
     // Reload photos
     const { data: photosData } = await supabase
@@ -167,6 +190,12 @@ export default function EventoDetailPage() {
     setPhotos(photosData || []);
     setUploading(false);
     e.target.value = "";
+  }
+
+  function cancelUpload() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setUploading(false);
   }
 
   async function handleSetCover(storagePath: string) {
@@ -502,9 +531,17 @@ export default function EventoDetailPage() {
               style={{ width: `${uploadProgress.total > 0 ? (uploadProgress.done / uploadProgress.total) * 100 : 0}%` }}
             />
           </div>
-          <p className="text-xs text-muted mt-2">
-            Upload + watermark + deteccao facial por IA (servidor)
-          </p>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-muted">
+              Upload + watermark + deteccao facial por IA (servidor)
+            </p>
+            <button
+              onClick={cancelUpload}
+              className="text-xs text-red-400 hover:text-red-300 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
       {reprocessStatus && (

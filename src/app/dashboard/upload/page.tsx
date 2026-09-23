@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { processPhoto } from "@/lib/face-recognition";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ export default function UploadPage() {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
   const supabase = createClient();
   const router = useRouter();
 
@@ -82,68 +83,90 @@ export default function UploadPage() {
 
     setUploading(true);
 
+    const abort = new AbortController();
+    abortRef.current = abort;
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    for (let i = 0; i < files.length; i++) {
-      if (files[i].status === "done") continue;
+    const CONCURRENT = 3;
+    const pendingIndexes = files
+      .map((f, i) => (f.status !== "done" ? i : -1))
+      .filter((i) => i >= 0);
+
+    const queue = [...pendingIndexes];
+
+    async function uploadOne(idx: number) {
+      if (abort.signal.aborted) return;
 
       setFiles((prev) =>
-        prev.map((f, idx) =>
-          idx === i ? { ...f, status: "uploading" } : f
-        )
+        prev.map((f, i) => (i === idx ? { ...f, status: "uploading" } : f))
       );
 
-      const file = files[i].file;
+      const file = files[idx].file;
 
-      // Process via DO server
-      const result = await processPhoto(file, user.id, selectedEvent);
+      try {
+        const result = await processPhoto(file, user!.id, selectedEvent, abort.signal);
 
-      if (!result) {
-        setFiles((prev) =>
-          prev.map((f, idx) =>
-            idx === i ? { ...f, status: "error" } : f
-          )
-        );
-        continue;
-      }
+        if (!result) {
+          setFiles((prev) =>
+            prev.map((f, i) => (i === idx ? { ...f, status: "error" } : f))
+          );
+          return;
+        }
 
-      // Save photo record
-      const { data: photoData, error: dbError } = await supabase.from("photos").insert({
-        event_id: selectedEvent,
-        photographer_id: user.id,
-        storage_path: result.original_path,
-        watermark_path: result.watermark_path,
-        original_filename: file.name,
-        file_size: result.file_size,
-        status: "ready",
-        processed_at: new Date().toISOString(),
-      }).select().single();
+        const { data: photoData, error: dbError } = await supabase.from("photos").insert({
+          event_id: selectedEvent,
+          photographer_id: user!.id,
+          storage_path: result.original_path,
+          watermark_path: result.watermark_path,
+          original_filename: file.name,
+          file_size: result.file_size,
+          status: "ready",
+          processed_at: new Date().toISOString(),
+        }).select().single();
 
-      // Save face embeddings
-      if (photoData && result.embeddings.length > 0) {
-        for (const face of result.embeddings) {
-          const embedding = `[${face.embedding.join(",")}]`;
-          await supabase.from("face_embeddings").insert({
+        if (photoData && result.embeddings.length > 0) {
+          const rows = result.embeddings.map((face) => ({
             photo_id: photoData.id,
-            embedding,
+            embedding: `[${face.embedding.join(",")}]`,
             bbox_x: face.bbox[0],
             bbox_y: face.bbox[1],
             bbox_w: face.bbox[2] - face.bbox[0],
             bbox_h: face.bbox[3] - face.bbox[1],
-          });
+          }));
+          await supabase.from("face_embeddings").insert(rows);
+        }
+
+        setFiles((prev) =>
+          prev.map((f, i) => (i === idx ? { ...f, status: dbError ? "error" : "done" } : f))
+        );
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setFiles((prev) =>
+            prev.map((f, i) => (i === idx ? { ...f, status: "error" } : f))
+          );
         }
       }
-
-      setFiles((prev) =>
-        prev.map((f, idx) =>
-          idx === i ? { ...f, status: dbError ? "error" : "done" } : f
-        )
-      );
     }
 
+    const workers = Array.from({ length: CONCURRENT }, async () => {
+      while (queue.length > 0 && !abort.signal.aborted) {
+        const idx = queue.shift()!;
+        await uploadOne(idx);
+      }
+    });
+
+    await Promise.all(workers);
+    abortRef.current = null;
+    setUploading(false);
+  }
+
+  function cancelUpload() {
+    abortRef.current?.abort();
+    abortRef.current = null;
     setUploading(false);
   }
 
@@ -227,11 +250,19 @@ export default function UploadPage() {
               style={{ width: `${files.length > 0 ? (doneCount / files.length) * 100 : 0}%` }}
             />
           </div>
-          <p className="text-xs text-muted mt-2">
-            {doneCount} de {files.length} fotos processadas (upload + watermark + IA)
-            {files.filter((f) => f.status === "error").length > 0 &&
-              ` · ${files.filter((f) => f.status === "error").length} com erro`}
-          </p>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-muted">
+              {doneCount} de {files.length} fotos processadas (upload + watermark + IA)
+              {files.filter((f) => f.status === "error").length > 0 &&
+                ` · ${files.filter((f) => f.status === "error").length} com erro`}
+            </p>
+            <button
+              onClick={cancelUpload}
+              className="text-xs text-red-400 hover:text-red-300 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
 
