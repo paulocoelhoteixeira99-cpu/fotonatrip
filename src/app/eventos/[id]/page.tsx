@@ -276,7 +276,7 @@ export default function EventoPublicPage() {
                   )}
                   {(event.city || event.state) && (
                     <span className="flex items-center gap-1.5">
-                      {!event.location && <MapPin className="w-4 h-4" />}
+                      <MapPin className="w-4 h-4" />
                       {event.city}{event.city && event.state && " - "}{event.state}
                     </span>
                   )}

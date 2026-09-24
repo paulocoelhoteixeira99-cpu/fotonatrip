@@ -158,7 +158,7 @@ export default function EventosPage() {
                         <div className="flex flex-wrap items-center gap-3">
                           {(event.city || event.state) && (
                             <span className="flex items-center gap-1">
-                              {!event.location && <MapPin className="w-3.5 h-3.5 shrink-0" />}
+                              <MapPin className="w-3.5 h-3.5 shrink-0" />
                               {event.city}{event.city && event.state && " - "}{event.state}
                             </span>
                           )}
