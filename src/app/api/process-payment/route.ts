@@ -141,8 +141,24 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(response);
   } catch (err: unknown) {
-    console.error("Process payment error:", err);
-    const message = err instanceof Error ? err.message : "Erro ao processar pagamento";
+    console.error("Process payment error:", JSON.stringify(err, null, 2));
+
+    // Extract detailed error from Mercado Pago SDK
+    let message = "Erro ao processar pagamento";
+    if (err && typeof err === "object") {
+      const mpErr = err as Record<string, unknown>;
+      // MP SDK errors have cause array with code/description
+      if (Array.isArray(mpErr.cause) && mpErr.cause.length > 0) {
+        const cause = mpErr.cause[0] as Record<string, unknown>;
+        message = `${cause.description || cause.code || message}`;
+        console.error("MP cause:", JSON.stringify(mpErr.cause));
+      } else if (mpErr.message) {
+        message = String(mpErr.message);
+      }
+    } else if (err instanceof Error) {
+      message = err.message;
+    }
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

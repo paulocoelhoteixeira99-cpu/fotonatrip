@@ -376,9 +376,23 @@ export default function CheckoutContent() {
                     clearCart();
                     router.push(`/checkout/sucesso?order=${orderId}`);
                   } else if (data.status === "rejected") {
-                    setError(
-                      "Pagamento recusado. Verifique os dados e tente novamente."
-                    );
+                    const reasons: Record<string, string> = {
+                      cc_rejected_bad_filled_card_number: "Numero do cartao incorreto.",
+                      cc_rejected_bad_filled_date: "Data de validade incorreta.",
+                      cc_rejected_bad_filled_security_code: "Codigo de seguranca incorreto.",
+                      cc_rejected_bad_filled_other: "Dados do cartao incorretos.",
+                      cc_rejected_insufficient_amount: "Saldo insuficiente.",
+                      cc_rejected_call_for_authorize: "Ligue para a operadora do cartao para autorizar.",
+                      cc_rejected_card_disabled: "Cartao desabilitado. Ative-o com a operadora.",
+                      cc_rejected_max_attempts: "Limite de tentativas. Use outro cartao.",
+                      cc_rejected_duplicated_payment: "Pagamento duplicado. Ja existe um pagamento com esse valor.",
+                      cc_rejected_high_risk: "Pagamento recusado por seguranca. Tente outro cartao.",
+                      cc_rejected_card_type_not_allowed: "Tipo de cartao nao aceito.",
+                      cc_rejected_other_reason: "Pagamento recusado pela operadora.",
+                    };
+                    const detail = data.status_detail || "";
+                    const reason = reasons[detail] || "Pagamento recusado. Verifique os dados e tente novamente.";
+                    setError(reason);
                     setProcessing(false);
                   } else {
                     clearCart();
