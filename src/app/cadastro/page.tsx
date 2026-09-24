@@ -18,6 +18,8 @@ export default function CadastroPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptFacial, setAcceptFacial] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -210,6 +212,44 @@ export default function CadastroPage() {
               </div>
             </div>
 
+            {/* LGPD consent */}
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border accent-primary shrink-0"
+                  required
+                />
+                <span className="text-xs text-muted leading-relaxed">
+                  Li e aceito os{" "}
+                  <Link href="/termos" target="_blank" className="text-primary hover:text-primary-light transition-colors">
+                    Termos de Uso
+                  </Link>{" "}
+                  e a{" "}
+                  <Link href="/privacidade" target="_blank" className="text-primary hover:text-primary-light transition-colors">
+                    Politica de Privacidade
+                  </Link>.
+                </span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={acceptFacial}
+                  onChange={(e) => setAcceptFacial(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border accent-primary shrink-0"
+                  required
+                />
+                <span className="text-xs text-muted leading-relaxed">
+                  Autorizo o uso de reconhecimento facial para busca de fotos, conforme a{" "}
+                  <Link href="/privacidade" target="_blank" className="text-primary hover:text-primary-light transition-colors">
+                    Politica de Privacidade
+                  </Link>.
+                </span>
+              </label>
+            </div>
+
             {error && (
               <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">
                 {error}
@@ -218,7 +258,7 @@ export default function CadastroPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !acceptTerms || !acceptFacial}
               className="w-full bg-primary hover:bg-primary-dark text-white py-3 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
