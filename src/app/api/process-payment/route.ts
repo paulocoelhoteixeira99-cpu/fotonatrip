@@ -109,11 +109,7 @@ export async function POST(req: NextRequest) {
       },
       external_reference: orderId,
       notification_url: `${appUrl}/api/webhook/mercadopago`,
-      back_urls: {
-        success: `${appUrl}/checkout/sucesso?order=${orderId}`,
-        failure: `${appUrl}/checkout/falha?order=${orderId}`,
-        pending: `${appUrl}/checkout/sucesso?order=${orderId}&status=pending`,
-      },
+      callback_url: `${appUrl}/checkout/sucesso?order=${orderId}`,
       additional_info: {
         items: mpItems,
       },
