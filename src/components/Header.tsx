@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, LayoutDashboard, ImageIcon, ShoppingCart, ShoppingBag, ScanFace } from "lucide-react";
+import { Menu, X, LayoutDashboard, ImageIcon, ShoppingCart, ShoppingBag, ScanFace, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCart } from "@/lib/cart";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
@@ -22,6 +23,16 @@ export default function Header() {
   const [role, setRole] = useState<string | null>(null);
   const { count: cartCount } = useCart();
   const supabase = createClient();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setRole(null);
+    setMenuOpen(false);
+    router.push("/");
+    router.refresh();
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -119,6 +130,13 @@ export default function Header() {
               >
                 Buscar fotos
               </Link>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-muted hover:text-red-400 transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-4.5 h-4.5" />
+              </button>
             </>
           ) : (
             <>
@@ -236,6 +254,13 @@ export default function Header() {
                   >
                     Buscar fotos
                   </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="text-sm text-red-400 hover:bg-red-400/10 transition-colors px-4 py-3 rounded-xl flex items-center gap-2 mt-1"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sair
+                  </button>
                 </>
               ) : (
                 <>

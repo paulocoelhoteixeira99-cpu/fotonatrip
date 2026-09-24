@@ -15,6 +15,7 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 interface OrderWithItems {
@@ -38,6 +39,7 @@ export default function MinhasComprasPage() {
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -93,6 +95,22 @@ export default function MinhasComprasPage() {
     }
 
     setDownloading(null);
+  }
+
+  async function handleCheckPayment(orderId: string) {
+    setCheckingPayment(orderId);
+    try {
+      const res = await fetch(`/api/check-payment?order_id=${orderId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: data.status } : o))
+        );
+      }
+    } catch {
+      // silently fail
+    }
+    setCheckingPayment(null);
   }
 
   const statusConfig: Record<string, { icon: typeof CheckCircle; label: string; color: string }> = {
@@ -161,6 +179,20 @@ export default function MinhasComprasPage() {
                           <StatusIcon className="w-4 h-4" />
                           {cfg.label}
                         </span>
+                        {order.status === "pending" && (
+                          <button
+                            onClick={() => handleCheckPayment(order.id)}
+                            disabled={checkingPayment === order.id}
+                            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-dark transition-colors disabled:opacity-50"
+                          >
+                            {checkingPayment === order.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            )}
+                            Verificar
+                          </button>
+                        )}
                         <span className="text-sm font-semibold">
                           {formatPrice(order.total_cents)}
                         </span>
