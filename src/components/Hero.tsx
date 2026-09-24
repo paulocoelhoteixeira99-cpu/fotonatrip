@@ -1,144 +1,205 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Search, Sparkles } from "lucide-react";
+import { Search, ArrowRight, Sparkles, Camera, Zap, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 const floatingPhotos = [
   {
-    rotate: -6, x: -40, y: 20, delay: 0,
-    src: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400&h=600&fit=crop&crop=faces&q=80",
-    alt: "Grupo de amigos rindo nas montanhas",
+    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=500&fit=crop&q=80",
+    alt: "Praia tropical com areia branca",
+    rotate: -4,
   },
   {
-    rotate: 3, x: 30, y: -10, delay: 0.1,
-    src: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=600&fit=crop&q=80",
-    alt: "Lago cristalino com barcos entre montanhas",
+    src: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400&h=500&fit=crop&crop=faces&q=80",
+    alt: "Grupo de amigos curtindo a viagem",
+    rotate: 3,
   },
   {
-    rotate: -3, x: -20, y: 40, delay: 0.2,
-    src: "https://images.unsplash.com/photo-1527631746610-bca00a040d60?w=400&h=600&fit=crop&crop=faces&q=80",
-    alt: "Viajante explorando ruas europeias",
+    src: "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=400&h=500&fit=crop&q=80",
+    alt: "Vista panoramica do Rio de Janeiro",
+    rotate: -2,
   },
   {
-    rotate: 5, x: 40, y: 0, delay: 0.15,
-    src: "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=400&h=600&fit=crop&crop=faces&q=80",
-    alt: "Fotografo registrando viajante com baloes de ar quente",
+    src: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=400&h=500&fit=crop&q=80",
+    alt: "Praia paradisiaca vista de cima",
+    rotate: 5,
   },
   {
-    rotate: -4, x: 0, y: 30, delay: 0.25,
-    src: "https://images.unsplash.com/photo-1516939884455-1445c8652f83?w=400&h=600&fit=crop&crop=faces&q=80",
-    alt: "Aventureiro em van sob ceu estrelado",
+    src: "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=400&h=500&fit=crop&crop=faces&q=80",
+    alt: "Fotografo registrando viajante",
+    rotate: -3,
   },
   {
-    rotate: 2, x: -30, y: -20, delay: 0.05,
-    src: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=400&h=600&fit=crop&q=80",
-    alt: "Praia tropical vista de cima com barcos coloridos",
+    src: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=500&fit=crop&q=80",
+    alt: "Paisagem com lago e montanhas",
+    rotate: 2,
+  },
+];
+
+const features = [
+  {
+    icon: Camera,
+    title: "Fotos profissionais",
+    description: "Registrando cada momento",
+  },
+  {
+    icon: Zap,
+    title: "Rapido e simples",
+    description: "Encontre suas fotos em segundos",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Seguro e privado",
+    description: "Suas fotos sempre protegidas",
   },
 ];
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Background gradient */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-primary/8 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-      </div>
+    <>
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex flex-col justify-end overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            src="/hero-bg.jpg"
+            alt="Viajante admirando paisagem tropical"
+            className="w-full h-full object-cover object-[75%_center] md:object-center"
+          />
+          {/* Gradient overlays for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+          <div className="absolute inset-0 bg-background/20" />
+        </div>
 
-      <div className="relative max-w-7xl mx-auto px-6 py-20 flex flex-col items-center text-center">
-        {/* Heading */}
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] max-w-5xl"
-        >
-          Os momentos passam.{" "}
-          <span className="gradient-text">As fotos ficam.</span>
-        </motion.h1>
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-6 pb-10 pt-24 md:pt-32 w-full">
+          <div className="max-w-2xl md:max-w-3xl md:mx-auto md:text-center">
+            {/* Heading */}
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight leading-[1.08]"
+            >
+              Os momentos passam.{" "}
+              <span className="gradient-text">As fotos ficam.</span>
+            </motion.h1>
 
-        {/* Tagline */}
-        <motion.p
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="mt-4 text-xl md:text-2xl text-muted/80 font-medium"
-        >
-          Sua viagem, eternizada em cada detalhe.
-        </motion.p>
+            {/* Tagline */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="mt-5 text-lg md:text-xl text-foreground/90 font-medium"
+            >
+              Sua viagem, eternizada em cada detalhe.
+            </motion.p>
 
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.25 }}
-          className="mt-4 text-lg md:text-xl text-muted max-w-2xl leading-relaxed"
-        >
-          Tire uma selfie e encontre, em segundos, todas as fotos profissionais
-          feitas de você durante a viagem. Simples, rápido e mágico.
-        </motion.p>
+            {/* Description */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="mt-3 text-base md:text-lg text-muted leading-relaxed"
+            >
+              Tire uma selfie e encontre, em segundos, todas as fotos
+              profissionais feitas de voce durante a viagem. Simples,{" "}
+              <strong className="text-foreground">rapido e magico</strong>.
+            </motion.p>
 
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="glass px-4 py-2 rounded-full flex items-center gap-2 mt-6"
-        >
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm text-muted">
-            Busca por reconhecimento facial
-          </span>
-        </motion.div>
+            {/* Search Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="mt-8 flex justify-center"
+            >
+              <Link
+                href="/buscar"
+                className="group inline-flex items-center gap-3 bg-white text-background pl-5 pr-2 py-2 rounded-full transition-all hover:shadow-lg hover:shadow-white/10 hover:scale-[1.02]"
+              >
+                <Search className="w-5 h-5 text-muted" />
+                <span className="font-medium text-base md:text-lg pr-2">
+                  Encontrar minhas fotos
+                </span>
+                <span className="w-10 h-10 bg-primary rounded-full flex items-center justify-center group-hover:bg-primary-dark transition-colors">
+                  <ArrowRight className="w-5 h-5 text-white" />
+                </span>
+              </Link>
+            </motion.div>
 
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.35 }}
-          className="mt-10 flex flex-col sm:flex-row gap-4"
-        >
-          <Link
-            href="/buscar"
-            className="group flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-full transition-all font-medium text-lg glow-green hover:scale-105"
+            {/* Facial Recognition Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="mt-4 flex justify-center"
+            >
+              <div className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-sm text-muted">
+                  Busca por reconhecimento facial
+                </span>
+              </div>
+            </motion.div>
+
+            {/* 3 Feature Cards */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="mt-8 grid grid-cols-3 gap-3 sm:gap-4 max-w-lg md:mx-auto"
+            >
+              {features.map((feature) => (
+                <div key={feature.title} className="flex flex-col items-center text-center gap-2">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center">
+                    <feature.icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight">
+                      {feature.title}
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-muted mt-0.5 leading-tight">
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Photo Gallery Section */}
+      <section className="relative pt-6 pb-16 md:pt-10 md:pb-24 overflow-hidden">
+        <div className="max-w-4xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.7 }}
+            className="grid grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4"
           >
-            <Search className="w-5 h-5" />
-            Encontrar minhas fotos
-          </Link>
-          <Link
-            href="/cadastro"
-            className="flex items-center gap-2 glass hover:bg-white/10 text-foreground px-8 py-4 rounded-full transition-all font-medium text-lg hover:scale-105"
-          >
-            Sou fotografo
-          </Link>
-        </motion.div>
-
-        {/* Floating photo grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="mt-20 w-full max-w-4xl"
-        >
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {floatingPhotos.map((photo, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 40, rotate: 0 }}
-                animate={{ opacity: 1, y: 0, rotate: photo.rotate }}
+                initial={{ opacity: 0, y: 30, rotate: 0 }}
+                whileInView={{ opacity: 1, y: 0, rotate: photo.rotate }}
+                viewport={{ once: true }}
                 transition={{
-                  duration: 0.6,
-                  delay: 0.6 + photo.delay,
+                  duration: 0.5,
+                  delay: i * 0.08,
                   ease: "easeOut",
                 }}
                 whileHover={{
-                  scale: 1.08,
+                  scale: 1.06,
                   rotate: 0,
                   zIndex: 10,
                   transition: { duration: 0.2 },
                 }}
-                className="aspect-[3/4] rounded-2xl bg-surface border border-border overflow-hidden cursor-pointer relative group"
+                className="aspect-[3/4] rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer relative group shadow-xl shadow-black/30"
               >
                 <img
                   src={photo.src}
@@ -146,32 +207,13 @@ export default function Hero() {
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </motion.div>
             ))}
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
 
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1 }}
-          className="mt-16 flex flex-wrap justify-center gap-12 text-center"
-        >
-          {[
-            { value: "2s", label: "para encontrar suas fotos" },
-            { value: "99%", label: "precisao facial" },
-            { value: "7%", label: "menor comissao do mercado" },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <div className="text-3xl font-bold gradient-text">
-                {stat.value}
-              </div>
-              <div className="text-sm text-muted mt-1">{stat.label}</div>
-            </div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

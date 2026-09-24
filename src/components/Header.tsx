@@ -83,7 +83,7 @@ export default function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm text-muted hover:text-foreground transition-colors flex items-center gap-1.5"
+              className="text-sm text-foreground/70 hover:text-foreground transition-colors flex items-center gap-1.5"
             >
               {link.isRoute && <ImageIcon className="w-3.5 h-3.5" />}
               {link.label}
@@ -160,20 +160,14 @@ export default function Header() {
         {/* Mobile quick actions + menu button */}
         <div className="md:hidden flex items-center gap-1">
           <Link
-            href="/buscar"
-            className="p-2 text-muted hover:text-foreground transition-colors"
-          >
-            <ScanFace className="w-5 h-5" />
-          </Link>
-          <Link
             href="/eventos"
-            className="p-2 text-muted hover:text-foreground transition-colors"
+            className="p-2 text-foreground/70 hover:text-foreground transition-colors"
           >
             <ImageIcon className="w-5 h-5" />
           </Link>
           <Link
             href="/carrinho"
-            className="relative p-2 text-muted hover:text-foreground transition-colors"
+            className="relative p-2 text-foreground/70 hover:text-foreground transition-colors"
           >
             <ShoppingCart className="w-5 h-5" />
             {cartCount > 0 && (
@@ -184,7 +178,7 @@ export default function Header() {
           </Link>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 text-muted hover:text-foreground transition-colors"
+            className="p-2 text-foreground/70 hover:text-foreground transition-colors"
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
