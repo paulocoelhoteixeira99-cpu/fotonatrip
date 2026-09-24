@@ -135,27 +135,34 @@ export default function EventoPublicPage() {
     }
     setLoadingUnidentified(true);
 
-    // Get all photo IDs that have face embeddings
-    const { data: withFaces } = await supabase
-      .from("face_embeddings")
-      .select("photo_id");
-
-    const facePhotoIds = (withFaces || []).map((f) => f.photo_id);
-
-    // Get photos from this event that have no embeddings
-    let query = supabase
+    // Get all photos from this event
+    const { data: eventPhotos } = await supabase
       .from("photos")
       .select("id, storage_path, watermark_path, price_cents, status")
       .eq("event_id", id)
       .eq("status", "ready")
       .order("created_at", { ascending: false });
 
-    if (facePhotoIds.length > 0) {
-      query = query.not("id", "in", `(${facePhotoIds.join(",")})`);
+    if (!eventPhotos?.length) {
+      setUnidentifiedPhotos([]);
+      setShowUnidentified(true);
+      setLoadingUnidentified(false);
+      return;
     }
 
-    const { data } = await query;
-    setUnidentifiedPhotos(data || []);
+    // Check which of THIS event's photos have face embeddings
+    const photoIds = eventPhotos.map((p) => p.id);
+    const { data: withFaces } = await supabase
+      .from("face_embeddings")
+      .select("photo_id")
+      .in("photo_id", photoIds);
+
+    const facePhotoIds = new Set((withFaces || []).map((f) => f.photo_id));
+
+    // Filter to only photos without any face embedding
+    const unidentified = eventPhotos.filter((p) => !facePhotoIds.has(p.id));
+
+    setUnidentifiedPhotos(unidentified);
     setShowUnidentified(true);
     setLoadingUnidentified(false);
   }
