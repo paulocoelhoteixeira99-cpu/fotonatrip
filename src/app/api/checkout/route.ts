@@ -46,15 +46,26 @@ export async function POST(req: NextRequest) {
   let totalCents = individualPhotos.reduce((sum, p) => sum + p.price_cents, 0);
 
   // Packages: use event's package_price_cents
-  const mpItems: { id: string; title: string; quantity: number; unit_price: number; currency_id: string }[] = [];
+  const mpItems: { id: string; title: string; description: string; quantity: number; unit_price: number; currency_id: string; category_id: string }[] = [];
+
+  // Get event titles for item descriptions
+  const eventIds = [...new Set(photos.map((p) => p.event_id))];
+  const { data: eventTitles } = await supabase
+    .from("events")
+    .select("id, title")
+    .in("id", eventIds);
+  const eventMap = new Map((eventTitles || []).map((e) => [e.id, e.title]));
 
   for (const photo of individualPhotos) {
+    const eventTitle = eventMap.get(photo.event_id) || "Evento";
     mpItems.push({
       id: photo.id,
       title: "Foto profissional - fotonatrip",
+      description: `Foto digital sem marca d'agua do evento "${eventTitle}". Entrega imediata via download apos confirmacao do pagamento.`,
       quantity: 1,
       unit_price: photo.price_cents / 100,
       currency_id: "BRL",
+      category_id: "services",
     });
   }
 
@@ -79,9 +90,11 @@ export async function POST(req: NextRequest) {
     mpItems.push({
       id: `pkg_${pkg.event_id}`,
       title: `Pacote ${pkgPhotoCount} fotos - ${eventData.title}`,
+      description: `Pacote com ${pkgPhotoCount} fotos digitais sem marca d'agua do evento "${eventData.title}". Entrega imediata via download apos confirmacao do pagamento.`,
       quantity: 1,
       unit_price: eventData.package_price_cents / 100,
       currency_id: "BRL",
+      category_id: "services",
     });
   }
 
