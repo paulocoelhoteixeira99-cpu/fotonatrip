@@ -20,8 +20,11 @@ export async function GET(request: Request) {
           .eq("id", user.id)
           .single();
 
+        const roleParam = searchParams.get("role");
+        const validRole = roleParam === "photographer" ? "photographer" : "client";
+
         if (!profile) {
-          // Create profile for new OAuth user (default: client)
+          // Create profile for new OAuth user
           const fullName =
             user.user_metadata?.full_name ||
             user.user_metadata?.name ||
@@ -29,16 +32,24 @@ export async function GET(request: Request) {
           await supabase.from("profiles").insert({
             id: user.id,
             full_name: fullName,
-            role: "client",
+            role: validRole,
           });
+
+          // Also create photographer record if needed
+          if (validRole === "photographer") {
+            await supabase.from("photographers").insert({
+              id: user.id,
+              display_name: fullName,
+            });
+          }
         }
 
         // Redirect based on role
         if (next) {
           return NextResponse.redirect(`${origin}${next}`);
         }
-        const role = profile?.role || "client";
-        const dest = role === "photographer" ? "/dashboard" : "/buscar";
+        const finalRole = profile?.role || validRole;
+        const dest = finalRole === "photographer" ? "/dashboard" : "/buscar";
         return NextResponse.redirect(`${origin}${dest}`);
       }
     }
