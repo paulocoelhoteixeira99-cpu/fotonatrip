@@ -6,6 +6,19 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, CalendarClock, DollarSign, Package } from "lucide-react";
 import Link from "next/link";
 
+const BRAZILIAN_STATES = [
+  { uf: "AC", name: "Acre" }, { uf: "AL", name: "Alagoas" }, { uf: "AP", name: "Amapá" },
+  { uf: "AM", name: "Amazonas" }, { uf: "BA", name: "Bahia" }, { uf: "CE", name: "Ceará" },
+  { uf: "DF", name: "Distrito Federal" }, { uf: "ES", name: "Espírito Santo" }, { uf: "GO", name: "Goiás" },
+  { uf: "MA", name: "Maranhão" }, { uf: "MT", name: "Mato Grosso" }, { uf: "MS", name: "Mato Grosso do Sul" },
+  { uf: "MG", name: "Minas Gerais" }, { uf: "PA", name: "Pará" }, { uf: "PB", name: "Paraíba" },
+  { uf: "PR", name: "Paraná" }, { uf: "PE", name: "Pernambuco" }, { uf: "PI", name: "Piauí" },
+  { uf: "RJ", name: "Rio de Janeiro" }, { uf: "RN", name: "Rio Grande do Norte" },
+  { uf: "RS", name: "Rio Grande do Sul" }, { uf: "RO", name: "Rondônia" }, { uf: "RR", name: "Roraima" },
+  { uf: "SC", name: "Santa Catarina" }, { uf: "SP", name: "São Paulo" }, { uf: "SE", name: "Sergipe" },
+  { uf: "TO", name: "Tocantins" },
+];
+
 type EventStatus = "active" | "inactive" | "scheduled";
 
 export default function NovoEventoPage() {
@@ -19,10 +32,22 @@ export default function NovoEventoPage() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [priceInput, setPriceInput] = useState("15,00");
   const [packagePriceInput, setPackagePriceInput] = useState("");
+  const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
+
+  async function fetchCities(uf: string) {
+    if (!uf) { setCities([]); return; }
+    try {
+      const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+      const data = await res.json();
+      setCities(data.map((m: { nome: string }) => m.nome));
+    } catch {
+      setCities([]);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -139,24 +164,32 @@ export default function NovoEventoPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
+            <label className="text-sm text-muted mb-2 block">Estado</label>
+            <select
+              value={state}
+              onChange={(e) => { setState(e.target.value); setCity(""); fetchCities(e.target.value); }}
+              className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+            >
+              <option value="">Selecione</option>
+              {BRAZILIAN_STATES.map((s) => (
+                <option key={s.uf} value={s.uf}>{s.uf} - {s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="text-sm text-muted mb-2 block">Cidade</label>
             <input
               type="text"
+              list="cities-list-novo"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Ex: Rio de Janeiro"
-              className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
+              placeholder={state ? "Digite para buscar..." : "Selecione o estado primeiro"}
+              disabled={!state}
+              className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50 disabled:opacity-50"
             />
-          </div>
-          <div>
-            <label className="text-sm text-muted mb-2 block">Estado</label>
-            <input
-              type="text"
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              placeholder="Ex: RJ"
-              className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
-            />
+            <datalist id="cities-list-novo">
+              {cities.map((c) => <option key={c} value={c} />)}
+            </datalist>
           </div>
         </div>
 

@@ -291,9 +291,6 @@ export default function EventoPublicPage() {
                   {totalPhotos} fotos
                 </span>
               </div>
-              {event.description && (
-                <p className="text-muted mt-4 max-w-2xl">{event.description}</p>
-              )}
             </div>
 
             <Link

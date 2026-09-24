@@ -21,7 +21,7 @@ export default function DashboardPage() {
     totalSalesCount: 0,
   });
   const [recentEvents, setRecentEvents] = useState<
-    { id: string; title: string; event_date: string; photo_count: number; is_active: boolean }[]
+    { id: string; title: string; event_date: string; photo_count: number; status: string }[]
   >([]);
   const supabase = createClient();
 
@@ -31,6 +31,9 @@ export default function DashboardPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Auto-activate scheduled events that have passed
+      await supabase.rpc("activate_scheduled_events");
 
       const [photosRes, eventsRes, salesRes] = await Promise.all([
         supabase
@@ -176,12 +179,14 @@ export default function DashboardPage() {
                 </div>
                 <span
                   className={`text-xs px-3 py-1 rounded-full ${
-                    event.is_active
+                    event.status === "active"
                       ? "bg-primary/10 text-primary"
+                      : event.status === "scheduled"
+                      ? "bg-yellow-500/10 text-yellow-400"
                       : "bg-muted/10 text-muted"
                   }`}
                 >
-                  {event.is_active ? "Ativo" : "Inativo"}
+                  {event.status === "active" ? "Ativo" : event.status === "scheduled" ? "Agendado" : "Inativo"}
                 </span>
               </Link>
             ))}

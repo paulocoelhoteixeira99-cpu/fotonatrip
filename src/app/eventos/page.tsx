@@ -43,6 +43,9 @@ export default function EventosPage() {
   async function loadEvents() {
     setLoading(true);
 
+    // Auto-activate scheduled events that have passed
+    await supabase.rpc("activate_scheduled_events");
+
     const { data, count } = await supabase
       .from("events")
       .select(
@@ -145,11 +148,6 @@ export default function EventosPage() {
                       <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
                         {event.title}
                       </h3>
-                      {event.description && (
-                        <p className="text-sm text-muted mb-3 line-clamp-2">
-                          {event.description}
-                        </p>
-                      )}
                       <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
                         {(event.location || event.city) && (
                           <span className="flex items-center gap-1">

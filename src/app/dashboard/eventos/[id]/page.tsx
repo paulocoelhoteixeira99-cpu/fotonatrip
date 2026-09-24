@@ -27,8 +27,22 @@ import {
   Download,
   CalendarClock,
   Package,
+  Pencil,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
+
+const BRAZILIAN_STATES = [
+  { uf: "AC", name: "Acre" }, { uf: "AL", name: "Alagoas" }, { uf: "AP", name: "Amapá" },
+  { uf: "AM", name: "Amazonas" }, { uf: "BA", name: "Bahia" }, { uf: "CE", name: "Ceará" },
+  { uf: "DF", name: "Distrito Federal" }, { uf: "ES", name: "Espírito Santo" }, { uf: "GO", name: "Goiás" },
+  { uf: "MA", name: "Maranhão" }, { uf: "MT", name: "Mato Grosso" }, { uf: "MS", name: "Mato Grosso do Sul" },
+  { uf: "MG", name: "Minas Gerais" }, { uf: "PA", name: "Pará" }, { uf: "PB", name: "Paraíba" },
+  { uf: "PR", name: "Paraná" }, { uf: "PE", name: "Pernambuco" }, { uf: "PI", name: "Piauí" },
+  { uf: "RJ", name: "Rio de Janeiro" }, { uf: "RN", name: "Rio Grande do Norte" },
+  { uf: "RS", name: "Rio Grande do Sul" }, { uf: "RO", name: "Rondônia" }, { uf: "RR", name: "Roraima" },
+  { uf: "SC", name: "Santa Catarina" }, { uf: "SP", name: "São Paulo" }, { uf: "SE", name: "Sergipe" },
+  { uf: "TO", name: "Tocantins" },
+];
 
 interface Event {
   id: string;
@@ -74,6 +88,10 @@ export default function EventoDetailPage() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", description: "", location: "", city: "", state: "", event_date: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [cities, setCities] = useState<string[]>([]);
   const supabase = createClient();
   const router = useRouter();
 
@@ -96,7 +114,10 @@ export default function EventoDetailPage() {
         setPackagePriceInput((eventData.package_price_cents / 100).toFixed(2).replace(".", ","));
       }
       if (eventData.scheduled_at) {
-        setScheduledAt(eventData.scheduled_at.slice(0, 16));
+        // Convert UTC to local datetime-local format
+        const local = new Date(eventData.scheduled_at);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setScheduledAt(`${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}`);
       }
 
       const { data: photosData } = await supabase
@@ -111,6 +132,55 @@ export default function EventoDetailPage() {
 
     load();
   }, [id]);
+
+  function startEditing() {
+    if (!event) return;
+    setEditForm({
+      title: event.title,
+      description: event.description || "",
+      location: event.location || "",
+      city: event.city || "",
+      state: event.state || "",
+      event_date: event.event_date || "",
+    });
+    if (event.state) fetchCities(event.state);
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!event || !editForm.title.trim()) return;
+    setSavingEdit(true);
+    await supabase.from("events").update({
+      title: editForm.title.trim(),
+      description: editForm.description.trim() || null,
+      location: editForm.location.trim() || null,
+      city: editForm.city.trim() || null,
+      state: editForm.state || null,
+      event_date: editForm.event_date || null,
+    }).eq("id", event.id);
+    setEvent({
+      ...event,
+      title: editForm.title.trim(),
+      description: editForm.description.trim() || null,
+      location: editForm.location.trim() || null,
+      city: editForm.city.trim() || null,
+      state: editForm.state || null,
+      event_date: editForm.event_date || null,
+    });
+    setSavingEdit(false);
+    setEditing(false);
+  }
+
+  async function fetchCities(uf: string) {
+    if (!uf) { setCities([]); return; }
+    try {
+      const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+      const data = await res.json();
+      setCities(data.map((m: { nome: string }) => m.nome));
+    } catch {
+      setCities([]);
+    }
+  }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -376,30 +446,117 @@ export default function EventoDetailPage() {
 
       {/* Event header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">{event.title}</h1>
-          <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted">
-            {event.location && (
-              <span className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                {event.location}
-                {event.city && `, ${event.city}`}
-                {event.state && ` - ${event.state}`}
-              </span>
-            )}
-            {event.event_date && (
-              <span className="flex items-center gap-1">
-                <CalendarDays className="w-4 h-4" />
-                {new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <ImageIcon className="w-4 h-4" />
-              {photos.length} fotos
-            </span>
-          </div>
-          {event.description && (
-            <p className="text-sm text-muted mt-3">{event.description}</p>
+        <div className="flex-1">
+          {editing ? (
+            <div className="space-y-3 max-w-lg">
+              <input
+                type="text"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                placeholder="Nome do evento *"
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-lg font-bold focus:outline-none focus:border-primary transition-colors"
+              />
+              <textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Descricao (visivel apenas para voce)"
+                rows={2}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors resize-none"
+              />
+              <input
+                type="text"
+                value={editForm.location}
+                onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                placeholder="Local (ex: Praia de Copacabana)"
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <select
+                  value={editForm.state}
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, state: e.target.value, city: "" });
+                    fetchCities(e.target.value);
+                  }}
+                  className="bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+                >
+                  <option value="">Estado</option>
+                  {BRAZILIAN_STATES.map((s) => (
+                    <option key={s.uf} value={s.uf}>{s.uf} - {s.name}</option>
+                  ))}
+                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="cities-list"
+                    value={editForm.city}
+                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                    placeholder="Cidade"
+                    className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors"
+                  />
+                  <datalist id="cities-list">
+                    {cities.map((c) => <option key={c} value={c} />)}
+                  </datalist>
+                </div>
+              </div>
+              <input
+                type="date"
+                value={editForm.event_date}
+                onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={saveEdit}
+                  disabled={savingEdit || !editForm.title.trim()}
+                  className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Salvar
+                </button>
+                <button
+                  onClick={() => setEditing(false)}
+                  className="glass hover:bg-white/10 px-5 py-2 rounded-xl text-sm font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold">{event.title}</h1>
+                <button
+                  onClick={startEditing}
+                  className="text-muted hover:text-primary transition-colors p-1"
+                  title="Editar evento"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted">
+                {(event.location || event.city) && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {event.location}
+                    {event.city && `, ${event.city}`}
+                    {event.state && ` - ${event.state}`}
+                  </span>
+                )}
+                {event.event_date && (
+                  <span className="flex items-center gap-1">
+                    <CalendarDays className="w-4 h-4" />
+                    {new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <ImageIcon className="w-4 h-4" />
+                  {photos.length} fotos
+                </span>
+              </div>
+              {event.description && (
+                <p className="text-sm text-muted mt-3">{event.description}</p>
+              )}
+            </>
           )}
         </div>
 
