@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -51,6 +51,7 @@ const PHOTOS_PER_PAGE = 20;
 
 export default function EventoPublicPage() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [event, setEvent] = useState<Event | null>(null);
   const [photographer, setPhotographer] = useState<Photographer | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -71,6 +72,13 @@ export default function EventoPublicPage() {
   useEffect(() => {
     if (event) loadPhotos();
   }, [event, page]);
+
+  // Auto-open "sem rosto" tab if URL has ?tab=sem-rosto
+  useEffect(() => {
+    if (event && searchParams.get("tab") === "sem-rosto") {
+      loadUnidentifiedPhotos();
+    }
+  }, [event]);
 
   async function loadEvent() {
     const { data } = await supabase

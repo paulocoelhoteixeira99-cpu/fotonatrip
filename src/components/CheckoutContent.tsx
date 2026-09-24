@@ -406,8 +406,10 @@ export default function CheckoutContent() {
                 }
               }}
               onReady={() => {
-                setBrickReady(true);
-                setError(null);
+                if (!brickReady) {
+                  setBrickReady(true);
+                  setError(null);
+                }
               }}
               onError={(err) => {
                 console.error("Payment Brick error:", err);

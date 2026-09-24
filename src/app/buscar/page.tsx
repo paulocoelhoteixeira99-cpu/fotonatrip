@@ -73,6 +73,15 @@ function BuscarContent() {
   const [noFace, setNoFace] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<SearchResult | null>(null);
+
+  // Handle Android back button for preview lightbox
+  useEffect(() => {
+    if (!previewPhoto) return;
+    window.history.pushState({ preview: true }, "");
+    const onPopState = () => setPreviewPhoto(null);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [previewPhoto]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const { addItem, addPackage, isInCart, isPackageInCart } = useCart();
@@ -536,12 +545,18 @@ function BuscarContent() {
                   })}
                 </div>
 
-                <div className="mt-8 text-center">
+                <div className="mt-8 glass rounded-xl p-4 text-center space-y-2">
                   <Link
                     href={`/eventos/${selectedEvent.id}`}
-                    className="text-sm text-muted hover:text-primary transition-colors"
+                    className="block text-sm text-muted hover:text-primary transition-colors"
                   >
-                    Ver todas as fotos do evento, incluindo fotos sem rosto identificado
+                    Ver todas as fotos do evento
+                  </Link>
+                  <Link
+                    href={`/eventos/${selectedEvent.id}?tab=sem-rosto`}
+                    className="block text-sm text-primary hover:text-primary-dark transition-colors font-medium"
+                  >
+                    Ver fotos sem rosto identificado
                   </Link>
                 </div>
                 </>
@@ -554,13 +569,17 @@ function BuscarContent() {
       {/* Photo preview lightbox */}
       {previewPhoto && (() => {
         const previewUrl = getPhotoUrl(previewPhoto.watermark_path || previewPhoto.storage_path);
+        const closePreview = () => {
+          setPreviewPhoto(null);
+          if (window.history.state?.preview) window.history.back();
+        };
         return (
           <div
             className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setPreviewPhoto(null)}
+            onClick={closePreview}
           >
             <button
-              onClick={() => setPreviewPhoto(null)}
+              onClick={closePreview}
               className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10"
             >
               <X className="w-6 h-6" />

@@ -79,22 +79,22 @@ export default function MinhasComprasPage() {
     setDownloading(item.id);
 
     try {
-      const res = await fetch(`/api/download?photo_id=${item.photo_id}`);
-      if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      // Use a hidden link pointing to the API download endpoint
+      // This works better on mobile than blob URLs
       const a = document.createElement("a");
-      a.href = blobUrl;
+      a.href = `/api/download?photo_id=${item.photo_id}`;
       a.download = `fotonatrip-${item.photo_id.slice(0, 8)}.jpg`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
     } catch {
       // Fallback: open CDN URL directly
       const photoUrl = getPhotoUrl(item.photo.storage_path);
       window.open(photoUrl, "_blank");
     }
 
-    setDownloading(null);
+    // Small delay so user sees loading state
+    setTimeout(() => setDownloading(null), 1500);
   }
 
   const [checkMessage, setCheckMessage] = useState<string | null>(null);
