@@ -148,22 +148,29 @@ export default function EventosPage() {
                       <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
                         {event.title}
                       </h3>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-                        {(event.location || event.city) && (
+                      <div className="space-y-1.5 text-xs text-muted">
+                        {event.location && (
                           <span className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5" />
-                            {event.location || event.city}
-                            {event.state && ` - ${event.state}`}
+                            <MapPin className="w-3.5 h-3.5 shrink-0" />
+                            {event.location}
                           </span>
                         )}
-                        {event.event_date && (
-                          <span className="flex items-center gap-1">
-                            <CalendarDays className="w-3.5 h-3.5" />
-                            {new Date(
-                              event.event_date + "T00:00:00"
-                            ).toLocaleDateString("pt-BR")}
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-3">
+                          {(event.city || event.state) && (
+                            <span className="flex items-center gap-1">
+                              {!event.location && <MapPin className="w-3.5 h-3.5 shrink-0" />}
+                              {event.city}{event.city && event.state && " - "}{event.state}
+                            </span>
+                          )}
+                          {event.event_date && (
+                            <span className="flex items-center gap-1">
+                              <CalendarDays className="w-3.5 h-3.5 shrink-0" />
+                              {new Date(
+                                event.event_date + "T00:00:00"
+                              ).toLocaleDateString("pt-BR")}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </Link>

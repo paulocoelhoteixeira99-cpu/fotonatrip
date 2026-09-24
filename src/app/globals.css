@@ -58,6 +58,12 @@ body {
   box-shadow: 0 0 60px rgba(13, 150, 104, 0.15);
 }
 
+/* Dark select/option for dropdowns */
+select option {
+  background: #1a1a1a;
+  color: #ededed;
+}
+
 /* Smooth section transitions */
 section {
   scroll-margin-top: 80px;

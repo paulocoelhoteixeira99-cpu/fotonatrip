@@ -260,36 +260,43 @@ export default function EventoPublicPage() {
               <h1 className="text-3xl md:text-4xl font-bold mb-3">
                 {event.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted">
-                {photographer && (
+              <div className="space-y-1.5 text-sm text-muted">
+                {event.location && (
                   <span className="flex items-center gap-1.5">
-                    <User className="w-4 h-4" />
-                    {photographer.business_name || photographer.full_name}
+                    <MapPin className="w-4 h-4 shrink-0" />
+                    {event.location}
                   </span>
                 )}
-                {(event.location || event.city) && (
+                <div className="flex flex-wrap items-center gap-4">
+                  {photographer && (
+                    <span className="flex items-center gap-1.5">
+                      <User className="w-4 h-4" />
+                      {photographer.business_name || photographer.full_name}
+                    </span>
+                  )}
+                  {(event.city || event.state) && (
+                    <span className="flex items-center gap-1.5">
+                      {!event.location && <MapPin className="w-4 h-4" />}
+                      {event.city}{event.city && event.state && " - "}{event.state}
+                    </span>
+                  )}
+                  {event.event_date && (
+                    <span className="flex items-center gap-1.5">
+                      <CalendarDays className="w-4 h-4" />
+                      {new Date(
+                        event.event_date + "T00:00:00"
+                      ).toLocaleDateString("pt-BR", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4" />
-                    {event.location || event.city}
-                    {event.state && ` - ${event.state}`}
+                    <ImageIcon className="w-4 h-4" />
+                    {totalPhotos} fotos
                   </span>
-                )}
-                {event.event_date && (
-                  <span className="flex items-center gap-1.5">
-                    <CalendarDays className="w-4 h-4" />
-                    {new Date(
-                      event.event_date + "T00:00:00"
-                    ).toLocaleDateString("pt-BR", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </span>
-                )}
-                <span className="flex items-center gap-1.5">
-                  <ImageIcon className="w-4 h-4" />
-                  {totalPhotos} fotos
-                </span>
+                </div>
               </div>
             </div>
 
