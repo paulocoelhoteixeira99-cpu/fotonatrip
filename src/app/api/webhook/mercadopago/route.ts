@@ -1,5 +1,6 @@
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { createClient } from "@supabase/supabase-js";
+import { createHmac } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET endpoint to test if webhook is accessible
@@ -7,6 +8,7 @@ export async function GET() {
   const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
   const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
   const hasMPToken = !!process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const hasWebhookSecret = !!process.env.MP_WEBHOOK_SECRET;
 
   return NextResponse.json({
     status: "ok",
@@ -14,8 +16,43 @@ export async function GET() {
       supabase_url: hasSupabaseUrl,
       service_key: hasServiceKey,
       mp_token: hasMPToken,
+      webhook_secret: hasWebhookSecret,
     },
   });
+}
+
+function verifySignature(req: NextRequest, dataId: string): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET;
+  if (!secret) return true; // Skip validation if no secret configured
+
+  const xSignature = req.headers.get("x-signature");
+  const xRequestId = req.headers.get("x-request-id");
+
+  if (!xSignature || !xRequestId) {
+    console.log("Webhook: missing x-signature or x-request-id headers");
+    return false;
+  }
+
+  // Parse x-signature: "ts=xxx,v1=xxx"
+  const parts: Record<string, string> = {};
+  xSignature.split(",").forEach((part) => {
+    const [key, ...val] = part.split("=");
+    parts[key.trim()] = val.join("=").trim();
+  });
+
+  const ts = parts.ts;
+  const v1 = parts.v1;
+
+  if (!ts || !v1) {
+    console.log("Webhook: invalid x-signature format");
+    return false;
+  }
+
+  // Build manifest string per MP docs
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+  const hmac = createHmac("sha256", secret).update(manifest).digest("hex");
+
+  return hmac === v1;
 }
 
 export async function POST(req: NextRequest) {
@@ -31,16 +68,24 @@ export async function POST(req: NextRequest) {
 
     console.log("Webhook received:", JSON.stringify(body));
 
+    // Extract data.id for signature verification
+    const rawDataId = (body.data as Record<string, unknown>)?.id;
+
+    // Verify signature
+    if (rawDataId && !verifySignature(req, String(rawDataId))) {
+      console.log("Webhook: invalid signature, rejecting");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
     // Extract payment ID — MP sends it as string or number
-    const rawPaymentId = (body.data as Record<string, unknown>)?.id;
-    if (!rawPaymentId) {
+    if (!rawDataId) {
       console.log("Webhook: no data.id, ignoring");
       return NextResponse.json({ received: true });
     }
 
-    const paymentId = Number(rawPaymentId);
+    const paymentId = Number(rawDataId);
     if (isNaN(paymentId)) {
-      console.log("Webhook: invalid payment ID:", rawPaymentId);
+      console.log("Webhook: invalid payment ID:", rawDataId);
       return NextResponse.json({ received: true });
     }
 
