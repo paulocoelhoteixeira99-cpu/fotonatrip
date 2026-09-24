@@ -59,10 +59,13 @@ export async function GET(request: Request) {
           }
         }
 
-        // Clear the cookie
-        const response = NextResponse.redirect(
-          `${origin}${next || (intendedRole === "photographer" || profile?.role === "photographer" ? "/dashboard" : "/buscar")}`
-        );
+        // Determine redirect destination
+        const isNewPhotographer = intendedRole === "photographer" && profile?.role !== "photographer";
+        const isPhotographer = intendedRole === "photographer" || profile?.role === "photographer";
+        let dest = next || (isPhotographer ? "/dashboard" : "/buscar");
+        if (isNewPhotographer) dest = "/dashboard/configuracoes";
+
+        const response = NextResponse.redirect(`${origin}${dest}`);
         response.cookies.set("oauth_role", "", { path: "/", maxAge: 0 });
         return response;
       }
