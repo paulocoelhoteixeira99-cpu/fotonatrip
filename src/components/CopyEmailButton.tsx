@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Mail } from "lucide-react";
 
 const EMAIL = "fotonatrip2026@gmail.com";
 
@@ -14,16 +14,24 @@ export default function CopyEmailButton() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback: open mailto
       window.location.href = `mailto:${EMAIL}`;
     }
   }
 
   return (
     <div className="flex flex-col items-center gap-3">
+      {/* Mobile: mailto */}
+      <a
+        href={`mailto:${EMAIL}`}
+        className="inline-flex md:hidden items-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-medium transition-colors"
+      >
+        <Mail className="w-4 h-4" />
+        Enviar email
+      </a>
+      {/* Desktop: copy to clipboard */}
       <button
         onClick={handleClick}
-        className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-medium transition-colors"
+        className="hidden md:inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-medium transition-colors"
       >
         {copied ? (
           <>
@@ -37,7 +45,7 @@ export default function CopyEmailButton() {
           </>
         )}
       </button>
-      <span className="text-xs text-muted">{EMAIL}</span>
+      <span className="text-xs text-muted hidden md:block">{EMAIL}</span>
     </div>
   );
 }
