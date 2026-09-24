@@ -342,6 +342,21 @@ function BuscarContent() {
                   </div>
                   <input ref={cameraInputRef} type="file" accept="image/*" capture="user" onChange={handleFileSelect} className="hidden" />
                   <input ref={galleryInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+
+                  <div className="flex flex-col items-center gap-2 mt-6 pt-6 border-t border-border w-full max-w-xs">
+                    <Link
+                      href={`/eventos/${selectedEvent.id}`}
+                      className="text-xs text-muted hover:text-foreground transition-colors"
+                    >
+                      Ver todas as fotos do evento
+                    </Link>
+                    <Link
+                      href={`/eventos/${selectedEvent.id}?tab=sem-rosto`}
+                      className="text-xs text-muted hover:text-primary transition-colors"
+                    >
+                      Ver fotos sem rosto identificado
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

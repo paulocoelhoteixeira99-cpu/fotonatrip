@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
   // Verify user has a paid order containing this photo
   const { data: orderItem } = await supabase
     .from("order_items")
-    .select("id, photo_id, orders!inner(id, user_id, status)")
+    .select("id, photo_id, orders!inner(id, client_id, status)")
     .eq("photo_id", photoId)
-    .eq("orders.user_id", user.id)
+    .eq("orders.client_id", user.id)
     .eq("orders.status", "paid")
     .limit(1)
     .single();
