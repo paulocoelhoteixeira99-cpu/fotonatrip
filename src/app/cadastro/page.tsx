@@ -147,10 +147,11 @@ export default function CadastroPage() {
 
           <button
             onClick={async () => {
+              document.cookie = `oauth_role=${role};path=/;max-age=600;SameSite=Lax`;
               await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                  redirectTo: `${window.location.origin}/auth/callback?role=${role}`,
+                  redirectTo: `${window.location.origin}/auth/callback`,
                 },
               });
             }}

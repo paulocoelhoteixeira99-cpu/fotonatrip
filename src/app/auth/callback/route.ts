@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -13,44 +14,57 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        // Check if profile exists (new OAuth user won't have one)
+        // Read intended role from cookie (set on signup page)
+        const cookieStore = await cookies();
+        const roleCookie = cookieStore.get("oauth_role")?.value;
+        const intendedRole = roleCookie === "photographer" ? "photographer" : null;
+
+        // Check if profile exists (trigger may have already created it)
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single();
 
-        const roleParam = searchParams.get("role");
-        const validRole = roleParam === "photographer" ? "photographer" : "client";
+        const fullName =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          "";
 
         if (!profile) {
-          // Create profile for new OAuth user
-          const fullName =
-            user.user_metadata?.full_name ||
-            user.user_metadata?.name ||
-            "";
+          // Trigger didn't fire yet — create profile
+          const role = intendedRole || "client";
           await supabase.from("profiles").insert({
             id: user.id,
             full_name: fullName,
-            role: validRole,
+            role,
           });
-
-          // Also create photographer record if needed
-          if (validRole === "photographer") {
-            await supabase.from("photographers").insert({
+          if (role === "photographer") {
+            await supabase.from("photographers").upsert({
+              id: user.id,
+              display_name: fullName,
+            });
+          }
+        } else if (intendedRole && profile.role !== intendedRole) {
+          // Profile exists but role needs to change (e.g. client -> photographer)
+          await supabase
+            .from("profiles")
+            .update({ role: intendedRole })
+            .eq("id", user.id);
+          if (intendedRole === "photographer") {
+            await supabase.from("photographers").upsert({
               id: user.id,
               display_name: fullName,
             });
           }
         }
 
-        // Redirect based on role
-        if (next) {
-          return NextResponse.redirect(`${origin}${next}`);
-        }
-        const finalRole = profile?.role || validRole;
-        const dest = finalRole === "photographer" ? "/dashboard" : "/buscar";
-        return NextResponse.redirect(`${origin}${dest}`);
+        // Clear the cookie
+        const response = NextResponse.redirect(
+          `${origin}${next || (intendedRole === "photographer" || profile?.role === "photographer" ? "/dashboard" : "/buscar")}`
+        );
+        response.cookies.set("oauth_role", "", { path: "/", maxAge: 0 });
+        return response;
       }
     }
   }
