@@ -97,20 +97,35 @@ export default function MinhasComprasPage() {
     setDownloading(null);
   }
 
+  const [checkMessage, setCheckMessage] = useState<string | null>(null);
+
   async function handleCheckPayment(orderId: string) {
     setCheckingPayment(orderId);
+    setCheckMessage(null);
     try {
       const res = await fetch(`/api/check-payment?order_id=${orderId}`);
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, status: data.status } : o))
-        );
+        if (data.status === "paid") {
+          setOrders((prev) =>
+            prev.map((o) => (o.id === orderId ? { ...o, status: "paid" } : o))
+          );
+          setCheckMessage("Pagamento confirmado!");
+        } else if (data.status === "pending") {
+          setCheckMessage("Pagamento ainda nao confirmado. Tente novamente em alguns minutos.");
+        } else {
+          setOrders((prev) =>
+            prev.map((o) => (o.id === orderId ? { ...o, status: data.status } : o))
+          );
+        }
+      } else {
+        setCheckMessage(data.error || "Erro ao verificar pagamento.");
       }
     } catch {
-      // silently fail
+      setCheckMessage("Erro de conexao. Tente novamente.");
     }
     setCheckingPayment(null);
+    setTimeout(() => setCheckMessage(null), 5000);
   }
 
   const statusConfig: Record<string, { icon: typeof CheckCircle; label: string; color: string }> = {
@@ -198,6 +213,16 @@ export default function MinhasComprasPage() {
                         </span>
                       </div>
                     </div>
+
+                    {checkMessage && (checkingPayment === order.id || order.status === "pending") && (
+                      <div className={`mx-4 mt-3 text-xs rounded-lg px-3 py-2 ${
+                        checkMessage.includes("confirmado")
+                          ? "text-primary bg-primary/10"
+                          : "text-yellow-400 bg-yellow-400/10"
+                      }`}>
+                        {checkMessage}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4">
                       {order.items.map((item) => {

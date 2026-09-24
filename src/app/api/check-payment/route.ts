@@ -36,14 +36,17 @@ export async function GET(req: NextRequest) {
   }
 
   if (!order.payment_id) {
+    console.log(`Check-payment: order ${orderId} has no payment_id, status=${order.status}`);
     return NextResponse.json({ status: order.status });
   }
 
   // Check directly with Mercado Pago
+  console.log(`Check-payment: checking payment_id=${order.payment_id} for order ${orderId}`);
   const paymentId = parseInt(order.payment_id);
-  let paymentData = await fetchFromMP(paymentId, supabase);
+  const paymentData = await fetchFromMP(paymentId, supabase);
 
   if (paymentData) {
+    console.log(`Check-payment: MP returned status=${paymentData.status} for payment ${paymentId}`);
     let newStatus: string;
     switch (paymentData.status) {
       case "approved":
@@ -70,6 +73,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ status: newStatus });
   }
 
+  console.log(`Check-payment: could not fetch payment ${paymentId} from MP`);
   return NextResponse.json({ status: order.status });
 }
 
@@ -81,8 +85,8 @@ async function fetchFromMP(paymentId: number, supabase: any) {
     });
     const result = await new Payment(client).get({ id: paymentId });
     if (result?.id) return result;
-  } catch {
-    // Platform token failed, try photographer tokens
+  } catch (err) {
+    console.log("Check-payment: platform token failed:", err instanceof Error ? err.message : err);
   }
 
   const { data: photographers } = await supabase

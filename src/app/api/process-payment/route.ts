@@ -23,9 +23,31 @@ export async function POST(req: NextRequest) {
     // Get order to know the platform_fee, then check photographer
     const { data: order } = await supabase
       .from("orders")
-      .select("id, platform_fee_cents")
+      .select("id, platform_fee_cents, status, payment_id")
       .eq("id", orderId)
       .single();
+
+    // Prevent duplicate payments — if order already paid, return success
+    if (order?.status === "paid") {
+      return NextResponse.json({ status: "approved", payment_id: order.payment_id });
+    }
+
+    // If order already has a payment, check its status before creating a new one
+    if (order?.payment_id) {
+      try {
+        const checkClient = new MercadoPagoConfig({ accessToken });
+        const existing = await new Payment(checkClient).get({ id: parseInt(order.payment_id) });
+        if (existing?.status === "approved") {
+          await supabase
+            .from("orders")
+            .update({ status: "paid", updated_at: new Date().toISOString() })
+            .eq("id", orderId);
+          return NextResponse.json({ status: "approved", payment_id: order.payment_id });
+        }
+      } catch {
+        // Could not check existing payment, proceed with new one
+      }
+    }
 
     if (order) {
       // Get the photographer from order items (all items same photographer for marketplace)
