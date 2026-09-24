@@ -31,6 +31,8 @@ const PAGE_SIZE = 12;
 export default function EventosPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -38,7 +40,7 @@ export default function EventosPage() {
 
   useEffect(() => {
     loadEvents();
-  }, [page]);
+  }, [page, dateFrom, dateTo]);
 
   async function loadEvents() {
     setLoading(true);
@@ -46,13 +48,18 @@ export default function EventosPage() {
     // Auto-activate scheduled events that have passed
     await supabase.rpc("activate_scheduled_events");
 
-    const { data, count } = await supabase
+    let query = supabase
       .from("events")
       .select(
         "id, title, description, location, city, state, event_date, photo_count, cover_url",
         { count: "exact" }
       )
-      .eq("status", "active")
+      .eq("status", "active");
+
+    if (dateFrom) query = query.gte("event_date", dateFrom);
+    if (dateTo) query = query.lte("event_date", dateTo);
+
+    const { data, count } = await query
       .order("event_date", { ascending: false, nullsFirst: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -88,16 +95,45 @@ export default function EventosPage() {
             </p>
           </div>
 
-          {/* Search */}
-          <div className="relative max-w-lg mx-auto mb-12">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por evento, local ou cidade..."
-              className="w-full bg-white/5 border border-border rounded-2xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
-            />
+          {/* Search + Date filter */}
+          <div className="max-w-2xl mx-auto mb-12 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por evento, local ou cidade..."
+                className="w-full bg-white/5 border border-border rounded-2xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
+              />
+            </div>
+            <div className="flex items-center gap-3 justify-center">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-muted shrink-0" />
+                <span className="text-xs text-muted">De</span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                  className="bg-white/5 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+                />
+              </div>
+              <span className="text-xs text-muted">ate</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                className="bg-white/5 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+              />
+              {(dateFrom || dateTo) && (
+                <button
+                  onClick={() => { setDateFrom(""); setDateTo(""); setPage(0); }}
+                  className="text-xs text-primary hover:text-primary-light transition-colors whitespace-nowrap"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Events grid */}
