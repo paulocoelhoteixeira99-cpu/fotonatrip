@@ -26,6 +26,7 @@ export default function Header() {
   const router = useRouter();
 
   async function handleLogout() {
+    if (!window.confirm("Voce deseja mesmo sair?")) return;
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);

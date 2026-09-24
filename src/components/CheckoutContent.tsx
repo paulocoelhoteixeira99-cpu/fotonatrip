@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import { useCart, formatPrice } from "@/lib/cart";
@@ -14,6 +14,7 @@ import {
   Check,
   CreditCard,
   QrCode,
+  CheckCircle,
 } from "lucide-react";
 
 initMercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY!, {
@@ -50,17 +51,55 @@ export default function CheckoutContent() {
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [pixLoading, setPixLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pixConfirmed, setPixConfirmed] = useState(false);
 
   const cardAmount = calcAdjusted(baseAmount, FEE_RATE.card);
   const pixAmount = calcAdjusted(baseAmount, FEE_RATE.pix);
   const currentAmount = payMethod === "card" ? cardAmount : pixAmount;
   const currentFee = +(currentAmount - baseAmount).toFixed(2);
 
+  const checkPaymentStatus = useCallback(async () => {
+    if (!orderId) return null;
+    try {
+      const res = await fetch(`/api/check-payment?order_id=${orderId}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.status as string;
+    } catch {
+      return null;
+    }
+  }, [orderId]);
+
   useEffect(() => {
     if (!preferenceId || !orderId) {
       router.replace("/carrinho");
+      return;
     }
+    // On page load, check if order is already paid (e.g. user paid and came back)
+    checkPaymentStatus().then((status) => {
+      if (status === "paid") {
+        clearCart();
+        router.replace(`/checkout/sucesso?order=${orderId}`);
+      }
+    });
   }, [preferenceId, orderId, router]);
+
+  // Poll payment status when Pix QR code is showing
+  useEffect(() => {
+    if (!pixData || pixConfirmed) return;
+    const interval = setInterval(async () => {
+      const status = await checkPaymentStatus();
+      if (status === "paid") {
+        setPixConfirmed(true);
+        clearInterval(interval);
+        clearCart();
+        setTimeout(() => {
+          router.push(`/checkout/sucesso?order=${orderId}`);
+        }, 2000);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [pixData, pixConfirmed, orderId, checkPaymentStatus, clearCart, router]);
 
   async function handlePixPayment() {
     setPixLoading(true);
@@ -120,6 +159,23 @@ export default function CheckoutContent() {
 
   // Pix QR Code screen
   if (pixData) {
+    if (pixConfirmed) {
+      return (
+        <div className="max-w-md mx-auto px-4 sm:px-6 text-center">
+          <div className="glass rounded-2xl p-6 sm:p-8">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-7 h-7 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Pagamento confirmado!</h2>
+            <p className="text-muted text-sm mb-4">
+              Redirecionando para suas fotos...
+            </p>
+            <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-md mx-auto px-4 sm:px-6 text-center">
         <div className="glass rounded-2xl p-6 sm:p-8">
@@ -170,16 +226,17 @@ export default function CheckoutContent() {
             </div>
           )}
 
-          <p className="text-xs text-muted mb-4">
-            Apos o pagamento, suas fotos serao liberadas automaticamente.
-          </p>
+          <div className="flex items-center justify-center gap-2 text-xs text-yellow-400 mb-4">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Aguardando confirmacao do pagamento...
+          </div>
 
           <Link
             href={`/checkout/sucesso?order=${orderId}&status=pending`}
             onClick={() => clearCart()}
-            className="text-sm text-primary hover:text-primary-dark transition-colors"
+            className="text-sm text-muted hover:text-foreground transition-colors"
           >
-            Ja paguei
+            Ir para minhas compras
           </Link>
         </div>
 

@@ -17,6 +17,8 @@ import {
   Package,
   Camera,
   Image as ImageLucide,
+  X,
+  ZoomIn,
 } from "lucide-react";
 import { useCart, formatPrice, type CartItem } from "@/lib/cart";
 import Link from "next/link";
@@ -70,6 +72,7 @@ function BuscarContent() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [noFace, setNoFace] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<SearchResult | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const { addItem, addPackage, isInCart, isPackageInCart } = useCart();
@@ -488,11 +491,17 @@ function BuscarContent() {
 
                     return (
                       <div key={result.photo_id} className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 transition-all">
-                        <div className="aspect-[3/4] overflow-hidden relative">
+                        <div
+                          className="aspect-[3/4] overflow-hidden relative cursor-pointer"
+                          onClick={() => setPreviewPhoto(result)}
+                        >
                           <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                           <span className="absolute top-2 right-2 text-[10px] text-primary bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
                             {Math.round(70 + ((Math.min(result.similarity, 0.8) - 0.4) / 0.4) * 30)}% match
                           </span>
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity md:flex hidden">
+                            <ZoomIn className="w-6 h-6 text-white" />
+                          </div>
                         </div>
                         <div className="p-3">
                           <p className="text-xs text-muted truncate mb-2">{result.event_title}</p>
@@ -541,6 +550,65 @@ function BuscarContent() {
           )}
         </div>
       </div>
+
+      {/* Photo preview lightbox */}
+      {previewPhoto && (() => {
+        const previewUrl = getPhotoUrl(previewPhoto.watermark_path || previewPhoto.storage_path);
+        return (
+          <div
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setPreviewPhoto(null)}
+          >
+            <button
+              onClick={() => setPreviewPhoto(null)}
+              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div
+              className="relative max-w-2xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={previewUrl}
+                alt=""
+                className="w-full max-h-[80vh] object-contain rounded-xl"
+              />
+              <div className="mt-4 flex items-center justify-between glass rounded-xl p-3">
+                <div>
+                  <p className="text-xs text-muted">{previewPhoto.event_title}</p>
+                  <p className="text-sm font-semibold">{formatPrice(previewPhoto.price_cents)}</p>
+                </div>
+                {isInCart(previewPhoto.photo_id) ? (
+                  <span className="flex items-center gap-1.5 text-sm text-primary bg-primary/10 px-4 py-2 rounded-xl">
+                    <Check className="w-4 h-4" />
+                    No carrinho
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      addItem({
+                        photo_id: previewPhoto.photo_id,
+                        event_id: previewPhoto.event_id,
+                        event_title: previewPhoto.event_title,
+                        photographer_name: previewPhoto.photographer_name,
+                        photographer_id: "",
+                        price_cents: previewPhoto.price_cents,
+                        watermark_url: previewUrl,
+                      });
+                    }}
+                    className="flex items-center gap-1.5 text-sm bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Adicionar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
