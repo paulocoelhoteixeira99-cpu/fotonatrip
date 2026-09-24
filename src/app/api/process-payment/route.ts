@@ -49,26 +49,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (order) {
-      // Get the photographer from order items (all items same photographer for marketplace)
-      const { data: orderItems } = await supabase
-        .from("order_items")
-        .select("photographer_id")
-        .eq("order_id", orderId)
-        .limit(1);
+    // Get order items with photo/event info for MP additional_info
+    const { data: orderItems } = await supabase
+      .from("order_items")
+      .select("id, photographer_id, price_cents, photos(event_id, events(title))")
+      .eq("order_id", orderId);
 
-      if (orderItems?.length) {
-        const { data: photographer } = await supabase
-          .from("photographers")
-          .select("mp_access_token, mp_user_id")
-          .eq("id", orderItems[0].photographer_id)
-          .single();
+    if (order && orderItems?.length) {
+      const { data: photographer } = await supabase
+        .from("photographers")
+        .select("mp_access_token, mp_user_id")
+        .eq("id", orderItems[0].photographer_id)
+        .single();
 
-        if (photographer?.mp_access_token && photographer?.mp_user_id) {
-          // Marketplace: use photographer's token + application_fee
-          accessToken = photographer.mp_access_token;
-          applicationFee = order.platform_fee_cents / 100; // 7% in BRL
-        }
+      if (photographer?.mp_access_token && photographer?.mp_user_id) {
+        accessToken = photographer.mp_access_token;
+        applicationFee = order.platform_fee_cents / 100;
       }
     }
 
@@ -90,16 +86,37 @@ export async function POST(req: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.com.br";
 
+    // Build items for additional_info
+    const eventTitle = (orderItems?.[0] as any)?.photos?.events?.title || "Evento";
+    const itemCount = orderItems?.length || 1;
+    const mpItems = [{
+      id: orderId,
+      title: `Fotos profissionais - ${eventTitle}`,
+      description: `${itemCount} foto${itemCount !== 1 ? "s" : ""} digital sem marca d'agua do evento "${eventTitle}". Entrega imediata via download apos confirmacao do pagamento.`,
+      category_id: "services",
+      quantity: 1,
+      unit_price: formData.transaction_amount,
+    }];
+
     const paymentBody: Record<string, unknown> = {
       transaction_amount: formData.transaction_amount,
       description: "Fotos profissionais - fotonatrip",
       payment_method_id: formData.payment_method_id,
+      statement_descriptor: "FOTONATRIP",
       payer: {
         email: payerEmail || formData.payer?.email,
         identification: formData.payer?.identification,
       },
       external_reference: orderId,
       notification_url: `${appUrl}/api/webhook/mercadopago`,
+      back_urls: {
+        success: `${appUrl}/checkout/sucesso?order=${orderId}`,
+        failure: `${appUrl}/checkout/falha?order=${orderId}`,
+        pending: `${appUrl}/checkout/sucesso?order=${orderId}&status=pending`,
+      },
+      additional_info: {
+        items: mpItems,
+      },
     };
 
     // Card-specific fields
