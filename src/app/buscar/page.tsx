@@ -520,9 +520,6 @@ function BuscarContent() {
                           onClick={() => setPreviewPhoto(result)}
                         >
                           <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
-                          <span className="absolute top-2 right-2 text-[10px] text-primary bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
-                            {Math.round(70 + ((Math.min(result.similarity, 0.8) - 0.4) / 0.4) * 30)}% match
-                          </span>
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity md:flex hidden">
                             <ZoomIn className="w-6 h-6 text-white" />
                           </div>
