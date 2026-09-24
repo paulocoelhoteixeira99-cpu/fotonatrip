@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CopyEmailButton from "@/components/CopyEmailButton";
 import Link from "next/link";
 import {
   Search,
@@ -168,12 +169,7 @@ export default function AjudaPage() {
             <p className="text-muted text-sm mb-6">
               Entre em contato com a nossa equipe. Respondemos em ate 24 horas.
             </p>
-            <a
-              href="mailto:fotonatrip2026@gmail.com"
-              className="inline-block bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-medium transition-colors"
-            >
-              Enviar email
-            </a>
+            <CopyEmailButton />
           </div>
 
           {/* Links */}
