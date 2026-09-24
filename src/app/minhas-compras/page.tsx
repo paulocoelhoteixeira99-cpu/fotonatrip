@@ -59,6 +59,7 @@ export default function MinhasComprasPage() {
           photos:photo_id (storage_path, watermark_path)
         )
       `)
+      .eq("client_id", user.id)
       .or("status.neq.pending,payment_id.not.is.null")
       .order("created_at", { ascending: false });
 
