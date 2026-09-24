@@ -230,8 +230,26 @@ export default function EventoDetailPage() {
     setPhotos((prev) => prev.filter((p) => p.id !== photoId));
   }
 
+  const [hasSoldPhotos, setHasSoldPhotos] = useState<boolean | null>(null);
+
+  async function checkSoldPhotos() {
+    if (!event) return false;
+    const { count } = await supabase
+      .from("order_items")
+      .select("id", { count: "exact", head: true })
+      .in("photo_id", photos.map((p) => p.id));
+    const hasSales = (count || 0) > 0;
+    setHasSoldPhotos(hasSales);
+    return hasSales;
+  }
+
   async function handleDeleteEvent() {
     if (!event) return;
+
+    // Check for sold photos before deleting
+    const hasSales = await checkSoldPhotos();
+    if (hasSales) return;
+
     setDeleting(true);
 
     const { data: allPhotos } = await supabase
@@ -240,7 +258,6 @@ export default function EventoDetailPage() {
       .eq("event_id", event.id);
 
     if (allPhotos && allPhotos.length > 0) {
-      // Collect all file paths to delete from DO Spaces
       const paths: string[] = [];
       for (const photo of allPhotos) {
         paths.push(photo.storage_path);
@@ -252,7 +269,6 @@ export default function EventoDetailPage() {
         await supabase.from("photos").delete().eq("id", photo.id);
       }
 
-      // Delete files from DO Spaces
       deletePhotoFiles(paths);
     }
 
@@ -389,7 +405,7 @@ export default function EventoDetailPage() {
 
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={() => { setHasSoldPhotos(null); checkSoldPhotos(); setShowDeleteConfirm(true); }}
             className="flex items-center gap-2 text-sm text-muted hover:text-red-400 hover:bg-red-400/10 px-4 py-2.5 rounded-xl transition-colors"
           >
             <Trash2 className="w-4 h-4" />
@@ -434,34 +450,53 @@ export default function EventoDetailPage() {
             <h3 className="text-lg font-bold text-center mb-2">
               Excluir evento?
             </h3>
-            <p className="text-sm text-muted text-center mb-6">
-              Tem certeza que deseja excluir <strong className="text-foreground">{event.title}</strong>?
-              Todas as <strong className="text-foreground">{photos.length} fotos</strong> serao
-              removidas permanentemente. Essa acao nao pode ser desfeita.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deleting}
-                className="flex-1 glass hover:bg-white/10 py-3 rounded-xl text-sm font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDeleteEvent}
-                disabled={deleting}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {deleting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Excluindo...
-                  </>
-                ) : (
-                  "Sim, excluir tudo"
-                )}
-              </button>
-            </div>
+            {hasSoldPhotos ? (
+              <>
+                <p className="text-sm text-muted text-center mb-6">
+                  Este evento possui <strong className="text-yellow-400">fotos vendidas</strong> e nao pode ser excluido.
+                  Os clientes precisam ter acesso ao download e os registros financeiros devem ser preservados.
+                  <br /><br />
+                  Voce pode <strong className="text-foreground">inativar</strong> o evento para que ele nao apareca mais nas buscas.
+                </p>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="w-full glass hover:bg-white/10 py-3 rounded-xl text-sm font-medium transition-colors"
+                >
+                  Entendi
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted text-center mb-6">
+                  Tem certeza que deseja excluir <strong className="text-foreground">{event.title}</strong>?
+                  Todas as <strong className="text-foreground">{photos.length} fotos</strong> serao
+                  removidas permanentemente. Essa acao nao pode ser desfeita.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={deleting}
+                    className="flex-1 glass hover:bg-white/10 py-3 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDeleteEvent}
+                    disabled={deleting}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {deleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Excluindo...
+                      </>
+                    ) : (
+                      "Sim, excluir tudo"
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
