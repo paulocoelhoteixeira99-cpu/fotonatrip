@@ -267,52 +267,75 @@ export default function EventoDetailPage() {
     setReprocessing(true);
     setReprocessStatus("Reprocessando rostos via IA...");
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !event) return;
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || !event) {
+        setReprocessStatus("Erro: usuario nao autenticado.");
+        setReprocessing(false);
+        return;
+      }
 
-    let totalFaces = 0;
-    for (let i = 0; i < photos.length; i++) {
-      const photo = photos[i];
-      setReprocessStatus(`Processando foto ${i + 1} de ${photos.length}...`);
+      let totalFaces = 0;
+      let errors = 0;
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        setReprocessStatus(`Processando foto ${i + 1} de ${photos.length}...`);
 
-      // Delete existing embeddings
-      await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
+        try {
+          // Delete existing embeddings
+          await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
 
-      // Download photo from CDN and re-extract embeddings
-      const photoUrl = getPhotoUrl(photo.storage_path);
-      const res = await fetch(photoUrl);
-      const blob = await res.blob();
-      const file = new File([blob], "photo.jpg", { type: blob.type });
+          // Download photo from CDN and re-extract embeddings
+          const photoUrl = getPhotoUrl(photo.storage_path);
+          const res = await fetch(photoUrl);
+          if (!res.ok) {
+            errors++;
+            continue;
+          }
+          const blob = await res.blob();
+          const file = new File([blob], "photo.jpg", { type: blob.type });
 
-      // Use the server to extract embeddings only
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-      const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
-      const formData = new FormData();
-      formData.append("file", file);
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+          const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+          const formData = new FormData();
+          formData.append("file", file);
 
-      const extractRes = await fetch(`${API_URL}/extract-embedding`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${API_KEY}` },
-        body: formData,
-      });
-
-      if (extractRes.ok) {
-        const data = await extractRes.json();
-        if (data.embedding) {
-          const embedding = `[${data.embedding.join(",")}]`;
-          await supabase.from("face_embeddings").insert({
-            photo_id: photo.id,
-            embedding,
+          const extractRes = await fetch(`${API_URL}/extract-embedding`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${API_KEY}` },
+            body: formData,
           });
-          totalFaces++;
+
+          if (extractRes.ok) {
+            const data = await extractRes.json();
+            // Insert all detected face embeddings (not just the largest)
+            const embeddings = data.embeddings || (data.embedding ? [{ embedding: data.embedding }] : []);
+            for (const face of embeddings) {
+              const embedding = `[${face.embedding.join(",")}]`;
+              await supabase.from("face_embeddings").insert({
+                photo_id: photo.id,
+                embedding,
+              });
+              totalFaces++;
+            }
+          } else {
+            errors++;
+          }
+        } catch {
+          errors++;
         }
       }
-    }
 
-    setReprocessStatus(`Concluido! ${totalFaces} rosto(s) detectado(s) em ${photos.length} fotos.`);
-    setReprocessing(false);
+      const errorMsg = errors > 0 ? ` (${errors} erro(s))` : "";
+      setReprocessStatus(`Concluido! ${totalFaces} rosto(s) detectado(s) em ${photos.length} fotos.${errorMsg}`);
+    } catch (err) {
+      console.error("Reprocess error:", err);
+      setReprocessStatus("Erro ao reprocessar. Tente novamente.");
+    } finally {
+      setReprocessing(false);
+    }
   }
 
   if (loading) {
