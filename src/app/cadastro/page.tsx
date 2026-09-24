@@ -165,7 +165,7 @@ export default function CadastroPage() {
             </svg>
             Cadastrar com Google
           </button>
-          <p className="text-[11px] text-muted text-center -mt-1">
+          <p className="text-[11px] text-muted text-center mt-2">
             Ao continuar, voce aceita os{" "}
             <Link href="/termos" target="_blank" className="text-primary hover:text-primary-light transition-colors">Termos de Uso</Link>{" "}
             e a{" "}
