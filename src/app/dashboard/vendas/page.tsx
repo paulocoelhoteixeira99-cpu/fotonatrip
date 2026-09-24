@@ -11,12 +11,13 @@ import {
   CalendarDays,
 } from "lucide-react";
 
-interface Sale {
-  id: string;
-  photo_id: string;
-  price_cents: number;
+interface OrderGroup {
+  order_id: string;
+  photo_count: number;
+  total_cents: number;
   created_at: string;
   event_title: string;
+  is_package: boolean;
 }
 
 interface DailySales {
@@ -26,10 +27,11 @@ interface DailySales {
 }
 
 export default function VendasPage() {
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [orders, setOrders] = useState<OrderGroup[]>([]);
   const [totalRevenueCents, setTotalRevenueCents] = useState(0);
   const [monthRevenueCents, setMonthRevenueCents] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -46,9 +48,9 @@ export default function VendasPage() {
     const { data } = await supabase
       .from("order_items")
       .select(`
-        id, photo_id, price_cents, created_at,
+        id, photo_id, price_cents, created_at, order_id,
         orders!inner(status),
-        photos!inner(event_id, events(title))
+        photos!inner(event_id, events(title, price_per_photo_cents))
       `)
       .eq("photographer_id", user.id)
       .eq("orders.status", "paid")
@@ -59,29 +61,45 @@ export default function VendasPage() {
       return;
     }
 
-    const salesMapped: Sale[] = data.map((item: any) => ({
-      id: item.id,
-      photo_id: item.photo_id,
-      price_cents: item.price_cents,
-      created_at: item.created_at,
-      event_title: item.photos?.events?.title || "Evento",
-    }));
-
-    setSales(salesMapped);
-
     // Calculate totals (photographer gets 93%)
-    const total = salesMapped.reduce((sum, s) => sum + Math.round(s.price_cents * 0.93), 0);
+    const total = data.reduce((sum: number, s: any) => sum + Math.round(s.price_cents * 0.93), 0);
     setTotalRevenueCents(total);
-    setTotalCount(salesMapped.length);
+    setTotalCount(data.length);
+    setOrderCount(new Set(data.map((item: any) => item.order_id)).size);
+
+    // Group items by order_id
+    const grouped = new Map<string, any[]>();
+    for (const item of data) {
+      const key = item.order_id;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(item);
+    }
+
+    const orderGroups: OrderGroup[] = Array.from(grouped.entries()).map(([orderId, items]) => {
+      const first = items[0] as any;
+      const eventPrice = first.photos?.events?.price_per_photo_cents || 0;
+      const isPackage = items.length > 1 && items[0].price_cents < eventPrice;
+      return {
+        order_id: orderId,
+        photo_count: items.length,
+        total_cents: items.reduce((sum: number, i: any) => sum + i.price_cents, 0),
+        created_at: first.created_at,
+        event_title: first.photos?.events?.title || "Evento",
+        is_package: isPackage,
+      };
+    });
+
+    orderGroups.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setOrders(orderGroups);
 
     // Month revenue
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthSales = salesMapped.filter(
-      (s) => new Date(s.created_at) >= monthStart
+    const monthItems = data.filter(
+      (s: any) => new Date(s.created_at) >= monthStart
     );
-    const monthTotal = monthSales.reduce(
-      (sum, s) => sum + Math.round(s.price_cents * 0.93),
+    const monthTotal = monthItems.reduce(
+      (sum: number, s: any) => sum + Math.round(s.price_cents * 0.93),
       0
     );
     setMonthRevenueCents(monthTotal);
@@ -91,8 +109,8 @@ export default function VendasPage() {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
 
-    const firstSale = salesMapped.length > 0
-      ? new Date(salesMapped[salesMapped.length - 1].created_at)
+    const firstSale = data.length > 0
+      ? new Date(data[data.length - 1].created_at)
       : new Date();
     const today = new Date();
     const diffDays = Math.ceil((today.getTime() - firstSale.getTime()) / (1000 * 60 * 60 * 24));
@@ -103,12 +121,12 @@ export default function VendasPage() {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = toLocalDate(date);
-      const daySales = salesMapped.filter(
-        (s) => toLocalDate(new Date(s.created_at)) === dateStr
+      const daySales = data.filter(
+        (s: any) => toLocalDate(new Date(s.created_at)) === dateStr
       );
       days.push({
         date: dateStr,
-        total_cents: daySales.reduce((sum, s) => sum + Math.round(s.price_cents * 0.93), 0),
+        total_cents: daySales.reduce((sum: number, s: any) => sum + Math.round(s.price_cents * 0.93), 0),
         count: daySales.length,
       });
     }
@@ -138,7 +156,7 @@ export default function VendasPage() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {[
           {
             label: "Receita total",
@@ -153,6 +171,13 @@ export default function VendasPage() {
             icon: CalendarDays,
             color: "text-blue-400",
             bg: "bg-blue-400/10",
+          },
+          {
+            label: "Vendas",
+            value: String(orderCount),
+            icon: ShoppingBag,
+            color: "text-orange-400",
+            bg: "bg-orange-400/10",
           },
           {
             label: "Fotos vendidas",
@@ -227,7 +252,7 @@ export default function VendasPage() {
           <h2 className="text-lg font-semibold">Vendas recentes</h2>
         </div>
 
-        {sales.length === 0 ? (
+        {orders.length === 0 ? (
           <div className="text-center py-16">
             <ShoppingBag className="w-12 h-12 text-muted/20 mx-auto mb-4" />
             <p className="text-muted text-sm">
@@ -236,24 +261,39 @@ export default function VendasPage() {
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {sales.slice(0, 20).map((sale) => {
-              const netCents = Math.round(sale.price_cents * 0.93);
-              const feeCents = sale.price_cents - netCents;
+            {orders.slice(0, 20).map((order) => {
+              const netCents = Math.round(order.total_cents * 0.93);
+              const feeCents = order.total_cents - netCents;
               return (
                 <div
-                  key={sale.id}
+                  key={order.order_id}
                   className="flex items-center justify-between px-6 py-4 hover:bg-white/3 transition-colors"
                 >
                   <div>
-                    <p className="text-sm font-medium">{sale.event_title}</p>
-                    <p className="text-xs text-muted">
-                      {new Date(sale.created_at).toLocaleDateString("pt-BR", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <p className="text-sm font-medium">{order.event_title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-muted">
+                        {new Date(order.created_at).toLocaleDateString("pt-BR", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      <span className="text-xs text-muted">·</span>
+                      <p className="text-xs text-muted">
+                        {order.photo_count} foto{order.photo_count !== 1 ? "s" : ""}
+                      </p>
+                      {order.is_package ? (
+                        <span className="text-[10px] font-medium bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
+                          Pacote
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium bg-white/10 text-muted px-1.5 py-0.5 rounded-full">
+                          Avulso
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-primary">
