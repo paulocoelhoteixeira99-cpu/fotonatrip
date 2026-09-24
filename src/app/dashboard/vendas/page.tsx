@@ -109,11 +109,15 @@ export default function VendasPage() {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
 
-    const firstSale = data.length > 0
-      ? new Date(data[data.length - 1].created_at)
-      : new Date();
-    const today = new Date();
-    const diffDays = Math.ceil((today.getTime() - firstSale.getTime()) / (1000 * 60 * 60 * 24));
+    // Find first sale date in local time
+    const todayStr = toLocalDate(new Date());
+    const firstSaleStr = data.length > 0
+      ? toLocalDate(new Date(data[data.length - 1].created_at))
+      : todayStr;
+    // Calculate diff from local date strings to avoid timezone drift
+    const todayMs = new Date(todayStr + "T00:00:00").getTime();
+    const firstMs = new Date(firstSaleStr + "T00:00:00").getTime();
+    const diffDays = Math.round((todayMs - firstMs) / (1000 * 60 * 60 * 24));
     const numDays = Math.min(diffDays + 1, 30);
 
     const days: DailySales[] = [];

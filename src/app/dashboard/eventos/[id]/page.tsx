@@ -89,7 +89,9 @@ export default function EventoDetailPage() {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ title: "", description: "", location: "", city: "", state: "", event_date: "" });
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState("");
+  const [editForm, setEditForm] = useState({ description: "", location: "", city: "", state: "", event_date: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
   const supabase = createClient();
@@ -133,10 +135,16 @@ export default function EventoDetailPage() {
     load();
   }, [id]);
 
+  async function saveTitle() {
+    if (!event || !titleInput.trim()) return;
+    await supabase.from("events").update({ title: titleInput.trim() }).eq("id", event.id);
+    setEvent({ ...event, title: titleInput.trim() });
+    setEditingTitle(false);
+  }
+
   function startEditing() {
     if (!event) return;
     setEditForm({
-      title: event.title,
       description: event.description || "",
       location: event.location || "",
       city: event.city || "",
@@ -148,10 +156,9 @@ export default function EventoDetailPage() {
   }
 
   async function saveEdit() {
-    if (!event || !editForm.title.trim()) return;
+    if (!event) return;
     setSavingEdit(true);
     await supabase.from("events").update({
-      title: editForm.title.trim(),
       description: editForm.description.trim() || null,
       location: editForm.location.trim() || null,
       city: editForm.city.trim() || null,
@@ -160,7 +167,6 @@ export default function EventoDetailPage() {
     }).eq("id", event.id);
     setEvent({
       ...event,
-      title: editForm.title.trim(),
       description: editForm.description.trim() || null,
       location: editForm.location.trim() || null,
       city: editForm.city.trim() || null,
@@ -447,92 +453,31 @@ export default function EventoDetailPage() {
       {/* Event header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div className="flex-1">
-          {editing ? (
-            <div className="space-y-3 max-w-lg">
+          {editingTitle ? (
+            <div className="flex items-center gap-2">
               <input
                 type="text"
-                value={editForm.title}
-                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                placeholder="Nome do evento *"
-                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-lg font-bold focus:outline-none focus:border-primary transition-colors"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
+                autoFocus
+                className="bg-white/5 border border-border rounded-xl px-4 py-2 text-2xl font-bold focus:outline-none focus:border-primary transition-colors"
               />
-              <textarea
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                placeholder="Descricao (visivel apenas para voce)"
-                rows={2}
-                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors resize-none"
-              />
-              <input
-                type="text"
-                value={editForm.location}
-                onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                placeholder="Local (ex: Praia de Copacabana)"
-                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  value={editForm.state}
-                  onChange={(e) => {
-                    setEditForm({ ...editForm, state: e.target.value, city: "" });
-                    fetchCities(e.target.value);
-                  }}
-                  className="bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
-                >
-                  <option value="">Estado</option>
-                  {BRAZILIAN_STATES.map((s) => (
-                    <option key={s.uf} value={s.uf}>{s.uf} - {s.name}</option>
-                  ))}
-                </select>
-                <div className="relative">
-                  <input
-                    type="text"
-                    list="cities-list"
-                    value={editForm.city}
-                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                    placeholder="Cidade"
-                    className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors"
-                  />
-                  <datalist id="cities-list">
-                    {cities.map((c) => <option key={c} value={c} />)}
-                  </datalist>
-                </div>
-              </div>
-              <input
-                type="date"
-                value={editForm.event_date}
-                onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
-                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={saveEdit}
-                  disabled={savingEdit || !editForm.title.trim()}
-                  className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Salvar
-                </button>
-                <button
-                  onClick={() => setEditing(false)}
-                  className="glass hover:bg-white/10 px-5 py-2 rounded-xl text-sm font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
+              <button onClick={saveTitle} disabled={!titleInput.trim()} className="text-primary hover:text-primary-light p-1 disabled:opacity-50"><Check className="w-5 h-5" /></button>
+              <button onClick={() => setEditingTitle(false)} className="text-muted hover:text-foreground p-1"><X className="w-5 h-5" /></button>
             </div>
           ) : (
-            <>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold">{event.title}</h1>
-                <button
-                  onClick={startEditing}
-                  className="text-muted hover:text-primary transition-colors p-1"
-                  title="Editar evento"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-              </div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">{event.title}</h1>
+              <button
+                onClick={() => { setTitleInput(event.title); setEditingTitle(true); }}
+                className="text-muted hover:text-primary transition-colors p-1"
+                title="Editar nome"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
+          )}
               <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted">
                 {(event.location || event.city) && (
                   <span className="flex items-center gap-1">
@@ -556,8 +501,6 @@ export default function EventoDetailPage() {
               {event.description && (
                 <p className="text-sm text-muted mt-3">{event.description}</p>
               )}
-            </>
-          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -567,6 +510,13 @@ export default function EventoDetailPage() {
           >
             <Trash2 className="w-4 h-4" />
             Excluir
+          </button>
+          <button
+            onClick={startEditing}
+            className="flex items-center gap-2 text-sm text-muted hover:text-primary hover:bg-primary/10 px-4 py-2.5 rounded-xl transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            Editar
           </button>
           {photos.length > 0 && (
             <button
@@ -596,6 +546,96 @@ export default function EventoDetailPage() {
         </label>
         </div>
       </div>
+
+      {/* Edit modal */}
+      {editing && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="glass rounded-2xl p-8 max-w-md w-full space-y-4">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-primary" />
+              Editar evento
+            </h3>
+            <div>
+              <label className="text-xs text-muted mb-1 block">Descricao (interna)</label>
+              <textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Descricao visivel apenas para voce"
+                rows={2}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors resize-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted mb-1 block">Local</label>
+              <input
+                type="text"
+                value={editForm.location}
+                onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                placeholder="Ex: Praia de Copacabana"
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted mb-1 block">Estado</label>
+                <select
+                  value={editForm.state}
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, state: e.target.value, city: "" });
+                    fetchCities(e.target.value);
+                  }}
+                  className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+                >
+                  <option value="">Selecione</option>
+                  {BRAZILIAN_STATES.map((s) => (
+                    <option key={s.uf} value={s.uf}>{s.uf} - {s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted mb-1 block">Cidade</label>
+                <input
+                  type="text"
+                  list="cities-list"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                  placeholder={editForm.state ? "Digite para buscar..." : "Selecione o estado"}
+                  disabled={!editForm.state}
+                  className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors disabled:opacity-50"
+                />
+                <datalist id="cities-list">
+                  {cities.map((c) => <option key={c} value={c} />)}
+                </datalist>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted mb-1 block">Data do evento</label>
+              <input
+                type="date"
+                value={editForm.event_date}
+                onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setEditing(false)}
+                className="flex-1 glass hover:bg-white/10 py-3 rounded-xl text-sm font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={savingEdit}
+                className="flex-1 bg-primary hover:bg-primary-dark text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
