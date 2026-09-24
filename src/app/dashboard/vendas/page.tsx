@@ -210,38 +210,41 @@ export default function VendasPage() {
       {/* Chart - last 30 days */}
       <div className="glass rounded-2xl p-6 mb-8">
         <h2 className="text-lg font-semibold mb-6">Ultimos 30 dias</h2>
-        <div className="flex items-end gap-[3px] h-40">
-          {dailySales.map((day) => {
+        <div className="flex items-end gap-1 overflow-x-auto pb-1" style={{ minHeight: 180 }}>
+          {dailySales.map((day, i) => {
             const height = maxDayRevenue > 0
-              ? Math.max((day.total_cents / maxDayRevenue) * 100, day.count > 0 ? 8 : 2)
-              : 2;
+              ? Math.max((day.total_cents / maxDayRevenue) * 100, day.count > 0 ? 12 : 4)
+              : 4;
+            const isToday = i === dailySales.length - 1;
+            const dd = day.date.slice(8);
+            const mm = day.date.slice(5, 7);
+            const valueBrl = day.count > 0 ? Math.round(day.total_cents / 100) : null;
             return (
               <div
                 key={day.date}
-                className="group relative h-full flex items-end"
-                style={{ width: `${100 / 30}%` }}
+                className="flex flex-col items-center gap-1 flex-1 min-w-[28px]"
               >
-                <div
-                  className={`w-full rounded-t transition-colors ${
-                    day.count > 0
-                      ? "bg-primary hover:bg-primary/70"
-                      : "bg-white/5"
-                  }`}
-                  style={{ height: `${height}%` }}
-                />
-                {day.count > 0 && (
-                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-surface border border-border rounded-lg px-2 py-1 text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    <p className="font-medium">{formatPrice(day.total_cents)}</p>
-                    <p className="text-muted">{day.count} venda{day.count !== 1 ? "s" : ""}</p>
-                  </div>
+                {valueBrl !== null && (
+                  <span className="text-[9px] font-semibold text-primary whitespace-nowrap">
+                    R${valueBrl}
+                  </span>
                 )}
+                <div className="w-full flex items-end" style={{ height: 120 }}>
+                  <div
+                    className={`w-full rounded-t transition-colors ${
+                      day.count > 0
+                        ? "bg-primary hover:bg-primary/70"
+                        : "bg-white/5"
+                    }`}
+                    style={{ height: `${height}%` }}
+                  />
+                </div>
+                <span className={`text-[9px] whitespace-nowrap ${isToday ? "text-primary font-semibold" : "text-muted"}`}>
+                  {isToday ? "Hoje" : `${dd}/${mm}`}
+                </span>
               </div>
             );
           })}
-        </div>
-        <div className="mt-2 flex justify-between text-[10px] text-muted">
-          <span>{dailySales[0]?.date.slice(8)}/{dailySales[0]?.date.slice(5, 7)}</span>
-          <span>Hoje</span>
         </div>
       </div>
 
