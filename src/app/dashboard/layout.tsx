@@ -55,7 +55,7 @@ export default function DashboardLayout({
         .single();
 
       if (data) {
-        if (data.role !== "photographer") {
+        if (data.role !== "photographer" && data.role !== "admin") {
           router.push("/buscar");
           return;
         }
