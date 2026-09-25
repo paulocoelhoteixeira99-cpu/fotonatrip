@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
       status: "pending",
       total_cents: totalCents,
       platform_fee_cents: platformFeeCents,
+      photographer_id: photographerIds.length === 1 ? photographerIds[0] : null,
     })
     .select("id")
     .single();

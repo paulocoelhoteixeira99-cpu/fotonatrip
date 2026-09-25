@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     // Fetch all paid orders
     let ordersQuery = supabase
       .from("orders")
-      .select("id, client_email, total_cents, platform_fee_cents, status, created_at")
+      .select("id, client_email, total_cents, platform_fee_cents, status, created_at, photographer_id")
       .eq("status", "paid")
       .order("created_at", { ascending: false });
 
@@ -103,6 +103,7 @@ export async function GET(req: Request) {
       client_email: o.client_email,
       total_cents: o.total_cents,
       platform_fee_cents: o.platform_fee_cents || 0,
+      photographer_name: o.photographer_id ? photographerMap.get(o.photographer_id) || "Sem nome" : "—",
       created_at: o.created_at,
     }));
 

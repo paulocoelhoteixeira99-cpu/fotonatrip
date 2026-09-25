@@ -40,6 +40,7 @@ interface Stats {
     client_email: string;
     total_cents: number;
     platform_fee_cents: number;
+    photographer_name: string;
     created_at: string;
   }[];
 }
@@ -279,6 +280,7 @@ export default function AdminPage() {
                       <tr className="text-left text-muted border-b border-border">
                         <th className="pb-3 font-medium">Data</th>
                         <th className="pb-3 font-medium">Cliente</th>
+                        <th className="pb-3 font-medium">Fotografo</th>
                         <th className="pb-3 font-medium text-right">Total</th>
                         <th className="pb-3 font-medium text-right">Plataforma</th>
                       </tr>
@@ -290,6 +292,7 @@ export default function AdminPage() {
                             {new Date(o.created_at).toLocaleDateString("pt-BR")}
                           </td>
                           <td className="py-3">{o.client_email}</td>
+                          <td className="py-3 text-muted">{o.photographer_name}</td>
                           <td className="py-3 text-right text-green-400">{formatPrice(o.total_cents)}</td>
                           <td className="py-3 text-right text-primary">{formatPrice(o.platform_fee_cents)}</td>
                         </tr>
