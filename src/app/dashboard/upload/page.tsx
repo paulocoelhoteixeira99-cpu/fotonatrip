@@ -11,7 +11,9 @@ import {
   CheckCircle2,
   XCircle,
   CalendarDays,
+  AlertTriangle,
 } from "lucide-react";
+import { deletePhotoFiles } from "@/lib/photos";
 
 interface Event {
   id: string;
@@ -21,8 +23,15 @@ interface Event {
 
 interface UploadFile {
   file: File;
-  status: "pending" | "uploading" | "done" | "error";
+  status: "pending" | "uploading" | "done" | "error" | "skipped";
   preview: string;
+}
+
+interface DuplicateInfo {
+  filename: string;
+  photoId: string;
+  storagePath: string;
+  watermarkPath: string;
 }
 
 export default function UploadPage() {
@@ -31,6 +40,8 @@ export default function UploadPage() {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const supabase = createClient();
   const router = useRouter();
@@ -78,7 +89,83 @@ export default function UploadPage() {
     });
   }
 
-  async function handleUpload() {
+  async function checkDuplicates() {
+    if (!selectedEvent || files.length === 0) return;
+
+    const pendingFiles = files.filter((f) => f.status === "pending");
+    if (pendingFiles.length === 0) return;
+
+    const filenames = pendingFiles.map((f) => f.file.name);
+
+    const { data: existing } = await supabase
+      .from("photos")
+      .select("id, original_filename, storage_path, watermark_path")
+      .eq("event_id", selectedEvent)
+      .in("original_filename", filenames);
+
+    if (existing && existing.length > 0) {
+      setDuplicates(
+        existing.map((p) => ({
+          filename: p.original_filename,
+          photoId: p.id,
+          storagePath: p.storage_path,
+          watermarkPath: p.watermark_path,
+        }))
+      );
+      setShowDuplicateModal(true);
+      return;
+    }
+
+    startUpload();
+  }
+
+  async function handleDuplicateReplace() {
+    setShowDuplicateModal(false);
+
+    // Delete existing duplicate photos from DB and storage
+    const photoIds = duplicates.map((d) => d.photoId);
+    const paths = duplicates.flatMap((d) =>
+      [d.storagePath, d.watermarkPath].filter(Boolean)
+    );
+
+    await supabase.from("face_embeddings").delete().in("photo_id", photoIds);
+    await supabase.from("photos").delete().in("id", photoIds);
+    if (paths.length > 0) await deletePhotoFiles(paths);
+
+    setDuplicates([]);
+    startUpload();
+  }
+
+  function handleDuplicateSkip() {
+    setShowDuplicateModal(false);
+
+    const dupNames = new Set(duplicates.map((d) => d.filename));
+
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.status === "pending" && dupNames.has(f.file.name)
+          ? { ...f, status: "skipped" as const }
+          : f
+      )
+    );
+
+    setDuplicates([]);
+
+    // Check if there are remaining non-duplicate pending files
+    const remaining = files.filter(
+      (f) => f.status === "pending" && !dupNames.has(f.file.name)
+    );
+    if (remaining.length > 0) {
+      startUpload();
+    }
+  }
+
+  function handleDuplicateCancel() {
+    setShowDuplicateModal(false);
+    setDuplicates([]);
+  }
+
+  async function startUpload() {
     if (!selectedEvent || files.length === 0) return;
 
     setUploading(true);
@@ -93,7 +180,7 @@ export default function UploadPage() {
 
     const CONCURRENT = 3;
     const pendingIndexes = files
-      .map((f, i) => (f.status !== "done" ? i : -1))
+      .map((f, i) => (f.status === "pending" ? i : -1))
       .filter((i) => i >= 0);
 
     const queue = [...pendingIndexes];
@@ -171,7 +258,8 @@ export default function UploadPage() {
   }
 
   const doneCount = files.filter((f) => f.status === "done").length;
-  const allDone = files.length > 0 && doneCount === files.length;
+  const skippedCount = files.filter((f) => f.status === "skipped").length;
+  const allDone = files.length > 0 && doneCount + skippedCount === files.length;
 
   return (
     <div className="max-w-4xl">
@@ -234,25 +322,28 @@ export default function UploadPage() {
       </label>
 
       {/* Progress bar */}
-      {uploading && (
+      {uploading && (() => {
+        const uploadTotal = files.length - skippedCount;
+        const pct = uploadTotal > 0 ? Math.round((doneCount / uploadTotal) * 100) : 0;
+        return (
         <div className="mb-6 glass rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium">
-              Processando {doneCount + 1} de {files.length}...
+              Processando {Math.min(doneCount + 1, uploadTotal)} de {uploadTotal}...
             </span>
             <span className="text-sm text-primary font-semibold">
-              {files.length > 0 ? Math.round((doneCount / files.length) * 100) : 0}%
+              {pct}%
             </span>
           </div>
           <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
             <div
               className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${files.length > 0 ? (doneCount / files.length) * 100 : 0}%` }}
+              style={{ width: `${pct}%` }}
             />
           </div>
           <div className="flex items-center justify-between mt-2">
             <p className="text-xs text-muted">
-              {doneCount} de {files.length} fotos processadas (upload + watermark + IA)
+              {doneCount} de {uploadTotal} fotos processadas (upload + watermark + IA)
               {files.filter((f) => f.status === "error").length > 0 &&
                 ` · ${files.filter((f) => f.status === "error").length} com erro`}
             </p>
@@ -264,7 +355,8 @@ export default function UploadPage() {
             </button>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* File list */}
       {files.length > 0 && (
@@ -310,6 +402,12 @@ export default function UploadPage() {
                     <XCircle className="w-6 h-6 text-red-400" />
                   </div>
                 )}
+                {f.status === "skipped" && (
+                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-yellow-500 mb-1" />
+                    <span className="text-[10px] text-yellow-500 font-medium">Ignorada</span>
+                  </div>
+                )}
                 {f.status === "pending" && !uploading && (
                   <button
                     onClick={() => removeFile(i)}
@@ -325,9 +423,9 @@ export default function UploadPage() {
       )}
 
       {/* Upload button */}
-      {files.length > 0 && !allDone && (
+      {files.length > 0 && !allDone && files.some((f) => f.status === "pending") && (
         <button
-          onClick={handleUpload}
+          onClick={checkDuplicates}
           disabled={uploading || !selectedEvent}
           className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-medium transition-colors disabled:opacity-50"
         >
@@ -339,7 +437,7 @@ export default function UploadPage() {
           ) : (
             <>
               <ImagePlus className="w-4 h-4" />
-              Enviar {files.length} foto{files.length !== 1 && "s"}
+              Enviar {files.filter((f) => f.status === "pending").length} foto{files.filter((f) => f.status === "pending").length !== 1 && "s"}
             </>
           )}
         </button>
@@ -350,7 +448,9 @@ export default function UploadPage() {
           <CheckCircle2 className="w-10 h-10 text-primary mx-auto mb-3" />
           <p className="font-medium mb-1">Upload concluido!</p>
           <p className="text-sm text-muted mb-4">
-            Todas as fotos foram processadas com sucesso.
+            {skippedCount > 0
+              ? `${doneCount} foto${doneCount !== 1 ? "s" : ""} enviada${doneCount !== 1 ? "s" : ""}, ${skippedCount} ignorada${skippedCount !== 1 ? "s" : ""}.`
+              : "Todas as fotos foram processadas com sucesso."}
           </p>
           <button
             onClick={() => router.push(`/dashboard/eventos/${selectedEvent}`)}
@@ -358,6 +458,55 @@ export default function UploadPage() {
           >
             Ver evento
           </button>
+        </div>
+      )}
+
+      {/* Duplicate files modal */}
+      {showDuplicateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Fotos duplicadas</h3>
+                <p className="text-sm text-muted">
+                  {duplicates.length} foto{duplicates.length !== 1 && "s"} ja
+                  existe{duplicates.length === 1 && ""}{duplicates.length !== 1 && "m"} neste evento
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-3 mb-5 max-h-40 overflow-y-auto">
+              {duplicates.map((d, i) => (
+                <p key={i} className="text-sm text-muted truncate py-0.5">
+                  {d.filename}
+                </p>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleDuplicateReplace}
+                className="w-full bg-primary hover:bg-primary-dark text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
+              >
+                Substituir existentes
+              </button>
+              <button
+                onClick={handleDuplicateSkip}
+                className="w-full bg-white/5 hover:bg-white/10 text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
+              >
+                Ignorar duplicadas
+              </button>
+              <button
+                onClick={handleDuplicateCancel}
+                className="w-full text-muted hover:text-white py-2 text-sm transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
