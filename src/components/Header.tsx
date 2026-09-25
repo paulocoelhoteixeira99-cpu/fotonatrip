@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, LayoutDashboard, ImageIcon, ShoppingCart, ShoppingBag, ScanFace, LogOut } from "lucide-react";
+import { Menu, X, ImageIcon, ShoppingCart, ShoppingBag, ScanFace, LogOut, LayoutDashboard, ShieldCheck, User, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCart } from "@/lib/cart";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 const navLinks = [
   { href: "/#como-funciona", label: "Como funciona" },
@@ -19,18 +19,24 @@ const navLinks = [
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null);
   const { count: cartCount } = useCart();
   const supabase = createClient();
   const router = useRouter();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const isPhotographerOrAdmin = profile?.role === "photographer" || profile?.role === "admin";
+  const isAdmin = profile?.role === "admin";
 
   async function handleLogout() {
     if (!window.confirm("Voce deseja mesmo sair?")) return;
     await supabase.auth.signOut();
     setUser(null);
-    setRole(null);
+    setProfile(null);
     setMenuOpen(false);
+    setUserMenuOpen(false);
     router.push("/");
     router.refresh();
   }
@@ -45,16 +51,27 @@ export default function Header() {
         setUser(user);
         const { data } = await supabase
           .from("profiles")
-          .select("role")
+          .select("full_name, role")
           .eq("id", user.id)
           .single();
-        if (data) setRole(data.role);
+        if (data) setProfile(data);
       }
     }
 
     checkUser();
 
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Close user menu on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -91,6 +108,7 @@ export default function Header() {
           ))}
         </nav>
 
+        {/* Desktop right side */}
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/carrinho"
@@ -107,37 +125,69 @@ export default function Header() {
               </motion.span>
             )}
           </Link>
+
           {user ? (
             <>
-              <Link
-                href="/minhas-compras"
-                className="text-sm text-muted hover:text-foreground transition-colors px-4 py-2 flex items-center gap-1.5"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                Minhas compras
-              </Link>
-              {role === "photographer" && (
-                <Link
-                  href="/dashboard"
-                  className="text-sm text-muted hover:text-foreground transition-colors px-4 py-2 flex items-center gap-1.5"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Link>
-              )}
               <Link
                 href="/buscar"
                 className="text-sm bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-full transition-colors font-medium"
               >
                 Buscar fotos
               </Link>
-              <button
-                onClick={handleLogout}
-                className="p-2 text-muted hover:text-red-400 transition-colors"
-                title="Sair"
-              >
-                <LogOut className="w-4.5 h-4.5" />
-              </button>
+
+              {/* User dropdown */}
+              <div ref={userMenuRef} className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-sm font-medium text-primary">
+                    {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
+                  </div>
+                  <span className="text-sm text-muted max-w-[120px] truncate">
+                    {profile?.full_name?.split(" ")[0] || "Usuario"}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-muted transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                <AnimatePresence>
+                  {userMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-56 glass rounded-xl border border-border shadow-2xl overflow-hidden"
+                    >
+                      {/* User info */}
+                      <div className="px-4 py-3 border-b border-border">
+                        <p className="text-sm font-medium truncate">{profile?.full_name}</p>
+                        <p className="text-xs text-muted truncate">{user.email}</p>
+                      </div>
+
+                      <div className="py-1">
+                        <DropdownLink href="/minhas-compras" icon={ShoppingBag} label="Minhas compras" onClick={() => setUserMenuOpen(false)} />
+                        {isPhotographerOrAdmin && (
+                          <DropdownLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={() => setUserMenuOpen(false)} />
+                        )}
+                        {isAdmin && (
+                          <DropdownLink href="/admin" icon={ShieldCheck} label="Admin" onClick={() => setUserMenuOpen(false)} />
+                        )}
+                      </div>
+
+                      <div className="border-t border-border py-1">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left text-sm text-red-400 hover:bg-red-400/10 transition-colors px-4 py-2.5 flex items-center gap-3"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sair
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </>
           ) : (
             <>
@@ -195,6 +245,22 @@ export default function Header() {
             className="md:hidden glass mt-2 mx-4 rounded-2xl overflow-hidden"
           >
             <nav className="flex flex-col p-4 gap-1">
+              {/* User info (if logged in) */}
+              {user && profile && (
+                <>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-sm font-medium text-primary">
+                      {profile.full_name?.charAt(0)?.toUpperCase() || "U"}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{profile.full_name}</p>
+                      <p className="text-xs text-muted truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  <hr className="border-border my-2" />
+                </>
+              )}
+
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -232,7 +298,7 @@ export default function Header() {
                     <ShoppingBag className="w-4 h-4" />
                     Minhas compras
                   </Link>
-                  {role === "photographer" && (
+                  {isPhotographerOrAdmin && (
                     <Link
                       href="/dashboard"
                       onClick={() => setMenuOpen(false)}
@@ -240,6 +306,16 @@ export default function Header() {
                     >
                       <LayoutDashboard className="w-4 h-4" />
                       Dashboard
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setMenuOpen(false)}
+                      className="text-sm text-muted hover:text-foreground transition-colors px-4 py-3 rounded-xl hover:bg-white/5 flex items-center gap-2"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      Admin
                     </Link>
                   )}
                   <Link
@@ -280,5 +356,28 @@ export default function Header() {
         )}
       </AnimatePresence>
     </motion.header>
+  );
+}
+
+function DropdownLink({
+  href,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-foreground hover:bg-white/5 transition-colors"
+    >
+      <Icon className="w-4 h-4" />
+      {label}
+    </Link>
   );
 }
