@@ -110,24 +110,18 @@ export default function Header() {
 
         {/* Desktop right side */}
         <div className="hidden md:flex items-center gap-3">
-          <Link
-            href="/carrinho"
-            className="relative p-2 text-muted hover:text-foreground transition-colors"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            {cartCount > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center"
-              >
-                {cartCount > 9 ? "9+" : cartCount}
-              </motion.span>
-            )}
-          </Link>
-
           {user ? (
             <>
+              {isPhotographerOrAdmin && (
+                <Link
+                  href="/dashboard"
+                  className="text-sm text-foreground/70 hover:text-foreground transition-colors px-3 py-2 flex items-center gap-1.5"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              )}
+
               <Link
                 href="/buscar"
                 className="text-sm bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-full transition-colors font-medium"
@@ -141,13 +135,13 @@ export default function Header() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-sm font-medium text-primary">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
                     {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
                   </div>
-                  <span className="text-sm text-muted max-w-[120px] truncate">
+                  <span className="text-sm text-white font-medium max-w-[120px] truncate">
                     {profile?.full_name?.split(" ")[0] || "Usuario"}
                   </span>
-                  <ChevronDown className={`w-4 h-4 text-muted transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`w-4 h-4 text-white/70 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 <AnimatePresence>
@@ -166,10 +160,8 @@ export default function Header() {
                       </div>
 
                       <div className="py-1">
+                        <DropdownLink href="/carrinho" icon={ShoppingCart} label="Carrinho" badge={cartCount} onClick={() => setUserMenuOpen(false)} />
                         <DropdownLink href="/minhas-compras" icon={ShoppingBag} label="Minhas compras" onClick={() => setUserMenuOpen(false)} />
-                        {isPhotographerOrAdmin && (
-                          <DropdownLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={() => setUserMenuOpen(false)} />
-                        )}
                         {isAdmin && (
                           <DropdownLink href="/admin" icon={ShieldCheck} label="Admin" onClick={() => setUserMenuOpen(false)} />
                         )}
@@ -363,11 +355,13 @@ function DropdownLink({
   href,
   icon: Icon,
   label,
+  badge,
   onClick,
 }: {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
+  badge?: number;
   onClick: () => void;
 }) {
   return (
@@ -378,6 +372,11 @@ function DropdownLink({
     >
       <Icon className="w-4 h-4" />
       {label}
+      {badge != null && badge > 0 && (
+        <span className="ml-auto w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
     </Link>
   );
 }
