@@ -28,6 +28,7 @@ import {
   CalendarClock,
   Package,
   Pencil,
+  AlertTriangle,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -94,6 +95,10 @@ export default function EventoDetailPage() {
   const [editForm, setEditForm] = useState({ description: "", location: "", city: "", state: "", event_date: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
+  const [pendingUploadFiles, setPendingUploadFiles] = useState<File[]>([]);
+  const [duplicatePhotos, setDuplicatePhotos] = useState<{ filename: string; photoId: string; storagePath: string; watermarkPath: string }[]>([]);
+  const [showDupModal, setShowDupModal] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const supabase = createClient();
   const router = useRouter();
 
@@ -188,11 +193,81 @@ export default function EventoDetailPage() {
     }
   }
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0 || !event) return;
 
     const fileList = Array.from(files);
+    const filenames = fileList.map((f) => f.name);
+
+    const { data: existing } = await supabase
+      .from("photos")
+      .select("id, original_filename, storage_path, watermark_path")
+      .eq("event_id", event.id)
+      .in("original_filename", filenames);
+
+    if (existing && existing.length > 0) {
+      setPendingUploadFiles(fileList);
+      setDuplicatePhotos(
+        existing.map((p) => ({
+          filename: p.original_filename,
+          photoId: p.id,
+          storagePath: p.storage_path,
+          watermarkPath: p.watermark_path,
+        }))
+      );
+      setShowDupModal(true);
+      e.target.value = "";
+      return;
+    }
+
+    e.target.value = "";
+    startUpload(fileList);
+  }
+
+  async function handleDupReplace() {
+    setShowDupModal(false);
+
+    const photoIds = duplicatePhotos.map((d) => d.photoId);
+    const paths = duplicatePhotos.flatMap((d) =>
+      [d.storagePath, d.watermarkPath].filter(Boolean)
+    );
+
+    await supabase.from("face_embeddings").delete().in("photo_id", photoIds);
+    await supabase.from("photos").delete().in("id", photoIds);
+    if (paths.length > 0) await deletePhotoFiles(paths);
+
+    setPhotos((prev) => prev.filter((p) => !photoIds.includes(p.id)));
+
+    const filesToUpload = [...pendingUploadFiles];
+    setDuplicatePhotos([]);
+    setPendingUploadFiles([]);
+    startUpload(filesToUpload);
+  }
+
+  function handleDupSkip() {
+    setShowDupModal(false);
+
+    const dupNames = new Set(duplicatePhotos.map((d) => d.filename));
+    const remaining = pendingUploadFiles.filter((f) => !dupNames.has(f.name));
+
+    setDuplicatePhotos([]);
+    setPendingUploadFiles([]);
+
+    if (remaining.length > 0) {
+      startUpload(remaining);
+    }
+  }
+
+  function handleDupCancel() {
+    setShowDupModal(false);
+    setDuplicatePhotos([]);
+    setPendingUploadFiles([]);
+  }
+
+  async function startUpload(fileList: File[]) {
+    if (!event || fileList.length === 0) return;
+
     setUploading(true);
     setUploadProgress({ done: 0, total: fileList.length });
 
@@ -278,7 +353,6 @@ export default function EventoDetailPage() {
 
     setPhotos(photosData || []);
     setUploading(false);
-    e.target.value = "";
   }
 
   function cancelUpload() {
@@ -539,7 +613,7 @@ export default function EventoDetailPage() {
             type="file"
             accept="image/*"
             multiple
-            onChange={handleUpload}
+            onChange={handleFileSelect}
             className="hidden"
             disabled={uploading}
           />
@@ -1048,6 +1122,55 @@ export default function EventoDetailPage() {
                 <ChevronRight className="w-5 h-5" />
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate files modal */}
+      {showDupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Fotos duplicadas</h3>
+                <p className="text-sm text-muted">
+                  {duplicatePhotos.length} foto{duplicatePhotos.length !== 1 && "s"} ja
+                  existe{duplicatePhotos.length !== 1 && "m"} neste evento
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-3 mb-5 max-h-40 overflow-y-auto">
+              {duplicatePhotos.map((d, i) => (
+                <p key={i} className="text-sm text-muted truncate py-0.5">
+                  {d.filename}
+                </p>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleDupReplace}
+                className="w-full bg-primary hover:bg-primary-dark text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
+              >
+                Substituir existentes
+              </button>
+              <button
+                onClick={handleDupSkip}
+                className="w-full bg-white/5 hover:bg-white/10 text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
+              >
+                Ignorar duplicadas
+              </button>
+              <button
+                onClick={handleDupCancel}
+                className="w-full text-muted hover:text-white py-2 text-sm transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
