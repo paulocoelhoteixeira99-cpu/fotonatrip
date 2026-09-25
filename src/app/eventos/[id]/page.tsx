@@ -135,10 +135,10 @@ export default function EventoPublicPage() {
     }
     setLoadingUnidentified(true);
 
-    // Get all photos from this event
+    // Single query with LEFT JOIN — avoids .in() URL limit with many photo IDs
     const { data: eventPhotos } = await supabase
       .from("photos")
-      .select("id, storage_path, watermark_path, price_cents, status")
+      .select("id, storage_path, watermark_path, price_cents, status, face_embeddings(photo_id)")
       .eq("event_id", id)
       .eq("status", "ready")
       .order("created_at", { ascending: false });
@@ -150,17 +150,11 @@ export default function EventoPublicPage() {
       return;
     }
 
-    // Check which of THIS event's photos have face embeddings
-    const photoIds = eventPhotos.map((p) => p.id);
-    const { data: withFaces } = await supabase
-      .from("face_embeddings")
-      .select("photo_id")
-      .in("photo_id", photoIds);
-
-    const facePhotoIds = new Set((withFaces || []).map((f) => f.photo_id));
-
     // Filter to only photos without any face embedding
-    const unidentified = eventPhotos.filter((p) => !facePhotoIds.has(p.id));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unidentified = (eventPhotos as any[])
+      .filter((p) => !p.face_embeddings || p.face_embeddings.length === 0)
+      .map(({ face_embeddings: _, ...photo }) => photo as Photo);
 
     setUnidentifiedPhotos(unidentified);
     setShowUnidentified(true);
