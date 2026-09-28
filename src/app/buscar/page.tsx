@@ -600,7 +600,7 @@ function BuscarContent() {
             onClick={closePreview}
           >
             <button
-              onClick={closePreview}
+              onClick={(e) => { e.stopPropagation(); closePreview(); }}
               className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10"
             >
               <X className="w-6 h-6" />
