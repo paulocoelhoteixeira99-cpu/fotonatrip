@@ -243,7 +243,7 @@ export default function CarrinhoPage() {
                             <p className="text-xs text-muted">
                               {item.is_package
                                 ? "Todas as fotos reconhecidas"
-                                : "Foto com marca d\u0027agua"}
+                                : "Foto em alta resolucao"}
                             </p>
                           </div>
                           <span className="text-sm font-semibold whitespace-nowrap">

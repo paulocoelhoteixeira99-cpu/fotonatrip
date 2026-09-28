@@ -78,7 +78,13 @@ function BuscarContent() {
   useEffect(() => {
     if (!previewPhoto) return;
     window.history.pushState({ preview: true }, "");
-    const onPopState = () => setPreviewPhoto(null);
+    const onPopState = (e: PopStateEvent) => {
+      // Only close preview if we're actually in preview state
+      if (previewPhoto) {
+        e.preventDefault();
+        setPreviewPhoto(null);
+      }
+    };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [previewPhoto]);
@@ -582,8 +588,11 @@ function BuscarContent() {
       {previewPhoto && (() => {
         const previewUrl = getPhotoUrl(previewPhoto.watermark_path || previewPhoto.storage_path);
         const closePreview = () => {
-          setPreviewPhoto(null);
-          if (window.history.state?.preview) window.history.back();
+          if (window.history.state?.preview) {
+            window.history.back(); // triggers popstate listener which sets previewPhoto to null
+          } else {
+            setPreviewPhoto(null);
+          }
         };
         return (
           <div
