@@ -15,6 +15,8 @@ import {
   LogOut,
   ShieldCheck,
   Camera,
+  Home,
+  LayoutDashboard,
 } from "lucide-react";
 
 interface Stats {
@@ -123,13 +125,29 @@ export default function AdminPage() {
             <ShieldCheck className="w-6 h-6 text-primary" />
             <h1 className="text-lg font-bold">Admin Dashboard</h1>
           </div>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); router.push("/"); }}
-            className="flex items-center gap-2 text-sm text-muted hover:text-red-400 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sair
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push("/")}
+              className="flex items-center gap-2 text-sm text-muted hover:text-white transition-colors"
+            >
+              <Home className="w-4 h-4" />
+              Home
+            </button>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="flex items-center gap-2 text-sm text-muted hover:text-white transition-colors"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Dashboard
+            </button>
+            <button
+              onClick={async () => { await supabase.auth.signOut(); router.push("/"); }}
+              className="flex items-center gap-2 text-sm text-muted hover:text-red-400 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
