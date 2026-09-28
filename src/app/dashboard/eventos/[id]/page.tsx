@@ -447,6 +447,7 @@ export default function EventoDetailPage() {
       const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 
       let totalFaces = 0;
+      let successCount = 0;
       let errors = 0;
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
@@ -457,6 +458,7 @@ export default function EventoDetailPage() {
           const photoUrl = getPhotoUrl(photo.storage_path);
           const res = await fetch(photoUrl);
           if (!res.ok) {
+            console.error(`CDN download failed for ${photo.storage_path}: ${res.status}`);
             errors++;
             continue;
           }
@@ -480,6 +482,7 @@ export default function EventoDetailPage() {
 
           if (reprocessRes.ok) {
             const data = await reprocessRes.json();
+            successCount++;
 
             // Delete old embeddings and insert new ones
             await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
@@ -497,15 +500,18 @@ export default function EventoDetailPage() {
               await supabase.from("photos").update({ watermark_path: wmPath }).eq("id", photo.id);
             }
           } else {
+            const errBody = await reprocessRes.text().catch(() => "");
+            console.error(`Reprocess failed for photo ${photo.id}: ${reprocessRes.status} ${errBody}`);
             errors++;
           }
-        } catch {
+        } catch (err) {
+          console.error(`Reprocess exception for photo ${photo.id}:`, err);
           errors++;
         }
       }
 
       const errorMsg = errors > 0 ? ` (${errors} erro(s))` : "";
-      setReprocessStatus(`Concluido! ${totalFaces} rosto(s) detectado(s), ${photos.length} watermark(s) atualizadas.${errorMsg}`);
+      setReprocessStatus(`Concluido! ${successCount} watermark(s) atualizadas, ${totalFaces} rosto(s) detectado(s).${errorMsg}`);
 
       // Reload photos to reflect updated watermarks
       const { data: photosData } = await supabase
