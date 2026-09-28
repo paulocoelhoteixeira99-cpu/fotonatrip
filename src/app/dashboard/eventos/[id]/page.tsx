@@ -431,7 +431,7 @@ export default function EventoDetailPage() {
 
   async function handleReprocessAll() {
     setReprocessing(true);
-    setReprocessStatus("Reprocessando rostos via IA...");
+    setReprocessStatus("Reprocessando fotos...");
 
     try {
       const {
@@ -443,17 +443,17 @@ export default function EventoDetailPage() {
         return;
       }
 
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+      const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+
       let totalFaces = 0;
       let errors = 0;
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
-        setReprocessStatus(`Processando foto ${i + 1} de ${photos.length}...`);
+        setReprocessStatus(`Reprocessando foto ${i + 1} de ${photos.length}...`);
 
         try {
-          // Delete existing embeddings
-          await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
-
-          // Download photo from CDN and re-extract embeddings
+          // Download original photo from CDN
           const photoUrl = getPhotoUrl(photo.storage_path);
           const res = await fetch(photoUrl);
           if (!res.ok) {
@@ -463,28 +463,38 @@ export default function EventoDetailPage() {
           const blob = await res.blob();
           const file = new File([blob], "photo.jpg", { type: blob.type });
 
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-          const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+          // Determine watermark path (generate from storage_path if missing)
+          const wmPath = photo.watermark_path
+            || `watermarks/${photo.storage_path.replace(/\.[^.]+$/, ".jpg")}`;
+
+          // Call /reprocess-photo: regenerates watermark + extracts embeddings
           const formData = new FormData();
           formData.append("file", file);
+          formData.append("watermark_path", wmPath);
 
-          const extractRes = await fetch(`${API_URL}/extract-embedding`, {
+          const reprocessRes = await fetch(`${API_URL}/reprocess-photo`, {
             method: "POST",
             headers: { Authorization: `Bearer ${API_KEY}` },
             body: formData,
           });
 
-          if (extractRes.ok) {
-            const data = await extractRes.json();
-            // Insert all detected face embeddings (not just the largest)
-            const embeddings = data.embeddings || (data.embedding ? [{ embedding: data.embedding }] : []);
-            for (const face of embeddings) {
+          if (reprocessRes.ok) {
+            const data = await reprocessRes.json();
+
+            // Delete old embeddings and insert new ones
+            await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
+            for (const face of data.embeddings) {
               const embedding = `[${face.embedding.join(",")}]`;
               await supabase.from("face_embeddings").insert({
                 photo_id: photo.id,
                 embedding,
               });
               totalFaces++;
+            }
+
+            // Update watermark_path if it was missing
+            if (!photo.watermark_path) {
+              await supabase.from("photos").update({ watermark_path: wmPath }).eq("id", photo.id);
             }
           } else {
             errors++;
@@ -495,7 +505,15 @@ export default function EventoDetailPage() {
       }
 
       const errorMsg = errors > 0 ? ` (${errors} erro(s))` : "";
-      setReprocessStatus(`Concluido! ${totalFaces} rosto(s) detectado(s) em ${photos.length} fotos.${errorMsg}`);
+      setReprocessStatus(`Concluido! ${totalFaces} rosto(s) detectado(s), ${photos.length} watermark(s) atualizadas.${errorMsg}`);
+
+      // Reload photos to reflect updated watermarks
+      const { data: photosData } = await supabase
+        .from("photos")
+        .select("*")
+        .eq("event_id", id)
+        .order("created_at", { ascending: false });
+      setPhotos(photosData || []);
     } catch (err) {
       console.error("Reprocess error:", err);
       setReprocessStatus("Erro ao reprocessar. Tente novamente.");
@@ -599,7 +617,7 @@ export default function EventoDetailPage() {
               className="flex items-center gap-2 text-sm text-muted hover:text-primary hover:bg-primary/10 px-4 py-2.5 rounded-xl transition-colors disabled:opacity-50"
             >
               <ScanFace className="w-4 h-4" />
-              {reprocessing ? "Processando..." : "Reprocessar rostos"}
+              {reprocessing ? "Processando..." : "Reprocessar fotos"}
             </button>
           )}
           <label className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer whitespace-nowrap">
