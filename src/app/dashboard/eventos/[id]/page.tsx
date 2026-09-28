@@ -454,24 +454,13 @@ export default function EventoDetailPage() {
         setReprocessStatus(`Reprocessando foto ${i + 1} de ${photos.length}...`);
 
         try {
-          // Download original photo from CDN
-          const photoUrl = getPhotoUrl(photo.storage_path);
-          const res = await fetch(photoUrl);
-          if (!res.ok) {
-            console.error(`CDN download failed for ${photo.storage_path}: ${res.status}`);
-            errors++;
-            continue;
-          }
-          const blob = await res.blob();
-          const file = new File([blob], "photo.jpg", { type: blob.type });
-
           // Determine watermark path (generate from storage_path if missing)
           const wmPath = photo.watermark_path
             || `watermarks/${photo.storage_path.replace(/\.[^.]+$/, ".jpg")}`;
 
-          // Call /reprocess-photo: regenerates watermark + extracts embeddings
+          // Call /reprocess-photo: server downloads from S3, regenerates watermark + extracts embeddings
           const formData = new FormData();
-          formData.append("file", file);
+          formData.append("storage_path", photo.storage_path);
           formData.append("watermark_path", wmPath);
 
           const reprocessRes = await fetch(`${API_URL}/reprocess-photo`, {
