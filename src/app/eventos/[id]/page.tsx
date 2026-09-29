@@ -571,7 +571,7 @@ export default function EventoPublicPage() {
               <img
                 src={photoUrl}
                 alt=""
-                className="w-full max-h-[calc(100dvh-7rem)] object-contain rounded-xl"
+                className="block max-w-full max-h-[calc(100dvh-7rem)] rounded-xl mx-auto"
               />
 
               {/* Info bar */}

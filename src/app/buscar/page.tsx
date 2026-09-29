@@ -621,7 +621,7 @@ function BuscarContent() {
               <img
                 src={previewUrl}
                 alt=""
-                className="w-full max-h-[calc(100dvh-7rem)] object-contain rounded-xl"
+                className="block max-w-full max-h-[calc(100dvh-7rem)] rounded-xl mx-auto"
               />
               <div className="mt-3 flex items-center justify-between glass rounded-xl p-3">
                 <div>
