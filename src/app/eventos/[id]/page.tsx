@@ -236,7 +236,7 @@ export default function EventoPublicPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       <Header />
       <div className="pt-28 pb-24">
         <div className="max-w-7xl mx-auto px-6">
@@ -305,7 +305,7 @@ export default function EventoPublicPage() {
           </div>
 
           {/* Filter tabs */}
-          <div className="flex items-center gap-2 mb-8">
+          <div className="flex items-center gap-2 mb-8 overflow-x-auto">
             <button
               onClick={() => { setShowUnidentified(false); setPage(0); }}
               className={`flex items-center gap-2 text-sm px-5 py-2.5 rounded-xl font-medium transition-colors ${
@@ -571,8 +571,7 @@ export default function EventoPublicPage() {
               <img
                 src={photoUrl}
                 alt=""
-                className="rounded-xl"
-                style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+                className="w-full max-h-[80vh] object-contain rounded-xl"
               />
 
               {/* Info bar */}
