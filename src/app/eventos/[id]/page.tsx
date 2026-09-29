@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   Check,
   User,
+  ZoomIn,
 } from "lucide-react";
 import { useCart, formatPrice } from "@/lib/cart";
 import { getPhotoUrl } from "@/lib/photos";
@@ -358,29 +359,35 @@ export default function EventoPublicPage() {
                   return (
                     <div
                       key={photo.id}
-                      onClick={() => openPhoto(photo)}
-                      className="group relative aspect-[3/4] rounded-xl overflow-hidden bg-surface-light border border-border cursor-pointer"
+                      className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 transition-all"
                     >
-                      <img
-                        src={url}
-                        alt=""
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                          <span className="text-white text-sm font-medium">
+                      <div
+                        className="aspect-[3/4] overflow-hidden relative cursor-pointer"
+                        onClick={() => openPhoto(photo)}
+                      >
+                        <img
+                          src={url}
+                          alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity md:flex hidden">
+                          <ZoomIn className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">
                             {formatPrice(photo.price_cents)}
                           </span>
                           {isInCart(photo.id) ? (
-                            <span className="flex items-center gap-1 text-[11px] text-primary bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                            <span className="flex items-center gap-1 text-[11px] text-primary bg-primary/10 px-2.5 py-1 rounded-full">
                               <Check className="w-3 h-3" />
                               No carrinho
                             </span>
                           ) : (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 const photographerName = photographer?.business_name || photographer?.full_name || "";
                                 addItem({
                                   photo_id: photo.id,
@@ -392,7 +399,7 @@ export default function EventoPublicPage() {
                                   watermark_url: url,
                                 });
                               }}
-                              className="flex items-center gap-1 text-[11px] text-white bg-primary/80 hover:bg-primary px-2 py-1 rounded-full transition-colors"
+                              className="flex items-center gap-1 text-[11px] text-foreground bg-white/10 hover:bg-primary hover:text-white px-2.5 py-1 rounded-full transition-colors"
                             >
                               <ShoppingCart className="w-3 h-3" />
                               Adicionar
@@ -421,29 +428,35 @@ export default function EventoPublicPage() {
                   return (
                     <div
                       key={photo.id}
-                      onClick={() => openPhoto(photo)}
-                      className="group relative aspect-[3/4] rounded-xl overflow-hidden bg-surface-light border border-border cursor-pointer"
+                      className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 transition-all"
                     >
-                      <img
-                        src={url}
-                        alt=""
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                          <span className="text-white text-sm font-medium">
+                      <div
+                        className="aspect-[3/4] overflow-hidden relative cursor-pointer"
+                        onClick={() => openPhoto(photo)}
+                      >
+                        <img
+                          src={url}
+                          alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity md:flex hidden">
+                          <ZoomIn className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">
                             {formatPrice(photo.price_cents)}
                           </span>
                           {isInCart(photo.id) ? (
-                            <span className="flex items-center gap-1 text-[11px] text-primary bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                            <span className="flex items-center gap-1 text-[11px] text-primary bg-primary/10 px-2.5 py-1 rounded-full">
                               <Check className="w-3 h-3" />
                               No carrinho
                             </span>
                           ) : (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 const photographerName = photographer?.business_name || photographer?.full_name || "";
                                 addItem({
                                   photo_id: photo.id,
@@ -455,7 +468,7 @@ export default function EventoPublicPage() {
                                   watermark_url: url,
                                 });
                               }}
-                              className="flex items-center gap-1 text-[11px] text-white bg-primary/80 hover:bg-primary px-2 py-1 rounded-full transition-colors"
+                              className="flex items-center gap-1 text-[11px] text-foreground bg-white/10 hover:bg-primary hover:text-white px-2.5 py-1 rounded-full transition-colors"
                             >
                               <ShoppingCart className="w-3 h-3" />
                               Adicionar
@@ -534,43 +547,43 @@ export default function EventoPublicPage() {
       </main>
 
       {/* Lightbox */}
-      {selectedPhoto && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center"
-          onClick={() => window.history.back()}
-        >
+      {selectedPhoto && (() => {
+        const currentList = showUnidentified ? unidentifiedPhotos : photos;
+        const currentIdx = currentList.findIndex((p) => p.id === selectedPhoto.id);
+        const photoUrl = getPhotoUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path);
+
+        return (
           <div
-            className="relative max-w-5xl max-h-[90vh] mx-4"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => window.history.back()}
           >
-            {/* Close */}
             <button
-              onClick={() => window.history.back()}
-              className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors"
+              onClick={(e) => { e.stopPropagation(); window.history.back(); }}
+              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10"
             >
               <X className="w-6 h-6" />
             </button>
 
-            {/* Image (watermarked) */}
-            <img
-              src={getPhotoUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path)}
-              alt=""
-              className="max-h-[80vh] w-auto rounded-xl select-none pointer-events-none"
-            />
+            <div
+              className="relative max-w-2xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={photoUrl}
+                alt=""
+                className="w-full max-h-[80vh] object-contain rounded-xl"
+              />
 
-            {/* Info bar */}
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-white">
-                <span className="text-lg font-semibold">
-                  {formatPrice(selectedPhoto.price_cents)}
-                </span>
-                <span className="text-white/50 text-sm ml-3">
-                  {event.title}
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
+              {/* Info bar */}
+              <div className="mt-4 flex items-center justify-between glass rounded-xl p-3">
+                <div>
+                  <p className="text-xs text-muted">{event.title}</p>
+                  <p className="text-sm font-semibold">
+                    {formatPrice(selectedPhoto.price_cents)}
+                  </p>
+                </div>
                 {isInCart(selectedPhoto.id) ? (
-                  <span className="flex items-center gap-2 bg-primary/20 text-primary px-5 py-2.5 rounded-xl text-sm font-medium">
+                  <span className="flex items-center gap-1.5 text-sm text-primary bg-primary/10 px-4 py-2 rounded-xl">
                     <Check className="w-4 h-4" />
                     No carrinho
                   </span>
@@ -578,7 +591,6 @@ export default function EventoPublicPage() {
                   <button
                     onClick={() => {
                       const photographerName = photographer?.business_name || photographer?.full_name || "";
-                      const photoUrl = getPhotoUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path);
                       addItem({
                         photo_id: selectedPhoto.id,
                         event_id: event.id,
@@ -589,46 +601,35 @@ export default function EventoPublicPage() {
                         watermark_url: photoUrl,
                       });
                     }}
-                    className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                    className="flex items-center gap-1.5 text-sm bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl transition-colors"
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    Adicionar ao carrinho
+                    Adicionar
                   </button>
                 )}
               </div>
-            </div>
 
-            {/* Navigation arrows */}
-            {photos.findIndex((p) => p.id === selectedPhoto.id) > 0 && (
-              <button
-                onClick={() => {
-                  const idx = photos.findIndex(
-                    (p) => p.id === selectedPhoto.id
-                  );
-                  setSelectedPhoto(photos[idx - 1]);
-                }}
-                className="absolute left-2 sm:left-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            )}
-            {photos.findIndex((p) => p.id === selectedPhoto.id) <
-              photos.length - 1 && (
-              <button
-                onClick={() => {
-                  const idx = photos.findIndex(
-                    (p) => p.id === selectedPhoto.id
-                  );
-                  setSelectedPhoto(photos[idx + 1]);
-                }}
-                className="absolute right-2 sm:right-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            )}
+              {/* Navigation arrows */}
+              {currentIdx > 0 && (
+                <button
+                  onClick={() => setSelectedPhoto(currentList[currentIdx - 1])}
+                  className="absolute left-2 sm:left-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+              {currentIdx < currentList.length - 1 && (
+                <button
+                  onClick={() => setSelectedPhoto(currentList[currentIdx + 1])}
+                  className="absolute right-2 sm:right-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <Footer />
     </>
