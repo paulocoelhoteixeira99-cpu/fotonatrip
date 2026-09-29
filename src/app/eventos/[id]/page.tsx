@@ -565,17 +565,17 @@ export default function EventoPublicPage() {
             </button>
 
             <div
-              className="relative max-w-2xl w-full flex flex-col max-h-[calc(100dvh-2rem)]"
+              className="relative max-w-2xl w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <img
                 src={photoUrl}
                 alt=""
-                className="w-full min-h-0 flex-1 object-contain rounded-xl"
+                className="w-full max-h-[calc(100dvh-7rem)] object-contain rounded-xl"
               />
 
               {/* Info bar */}
-              <div className="mt-3 flex-shrink-0 flex items-center justify-between glass rounded-xl p-3">
+              <div className="mt-3 flex items-center justify-between glass rounded-xl p-3">
                 <div>
                   <p className="text-xs text-muted">{event.title}</p>
                   <p className="text-sm font-semibold">
