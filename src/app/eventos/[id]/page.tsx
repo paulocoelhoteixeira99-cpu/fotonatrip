@@ -236,9 +236,9 @@ export default function EventoPublicPage() {
   }
 
   return (
-    <>
+    <div className="min-h-screen">
       <Header />
-      <main className="min-h-screen pt-28 pb-24">
+      <div className="pt-28 pb-24">
         <div className="max-w-7xl mx-auto px-6">
           {/* Back */}
           <Link
@@ -544,7 +544,7 @@ export default function EventoPublicPage() {
             </>
           )}
         </div>
-      </main>
+      </div>
 
       {/* Lightbox */}
       {selectedPhoto && (() => {
@@ -632,6 +632,6 @@ export default function EventoPublicPage() {
       })()}
 
       <Footer />
-    </>
+    </div>
   );
 }
