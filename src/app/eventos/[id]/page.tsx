@@ -571,7 +571,8 @@ export default function EventoPublicPage() {
               <img
                 src={photoUrl}
                 alt=""
-                className="w-full max-h-[80vh] object-contain rounded-xl"
+                className="rounded-xl"
+                style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain' }}
               />
 
               {/* Info bar */}
