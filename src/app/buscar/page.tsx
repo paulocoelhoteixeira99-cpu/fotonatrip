@@ -162,7 +162,15 @@ function BuscarContent() {
       console.error("Search error:", error.message, error.details, error.hint);
     }
 
-    setResults(data || []);
+    // Deduplicate by photo_id, keeping highest similarity
+    const seen = new Map<string, SearchResult>();
+    for (const item of data || []) {
+      const existing = seen.get(item.photo_id);
+      if (!existing || item.similarity > existing.similarity) {
+        seen.set(item.photo_id, item);
+      }
+    }
+    setResults(Array.from(seen.values()));
     setSearching(false);
     setSearched(true);
   }
