@@ -571,11 +571,11 @@ export default function EventoPublicPage() {
               <img
                 src={photoUrl}
                 alt=""
-                className="block max-w-full max-h-[calc(100dvh-7rem)] rounded-xl mx-auto"
+                className="w-full max-h-[80vh] object-contain rounded-xl"
               />
 
               {/* Info bar */}
-              <div className="mt-3 flex items-center justify-between glass rounded-xl p-3">
+              <div className="mt-4 flex items-center justify-between glass rounded-xl p-3">
                 <div>
                   <p className="text-xs text-muted">{event.title}</p>
                   <p className="text-sm font-semibold">

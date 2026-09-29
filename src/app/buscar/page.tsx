@@ -621,9 +621,9 @@ function BuscarContent() {
               <img
                 src={previewUrl}
                 alt=""
-                className="block max-w-full max-h-[calc(100dvh-7rem)] rounded-xl mx-auto"
+                className="w-full max-h-[80vh] object-contain rounded-xl"
               />
-              <div className="mt-3 flex items-center justify-between glass rounded-xl p-3">
+              <div className="mt-4 flex items-center justify-between glass rounded-xl p-3">
                 <div>
                   <p className="text-xs text-muted">{previewPhoto.event_title}</p>
                   <p className="text-sm font-semibold">{formatPrice(previewPhoto.price_cents)}</p>
