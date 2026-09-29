@@ -615,15 +615,15 @@ function BuscarContent() {
             </button>
 
             <div
-              className="relative max-w-2xl w-full"
+              className="relative max-w-2xl w-full flex flex-col max-h-[calc(100dvh-2rem)]"
               onClick={(e) => e.stopPropagation()}
             >
               <img
                 src={previewUrl}
                 alt=""
-                className="w-full max-h-[80vh] object-contain rounded-xl"
+                className="w-full min-h-0 flex-1 object-contain rounded-xl"
               />
-              <div className="mt-4 flex items-center justify-between glass rounded-xl p-3">
+              <div className="mt-3 flex-shrink-0 flex items-center justify-between glass rounded-xl p-3">
                 <div>
                   <p className="text-xs text-muted">{previewPhoto.event_title}</p>
                   <p className="text-sm font-semibold">{formatPrice(previewPhoto.price_cents)}</p>
