@@ -11,7 +11,7 @@ Plataforma onde fotografos fazem upload de fotos de eventos/viagens e clientes e
 - **Photo Storage**: DigitalOcean Spaces (S3-compatible) + CDN
 - **Photo Processing**: FastAPI + InsightFace (buffalo_l, 512d, CPU) em DO Droplet
 - **Facial Recognition**: InsightFace server-side (512d embeddings, cosine similarity, threshold 0.4)
-- **Watermarks**: Server-side (Pillow, 600px max, blur 1px, 45% JPEG)
+- **Watermarks**: Server-side (Pillow, 1200px max, blur 0.85px, JPEG 60%, texto 40%/35% opacidade, linhas 45%)
 - **Payments**: Mercado Pago (Payment Brick card + custom Pix + Split Payment marketplace)
 - **Icons**: Lucide React
 
@@ -168,9 +168,11 @@ supabase/
 ### Upload de Fotos
 - 3 uploads concorrentes + botao cancelar (AbortController)
 - Resize client-side antes do upload (max 2400px, JPEG 0.85)
-- Servidor processa: watermark (600px, blur 1px, JPEG 45%) + embeddings
+- Servidor processa: watermark + embeddings via `/process-photo`
+- Watermark: resize 1200px max, blur 0.85px, JPEG 60%, texto "FOTONATRIP" rotacionado 30° (opacidade 40%/35%), linhas diagonais cruzadas (opacidade 45%)
 - Deteccao de duplicatas por original_filename
 - Fotos/eventos deletados tambem removem arquivos do DO Spaces via /delete-files
+- "Reprocessar rostos" usa `/extract-embedding` — so atualiza embeddings, NAO regenera watermarks
 
 ### Autenticacao e Roles
 - Roles: `client`, `photographer`, `admin`
@@ -221,6 +223,9 @@ supabase/
 - Server components para paginas estaticas (termos, privacidade, ajuda)
 - `dynamic()` com `ssr: false` para componentes que dependem do browser (MP Brick)
 - Suspense wrapper para paginas com useSearchParams
+
+### Paginas Pareadas (manter sincronizadas)
+- **`/buscar` e `/eventos/[id]`**: compartilham padroes de grid de fotos (card com preco/botao visivel abaixo da imagem) e lightbox (flex-col, 100dvh, object-contain). Ao alterar layout de cards, lightbox ou interacao com carrinho em uma, DEVE aplicar a mesma mudanca na outra.
 
 ### Estilo de Inputs
 - Classes padrao: `bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary`
@@ -337,11 +342,12 @@ Mudancas significativas incluem:
 - MP card rejection "high_risk" comum em integracoes novas — melhora com historico
 - Comprar da propria conta (payer=seller) aciona anti-fraud do MP
 - Circular RLS entre orders/order_items causa 500 — usar SECURITY DEFINER function
+- Lightbox mobile cortando fotos: causa real era overflow horizontal na pagina (tabs excedendo viewport) que alterava o zoom do browser — fix com `overflow-x-hidden` no wrapper
+- /buscar e /eventos/[id] compartilham UX de grid e lightbox — sempre sincronizar mudancas entre as duas
 
 ## TODO
 
 - [ ] Travar criacao de evento sem conta MP conectada
-- [ ] Remover pagina /debug (nao tem utilidade em producao)
 - [ ] Limpar bucket antigo do Supabase Storage (618 files, 936MB, nao referenciado)
 - [ ] Implementar testes automatizados para API routes
 - [ ] Google SSO login (adiado)
