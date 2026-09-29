@@ -609,23 +609,6 @@ export default function EventoPublicPage() {
                 )}
               </div>
 
-              {/* Navigation arrows */}
-              {currentIdx > 0 && (
-                <button
-                  onClick={() => setSelectedPhoto(currentList[currentIdx - 1])}
-                  className="absolute left-2 sm:left-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-              )}
-              {currentIdx < currentList.length - 1 && (
-                <button
-                  onClick={() => setSelectedPhoto(currentList[currentIdx + 1])}
-                  className="absolute right-2 sm:right-[-60px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              )}
             </div>
           </div>
         );
