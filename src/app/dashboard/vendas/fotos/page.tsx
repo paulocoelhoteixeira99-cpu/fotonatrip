@@ -1,24 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice } from "@/lib/cart";
 import { getPhotoUrl } from "@/lib/photos";
 import { ArrowLeft, ImageIcon, X, ShoppingBag } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+
+export default function FotosVendidasPage() {
+  return (
+    <Suspense>
+      <FotosVendidasContent />
+    </Suspense>
+  );
+}
 
 interface SoldPhoto {
   photo_id: string;
   watermark_path: string | null;
   storage_path: string;
   event_title: string;
+  event_id: string;
   price_cents: number;
   sold_count: number;
   total_revenue_cents: number;
 }
 
-export default function FotosVendidasPage() {
+function FotosVendidasContent() {
+  const searchParams = useSearchParams();
+  const eventoFilter = searchParams.get("evento");
   const [photos, setPhotos] = useState<SoldPhoto[]>([]);
+  const [eventTitle, setEventTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewPhoto, setPreviewPhoto] = useState<SoldPhoto | null>(null);
   const supabase = createClient();
@@ -44,17 +57,32 @@ export default function FotosVendidasPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
+    let query = supabase
       .from("order_items")
       .select(`
         photo_id, price_cents,
         orders!inner(status),
-        photos!inner(storage_path, watermark_path, events(title))
+        photos!inner(storage_path, watermark_path, event_id, events(title))
       `)
       .eq("photographer_id", user.id)
       .eq("orders.status", "paid");
 
+    if (eventoFilter) {
+      query = query.eq("photos.event_id", eventoFilter);
+    }
+
+    const { data } = await query;
+
     if (!data || data.length === 0) {
+      // If filtering by event, still get event title
+      if (eventoFilter) {
+        const { data: evt } = await supabase
+          .from("events")
+          .select("title")
+          .eq("id", eventoFilter)
+          .single();
+        if (evt) setEventTitle(evt.title);
+      }
       setLoading(false);
       return;
     }
@@ -73,6 +101,7 @@ export default function FotosVendidasPage() {
           watermark_path: item.photos?.watermark_path || null,
           storage_path: item.photos?.storage_path || "",
           event_title: item.photos?.events?.title || "Evento",
+          event_id: item.photos?.event_id || "",
           price_cents: item.price_cents,
           sold_count: 1,
           total_revenue_cents: Math.round(item.price_cents * 0.93),
@@ -86,8 +115,21 @@ export default function FotosVendidasPage() {
     );
 
     setPhotos(sorted);
+    if (eventoFilter && sorted.length > 0) {
+      setEventTitle(sorted[0].event_title);
+    }
     setLoading(false);
   }
+
+  const backHref = eventoFilter
+    ? `/dashboard/eventos/${eventoFilter}`
+    : "/dashboard/vendas";
+  const backLabel = eventoFilter
+    ? "Voltar para evento"
+    : "Voltar para vendas";
+  const title = eventoFilter
+    ? `Fotos vendidas${eventTitle ? ` - ${eventTitle}` : ""}`
+    : "Fotos vendidas";
 
   if (loading) {
     return (
@@ -101,13 +143,13 @@ export default function FotosVendidasPage() {
     <div>
       <div className="mb-8">
         <Link
-          href="/dashboard/vendas"
+          href={backHref}
           className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Voltar para vendas
+          {backLabel}
         </Link>
-        <h1 className="text-2xl font-bold">Fotos vendidas</h1>
+        <h1 className="text-2xl font-bold">{title}</h1>
         <p className="text-muted text-sm mt-1">
           {photos.length > 0
             ? `${photos.length} foto${photos.length !== 1 ? "s" : ""} diferente${photos.length !== 1 ? "s" : ""} vendida${photos.length !== 1 ? "s" : ""}`
@@ -119,7 +161,9 @@ export default function FotosVendidasPage() {
         <div className="glass rounded-2xl p-10 text-center">
           <ShoppingBag className="w-12 h-12 text-muted/20 mx-auto mb-4" />
           <p className="text-muted text-sm">
-            Quando clientes comprarem suas fotos, elas aparecerao aqui.
+            {eventoFilter
+              ? "Nenhuma foto deste evento foi vendida ainda."
+              : "Quando clientes comprarem suas fotos, elas aparecerao aqui."}
           </p>
         </div>
       ) : (
@@ -148,7 +192,9 @@ export default function FotosVendidasPage() {
                   )}
                 </div>
                 <div className="p-3">
-                  <p className="text-xs text-muted truncate mb-1">{photo.event_title}</p>
+                  {!eventoFilter && (
+                    <p className="text-xs text-muted truncate mb-1">{photo.event_title}</p>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-primary">
                       {formatPrice(photo.total_revenue_cents)}

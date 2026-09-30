@@ -915,6 +915,16 @@ export default function EventoDetailPage() {
         </p>
       </div>
 
+      {/* Sold photos button */}
+      <div className="mb-6">
+        <Link
+          href={`/dashboard/vendas/fotos?evento=${event.id}`}
+          className="inline-block bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors"
+        >
+          Ver fotos vendidas
+        </Link>
+      </div>
+
       {/* Share link & QR Code */}
       <div className="glass rounded-2xl p-5 mb-6">
         <div className="flex items-center gap-2 text-sm font-medium mb-3">
