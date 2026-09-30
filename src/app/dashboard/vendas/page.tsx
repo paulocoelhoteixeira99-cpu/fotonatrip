@@ -9,7 +9,6 @@ import {
   ImageIcon,
   ShoppingBag,
   CalendarDays,
-  Eye,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -164,9 +163,8 @@ export default function VendasPage() {
         {totalCount > 0 && (
           <Link
             href="/dashboard/vendas/fotos"
-            className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+            className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
           >
-            <Eye className="w-4 h-4" />
             Ver fotos vendidas
           </Link>
         )}
