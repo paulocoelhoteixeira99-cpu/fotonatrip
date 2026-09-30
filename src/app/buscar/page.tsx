@@ -623,11 +623,11 @@ function BuscarContent() {
                 alt=""
                 className="w-full max-h-[80vh] object-contain rounded-xl"
               />
-              <div className="mt-4 flex items-center justify-between glass rounded-xl p-3">
+              <p className="text-xs text-muted mt-2 px-1">Foto por <span className="text-foreground font-medium">{previewPhoto.photographer_name}</span></p>
+              <div className="mt-2 flex items-center justify-between glass rounded-xl p-3">
                 <div>
                   <p className="text-xs text-muted">{previewPhoto.event_title}</p>
                   <p className="text-sm font-semibold">{formatPrice(previewPhoto.price_cents)}</p>
-                  <p className="text-xs text-muted mt-0.5">Foto de <span className="text-foreground">@{previewPhoto.photographer_name}</span></p>
                 </div>
                 {isInCart(previewPhoto.photo_id) ? (
                   <span className="flex items-center gap-1.5 text-sm text-primary bg-primary/10 px-4 py-2 rounded-xl">

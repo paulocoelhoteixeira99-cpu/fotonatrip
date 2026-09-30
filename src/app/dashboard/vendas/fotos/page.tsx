@@ -125,7 +125,7 @@ export default function FotosVendidasPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {photos.map((photo) => {
-            const url = getPhotoUrl(photo.watermark_path || photo.storage_path);
+            const url = getPhotoUrl(photo.storage_path);
             return (
               <div
                 key={photo.photo_id}
@@ -166,7 +166,7 @@ export default function FotosVendidasPage() {
 
       {/* Photo preview lightbox */}
       {previewPhoto && (() => {
-        const previewUrl = getPhotoUrl(previewPhoto.watermark_path || previewPhoto.storage_path);
+        const previewUrl = getPhotoUrl(previewPhoto.storage_path);
         const closePreview = () => {
           if (window.history.state?.preview) {
             window.history.back();
