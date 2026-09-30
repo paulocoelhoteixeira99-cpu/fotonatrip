@@ -153,21 +153,11 @@ export default function VendasPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Vendas</h1>
-          <p className="text-muted text-sm mt-1">
-            Acompanhe suas vendas e receita.
-          </p>
-        </div>
-        {totalCount > 0 && (
-          <Link
-            href="/dashboard/vendas/fotos"
-            className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
-          >
-            Ver fotos vendidas
-          </Link>
-        )}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold">Vendas</h1>
+        <p className="text-muted text-sm mt-1">
+          Acompanhe suas vendas e receita.
+        </p>
       </div>
 
       {/* Stats cards */}
@@ -262,6 +252,17 @@ export default function VendasPage() {
           })}
         </div>
       </div>
+
+      {totalCount > 0 && (
+        <div className="mb-8">
+          <Link
+            href="/dashboard/vendas/fotos"
+            className="inline-block bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          >
+            Ver fotos vendidas
+          </Link>
+        </div>
+      )}
 
       {/* Recent sales table */}
       <div className="glass rounded-2xl overflow-hidden">
