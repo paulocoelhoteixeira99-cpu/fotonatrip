@@ -169,10 +169,10 @@ supabase/
 - 3 uploads concorrentes + botao cancelar (AbortController)
 - Resize client-side antes do upload (max 2400px, JPEG 0.85)
 - Servidor processa: watermark + embeddings via `/process-photo`
-- Watermark: resize 1200px max, blur 0.85px, JPEG 60%, texto "FOTONATRIP" rotacionado 30° (opacidade 40%/35%), linhas diagonais cruzadas (opacidade 45%)
+- Watermark: resize 1200px max, blur 0.85px, JPEG 60%, texto "FOTONATRIP" rotacionado 30° (fonte 6.5%, opacidade 67%), subtitulo "#NOCOPY - Valorize o fotografo" (fonte 3%, opacidade 47%), copyright "DO NOT REMOVE WATERMARK — COPYRIGHT PROTECTED" a cada 2 linhas (fonte 1.8%, opacidade 41%), linhas diagonais cruzadas (espacamento 20%, opacidade 75%), espacamento vertical adaptativo (4.5x horizontal, ate 6x+ vertical)
 - Deteccao de duplicatas por original_filename
 - Fotos/eventos deletados tambem removem arquivos do DO Spaces via /delete-files
-- "Reprocessar rostos" usa `/extract-embedding` — so atualiza embeddings, NAO regenera watermarks
+- "Reprocessar fotos" usa `/reprocess-photo` — regenera watermarks E atualiza embeddings (gera novo path com timestamp para bust de cache CDN)
 
 ### Autenticacao e Roles
 - Roles: `client`, `photographer`, `admin`
