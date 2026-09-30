@@ -627,6 +627,7 @@ function BuscarContent() {
                 <div>
                   <p className="text-xs text-muted">{previewPhoto.event_title}</p>
                   <p className="text-sm font-semibold">{formatPrice(previewPhoto.price_cents)}</p>
+                  <p className="text-xs text-muted mt-0.5">Foto de <span className="text-foreground">@{previewPhoto.photographer_name}</span></p>
                 </div>
                 {isInCart(previewPhoto.photo_id) ? (
                   <span className="flex items-center gap-1.5 text-sm text-primary bg-primary/10 px-4 py-2 rounded-xl">

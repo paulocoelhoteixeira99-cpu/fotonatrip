@@ -581,6 +581,9 @@ export default function EventoPublicPage() {
                   <p className="text-sm font-semibold">
                     {formatPrice(selectedPhoto.price_cents)}
                   </p>
+                  {photographer && (
+                    <p className="text-xs text-muted mt-0.5">Foto de <span className="text-foreground">@{photographer.business_name || photographer.full_name}</span></p>
+                  )}
                 </div>
                 {isInCart(selectedPhoto.id) ? (
                   <span className="flex items-center gap-1.5 text-sm text-primary bg-primary/10 px-4 py-2 rounded-xl">
