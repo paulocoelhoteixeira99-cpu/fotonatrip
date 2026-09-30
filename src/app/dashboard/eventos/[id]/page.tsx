@@ -454,9 +454,9 @@ export default function EventoDetailPage() {
         setReprocessStatus(`Reprocessando foto ${i + 1} de ${photos.length}...`);
 
         try {
-          // Determine watermark path (generate from storage_path if missing)
-          const wmPath = photo.watermark_path
-            || `watermarks/${photo.storage_path.replace(/\.[^.]+$/, ".jpg")}`;
+          // Generate new watermark path with timestamp to bust CDN cache
+          const basePath = photo.storage_path.replace(/\.[^.]+$/, "");
+          const wmPath = `watermarks/${basePath}_${Date.now()}.jpg`;
 
           // Call /reprocess-photo: server downloads from S3, regenerates watermark + extracts embeddings
           const formData = new FormData();
@@ -484,10 +484,8 @@ export default function EventoDetailPage() {
               totalFaces++;
             }
 
-            // Update watermark_path if it was missing
-            if (!photo.watermark_path) {
-              await supabase.from("photos").update({ watermark_path: wmPath }).eq("id", photo.id);
-            }
+            // Always update watermark_path (new path busts CDN cache)
+            await supabase.from("photos").update({ watermark_path: wmPath }).eq("id", photo.id);
           } else {
             const errBody = await reprocessRes.text().catch(() => "");
             console.error(`Reprocess failed for photo ${photo.id}: ${reprocessRes.status} ${errBody}`);
