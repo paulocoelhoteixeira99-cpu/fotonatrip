@@ -239,19 +239,19 @@ export default function CarrinhoPage() {
                       </div>
                     ) : (
                       <div>
-                        <div className="flex gap-2">
+                        <div className="flex items-stretch gap-2">
                           <input
                             type="text"
                             value={couponInput}
                             onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                             onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
                             placeholder="Cupom de desconto"
-                            className="flex-1 bg-white/5 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary placeholder:text-muted/50"
+                            className="flex-1 min-w-0 bg-white/5 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary placeholder:text-muted/50"
                           />
                           <button
                             onClick={handleApplyCoupon}
                             disabled={couponLoading || !couponInput.trim()}
-                            className="px-3 py-2 bg-white/10 hover:bg-white/15 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                            className="px-4 bg-white/10 hover:bg-white/15 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center"
                           >
                             {couponLoading ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
