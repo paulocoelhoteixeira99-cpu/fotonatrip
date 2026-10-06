@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "@/lib/cart";
 import CartBar from "@/components/CartBar";
+import PageViewTracker from "@/components/PageViewTracker";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <CartProvider>
+          <PageViewTracker />
           {children}
           <CartBar />
         </CartProvider>
