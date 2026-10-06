@@ -19,6 +19,7 @@ interface OrderGroup {
   created_at: string;
   event_title: string;
   is_package: boolean;
+  coupon_code: string | null;
 }
 
 interface DailySales {
@@ -50,7 +51,7 @@ export default function VendasPage() {
       .from("order_items")
       .select(`
         id, photo_id, price_cents, created_at, order_id,
-        orders!inner(status),
+        orders!inner(status, coupon_code),
         photos!inner(event_id, events(title, price_per_photo_cents))
       `)
       .eq("photographer_id", user.id)
@@ -87,6 +88,7 @@ export default function VendasPage() {
         created_at: first.created_at,
         event_title: first.photos?.events?.title || "Evento",
         is_package: isPackage,
+        coupon_code: (first.orders as any)?.coupon_code || null,
       };
     });
 
@@ -309,6 +311,11 @@ export default function VendasPage() {
                       ) : (
                         <span className="text-[10px] font-medium bg-white/10 text-muted px-1.5 py-0.5 rounded-full">
                           Avulso
+                        </span>
+                      )}
+                      {order.coupon_code && (
+                        <span className="text-[10px] font-medium bg-yellow-500/15 text-yellow-400 px-1.5 py-0.5 rounded-full">
+                          {order.coupon_code}
                         </span>
                       )}
                     </div>

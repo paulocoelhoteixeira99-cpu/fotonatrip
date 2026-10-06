@@ -16,14 +16,66 @@ import {
   Loader2,
   Lock,
   Package,
+  Tag,
+  X,
+  Check,
 } from "lucide-react";
 
 export default function CarrinhoPage() {
   const { items, removeItem, totalCents, count, photoCount, clearCart, hydrated } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    coupon_id: string;
+    discount_cents: number;
+    label: string;
+  } | null>(null);
   const supabase = createClient();
   const router = useRouter();
+
+  const discountCents = appliedCoupon?.discount_cents || 0;
+  const finalTotalCents = totalCents - discountCents;
+
+  async function handleApplyCoupon() {
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    setCouponError(null);
+
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput.trim(), total_cents: totalCents }),
+      });
+      const data = await res.json();
+
+      if (data.valid) {
+        setAppliedCoupon({
+          code: data.code,
+          coupon_id: data.coupon_id,
+          discount_cents: data.discount_cents,
+          label: data.label,
+        });
+        setCouponError(null);
+      } else {
+        setCouponError(data.message || "Cupom invalido");
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError("Erro ao validar cupom");
+    }
+    setCouponLoading(false);
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponError(null);
+  }
 
   // Group items by event
   const grouped = items.reduce<
@@ -69,6 +121,7 @@ export default function CarrinhoPage() {
             photo_ids: i.package_photo_ids || [],
             photographer_id: i.photographer_id,
           })),
+          coupon_code: appliedCoupon?.code || undefined,
         }),
       });
 
@@ -168,12 +221,64 @@ export default function CarrinhoPage() {
                       </span>
                       <span>{formatPrice(totalCents)}</span>
                     </div>
+
+                    {/* Coupon */}
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between text-sm bg-primary/10 rounded-xl px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <Tag className="w-3.5 h-3.5 text-primary" />
+                          <span className="text-primary font-medium">{appliedCoupon.code}</span>
+                          <span className="text-xs text-muted">({appliedCoupon.label})</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-primary font-medium">-{formatPrice(discountCents)}</span>
+                          <button onClick={handleRemoveCoupon} className="text-muted hover:text-red-400 transition-colors">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={couponInput}
+                            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                            onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
+                            placeholder="Cupom de desconto"
+                            className="flex-1 bg-white/5 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary placeholder:text-muted/50"
+                          />
+                          <button
+                            onClick={handleApplyCoupon}
+                            disabled={couponLoading || !couponInput.trim()}
+                            className="px-3 py-2 bg-white/10 hover:bg-white/15 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                          >
+                            {couponLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              "Aplicar"
+                            )}
+                          </button>
+                        </div>
+                        {couponError && (
+                          <p className="text-xs text-red-400 mt-1.5">{couponError}</p>
+                        )}
+                      </div>
+                    )}
+
                     <hr className="border-border" />
                     <div className="flex justify-between font-semibold">
                       <span>Total</span>
-                      <span className="text-lg gradient-text">
-                        {formatPrice(totalCents)}
-                      </span>
+                      <div className="text-right">
+                        {discountCents > 0 && (
+                          <span className="text-xs text-muted line-through block">
+                            {formatPrice(totalCents)}
+                          </span>
+                        )}
+                        <span className="text-lg gradient-text">
+                          {formatPrice(finalTotalCents)}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-[10px] text-muted">
                       Taxas do meio de pagamento podem ser aplicadas no checkout.
@@ -289,7 +394,7 @@ export default function CarrinhoPage() {
               ) : (
                 <>
                   <Lock className="w-4 h-4" />
-                  Finalizar compra - {formatPrice(totalCents)}
+                  Finalizar compra - {formatPrice(finalTotalCents)}
                 </>
               )}
             </button>

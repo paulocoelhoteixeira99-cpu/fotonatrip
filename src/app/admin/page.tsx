@@ -26,11 +26,16 @@ import {
   Smartphone,
   ArrowUpRight,
   ExternalLink,
+  Tag,
+  Plus,
+  Trash2,
+  Power,
+  Check,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
 
-type Tab = "overview" | "sales" | "growth" | "traffic";
+type Tab = "overview" | "sales" | "growth" | "traffic" | "coupons";
 type Period = "all" | "month" | "week" | "custom";
 
 interface OverviewStats {
@@ -60,6 +65,8 @@ interface OverviewStats {
     total_cents: number;
     platform_fee_cents: number;
     photographer_name: string;
+    coupon_code: string | null;
+    discount_cents: number;
     created_at: string;
   }[];
 }
@@ -106,6 +113,19 @@ interface TrafficData {
     last_seen: string;
   }[];
   totals: { views: number; sessions: number };
+}
+
+interface Coupon {
+  id: string;
+  code: string;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  min_order_cents: number | null;
+  max_uses: number | null;
+  used_count: number;
+  active: boolean;
+  expires_at: string | null;
+  created_at: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -229,6 +249,7 @@ export default function AdminPage() {
   const [salesData, setSalesData] = useState<{ event_sales: EventSale[] } | null>(null);
   const [growthData, setGrowthData] = useState<GrowthData | null>(null);
   const [trafficData, setTrafficData] = useState<TrafficData | null>(null);
+  const [couponsData, setCouponsData] = useState<Coupon[]>([]);
 
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -250,22 +271,34 @@ export default function AdminPage() {
     return params;
   }, [period, customFrom, customTo]);
 
-  const loadTabData = useCallback(async (tab: Tab) => {
-    setLoading(true);
-    const params = buildParams();
-    params.set("section", tab);
-    const res = await fetch(`/api/admin/stats?${params.toString()}`);
+  const loadCoupons = useCallback(async () => {
+    const res = await fetch("/api/admin/coupons");
     if (res.ok) {
       const json = await res.json();
-      switch (tab) {
-        case "overview": setOverviewData(json); break;
-        case "sales": setSalesData(json); break;
-        case "growth": setGrowthData(json); break;
-        case "traffic": setTrafficData(json); break;
+      setCouponsData(json.coupons || []);
+    }
+  }, []);
+
+  const loadTabData = useCallback(async (tab: Tab) => {
+    setLoading(true);
+    if (tab === "coupons") {
+      await loadCoupons();
+    } else {
+      const params = buildParams();
+      params.set("section", tab);
+      const res = await fetch(`/api/admin/stats?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        switch (tab) {
+          case "overview": setOverviewData(json); break;
+          case "sales": setSalesData(json); break;
+          case "growth": setGrowthData(json); break;
+          case "traffic": setTrafficData(json); break;
+        }
       }
     }
     setLoading(false);
-  }, [buildParams]);
+  }, [buildParams, loadCoupons]);
 
   useEffect(() => {
     async function init() {
@@ -296,6 +329,7 @@ export default function AdminPage() {
     { key: "sales", label: "Vendas por Evento", icon: ShoppingBag },
     { key: "growth", label: "Crescimento", icon: UserPlus },
     { key: "traffic", label: "Trafego", icon: Globe },
+    { key: "coupons", label: "Cupons", icon: Tag },
   ];
 
   return (
@@ -380,6 +414,7 @@ export default function AdminPage() {
             {activeTab === "sales" && salesData && <SalesTab data={salesData} />}
             {activeTab === "growth" && growthData && <GrowthTab data={growthData} />}
             {activeTab === "traffic" && trafficData && <TrafficTab data={trafficData} />}
+            {activeTab === "coupons" && <CouponsTab coupons={couponsData} onRefresh={loadCoupons} />}
           </>
         )}
       </main>
@@ -489,6 +524,7 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                   <th className="pb-3 font-medium">Fotografo</th>
                   <th className="pb-3 font-medium text-right">Total</th>
                   <th className="pb-3 font-medium text-right">Plataforma</th>
+                  <th className="pb-3 font-medium text-center">Cupom</th>
                 </tr>
               </thead>
               <tbody>
@@ -499,6 +535,15 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                     <td className="py-3 text-muted">{o.photographer_name}</td>
                     <td className="py-3 text-right text-green-400">{formatPrice(o.total_cents)}</td>
                     <td className="py-3 text-right text-primary">{formatPrice(o.platform_fee_cents)}</td>
+                    <td className="py-3 text-center">
+                      {o.coupon_code ? (
+                        <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full" title={`-${formatPrice(o.discount_cents)}`}>
+                          {o.coupon_code}
+                        </span>
+                      ) : (
+                        <span className="text-muted text-xs">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -934,6 +979,279 @@ function TrafficTab({ data }: { data: TrafficData }) {
             </div>
           )}
         </>
+      )}
+    </>
+  );
+}
+
+// ─── Coupons Tab ────────────────────────────────────────────
+
+function CouponsTab({ coupons, onRefresh }: { coupons: Coupon[]; onRefresh: () => Promise<void> }) {
+  const [showForm, setShowForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage");
+  const [discountValue, setDiscountValue] = useState("");
+  const [minOrder, setMinOrder] = useState("");
+  const [maxUses, setMaxUses] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+
+  async function handleCreate() {
+    if (!code.trim() || !discountValue) return;
+    setFormLoading(true);
+    setFormError(null);
+
+    const res = await fetch("/api/admin/coupons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: code.trim(),
+        discount_type: discountType,
+        discount_value: discountType === "fixed"
+          ? Math.round(parseFloat(discountValue) * 100)
+          : parseInt(discountValue),
+        min_order_cents: minOrder ? Math.round(parseFloat(minOrder) * 100) : null,
+        max_uses: maxUses ? parseInt(maxUses) : null,
+        expires_at: expiresAt || null,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setFormError(data.error);
+    } else {
+      setShowForm(false);
+      setCode("");
+      setDiscountValue("");
+      setMinOrder("");
+      setMaxUses("");
+      setExpiresAt("");
+      await onRefresh();
+    }
+    setFormLoading(false);
+  }
+
+  async function handleToggle(coupon: Coupon) {
+    await fetch("/api/admin/coupons", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: coupon.id, active: !coupon.active }),
+    });
+    await onRefresh();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Tem certeza que deseja excluir este cupom?")) return;
+    await fetch(`/api/admin/coupons?id=${id}`, { method: "DELETE" });
+    await onRefresh();
+  }
+
+  const activeCoupons = coupons.filter((c) => c.active);
+  const inactiveCoupons = coupons.filter((c) => !c.active);
+  const totalUsed = coupons.reduce((s, c) => s + c.used_count, 0);
+
+  return (
+    <>
+      {/* Summary + create button */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex gap-4">
+          <StatCard icon={Tag} label="Cupons ativos" value={String(activeCoupons.length)} accent="text-primary" />
+          <StatCard icon={Check} label="Total utilizados" value={String(totalUsed)} accent="text-green-400" />
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Novo cupom
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showForm && (
+        <div className="glass rounded-2xl p-6 mb-8">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <Plus className="w-4 h-4 text-primary" /> Criar novo cupom
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs text-muted block mb-1">Codigo do cupom</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="Ex: BEMVINDO10"
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted block mb-1">Tipo de desconto</label>
+              <select
+                value={discountType}
+                onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary [color-scheme:dark]"
+              >
+                <option value="percentage">Percentual (%)</option>
+                <option value="fixed">Valor fixo (R$)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted block mb-1">
+                {discountType === "percentage" ? "Percentual (%)" : "Valor (R$)"}
+              </label>
+              <input
+                type="number"
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+                placeholder={discountType === "percentage" ? "10" : "5.00"}
+                min="1"
+                max={discountType === "percentage" ? "100" : undefined}
+                step={discountType === "fixed" ? "0.01" : "1"}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted block mb-1">Pedido minimo (R$, opcional)</label>
+              <input
+                type="number"
+                value={minOrder}
+                onChange={(e) => setMinOrder(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted block mb-1">Usos maximos (opcional)</label>
+              <input
+                type="number"
+                value={maxUses}
+                onChange={(e) => setMaxUses(e.target.value)}
+                placeholder="Ilimitado"
+                min="1"
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted block mb-1">Validade (opcional)</label>
+              <input
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary [color-scheme:dark]"
+              />
+            </div>
+          </div>
+
+          {formError && (
+            <p className="text-sm text-red-400 mt-3">{formError}</p>
+          )}
+
+          <div className="flex gap-3 mt-5">
+            <button
+              onClick={handleCreate}
+              disabled={formLoading || !code.trim() || !discountValue}
+              className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Criar cupom
+            </button>
+            <button
+              onClick={() => { setShowForm(false); setFormError(null); }}
+              className="px-5 py-2.5 text-sm text-muted hover:text-white transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Coupons table */}
+      {coupons.length === 0 ? (
+        <div className="glass rounded-2xl p-10 text-center">
+          <Tag className="w-12 h-12 text-muted/30 mx-auto mb-4" />
+          <p className="text-muted">Nenhum cupom criado ainda.</p>
+        </div>
+      ) : (
+        <div className="glass rounded-2xl p-6">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <Tag className="w-4 h-4 text-primary" /> Todos os cupons
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted border-b border-border">
+                  <th className="pb-3 font-medium">Codigo</th>
+                  <th className="pb-3 font-medium">Desconto</th>
+                  <th className="pb-3 font-medium text-right">Pedido min.</th>
+                  <th className="pb-3 font-medium text-right">Usos</th>
+                  <th className="pb-3 font-medium">Validade</th>
+                  <th className="pb-3 font-medium text-center">Status</th>
+                  <th className="pb-3 font-medium text-right">Acoes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coupons.map((c) => {
+                  const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
+                  const isMaxed = c.max_uses !== null && c.used_count >= c.max_uses;
+                  return (
+                    <tr key={c.id} className="border-b border-border/50 last:border-0">
+                      <td className="py-3 font-mono font-bold text-primary">{c.code}</td>
+                      <td className="py-3">
+                        {c.discount_type === "percentage"
+                          ? `${c.discount_value}%`
+                          : formatPrice(c.discount_value)}
+                      </td>
+                      <td className="py-3 text-right text-muted">
+                        {c.min_order_cents ? formatPrice(c.min_order_cents) : "—"}
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className="text-white">{c.used_count}</span>
+                        <span className="text-muted">/{c.max_uses ?? "∞"}</span>
+                      </td>
+                      <td className="py-3 text-muted">
+                        {c.expires_at
+                          ? new Date(c.expires_at).toLocaleDateString("pt-BR")
+                          : "Sem validade"}
+                        {isExpired && <span className="text-red-400 text-xs ml-1">(expirado)</span>}
+                      </td>
+                      <td className="py-3 text-center">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          !c.active ? "bg-white/10 text-muted" :
+                          isExpired || isMaxed ? "bg-yellow-500/15 text-yellow-400" :
+                          "bg-green-500/15 text-green-400"
+                        }`}>
+                          {!c.active ? "Inativo" : isExpired ? "Expirado" : isMaxed ? "Esgotado" : "Ativo"}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleToggle(c)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              c.active ? "text-yellow-400 hover:bg-yellow-400/10" : "text-green-400 hover:bg-green-400/10"
+                            }`}
+                            title={c.active ? "Desativar" : "Ativar"}
+                          >
+                            <Power className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(c.id)}
+                            className="p-1.5 rounded-lg text-red-400 hover:bg-red-400/10 transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </>
   );

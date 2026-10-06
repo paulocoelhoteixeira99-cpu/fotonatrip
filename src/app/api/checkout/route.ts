@@ -12,9 +12,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { items, packages } = body as {
+  const { items, packages, coupon_code } = body as {
     items?: { photo_id: string; event_id: string; photographer_id: string }[];
     packages?: { event_id: string; photo_ids: string[]; photographer_id: string }[];
+    coupon_code?: string;
   };
 
   const hasItems = items && items.length > 0;
@@ -98,7 +99,51 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const platformFeeCents = Math.round(totalCents * 0.07); // 7% commission
+  // Validate and apply coupon
+  let couponId: string | null = null;
+  let couponCodeFinal: string | null = null;
+  let discountCents = 0;
+
+  if (coupon_code) {
+    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
+    const supa = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: coupon } = await supa
+      .from("coupons")
+      .select("*")
+      .eq("code", coupon_code.toUpperCase().trim())
+      .single();
+
+    if (coupon && coupon.active) {
+      const notExpired = !coupon.expires_at || new Date(coupon.expires_at) >= new Date();
+      const notMaxed = coupon.max_uses === null || coupon.used_count < coupon.max_uses;
+      const meetsMin = !coupon.min_order_cents || totalCents >= coupon.min_order_cents;
+
+      if (notExpired && notMaxed && meetsMin) {
+        couponId = coupon.id;
+        couponCodeFinal = coupon.code;
+
+        if (coupon.discount_type === "percentage") {
+          discountCents = Math.round(totalCents * (coupon.discount_value / 100));
+        } else {
+          discountCents = coupon.discount_value;
+        }
+        discountCents = Math.min(discountCents, totalCents);
+
+        // Increment used_count
+        await supa
+          .from("coupons")
+          .update({ used_count: coupon.used_count + 1 })
+          .eq("id", coupon.id);
+      }
+    }
+  }
+
+  const finalTotalCents = totalCents - discountCents;
+  const platformFeeCents = Math.round(finalTotalCents * 0.07); // 7% commission
 
   // Get user email
   const email = user.email || "";
@@ -128,9 +173,12 @@ export async function POST(req: NextRequest) {
       client_id: user.id,
       client_email: email,
       status: "pending",
-      total_cents: totalCents,
+      total_cents: finalTotalCents,
       platform_fee_cents: platformFeeCents,
       photographer_id: photographerIds.length === 1 ? photographerIds[0] : null,
+      coupon_id: couponId,
+      coupon_code: couponCodeFinal,
+      discount_cents: discountCents,
     })
     .select("id")
     .single();
@@ -181,6 +229,14 @@ export async function POST(req: NextRequest) {
     const client = new MercadoPagoConfig({ accessToken });
     const preference = new Preference(client);
 
+    // If coupon applied, adjust item prices proportionally for MP
+    if (discountCents > 0 && totalCents > 0) {
+      const ratio = finalTotalCents / totalCents;
+      for (const item of mpItems) {
+        item.unit_price = Math.round(item.unit_price * ratio * 100) / 100;
+      }
+    }
+
     const preferenceBody: Record<string, unknown> = {
       items: mpItems,
       back_urls: {
@@ -208,7 +264,7 @@ export async function POST(req: NextRequest) {
       preference_id: result.id,
       init_point: result.init_point,
       order_id: order.id,
-      amount: totalCents / 100,
+      amount: finalTotalCents / 100,
       marketplace: useMarketplace,
     });
   } catch (err) {

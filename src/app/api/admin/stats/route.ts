@@ -39,7 +39,7 @@ async function getOverview(from: string | null, to: string | null) {
   // Paid orders
   let ordersQuery = supabase
     .from("orders")
-    .select("id, client_email, total_cents, platform_fee_cents, status, created_at, photographer_id")
+    .select("id, client_email, total_cents, platform_fee_cents, status, created_at, photographer_id, coupon_code, discount_cents")
     .eq("status", "paid")
     .order("created_at", { ascending: false });
   if (from) ordersQuery = ordersQuery.gte("created_at", `${from}T00:00:00`);
@@ -98,6 +98,8 @@ async function getOverview(from: string | null, to: string | null) {
     total_cents: o.total_cents,
     platform_fee_cents: o.platform_fee_cents || 0,
     photographer_name: o.photographer_id ? photographerMap.get(o.photographer_id) || "Sem nome" : "—",
+    coupon_code: o.coupon_code || null,
+    discount_cents: o.discount_cents || 0,
     created_at: o.created_at,
   }));
 
