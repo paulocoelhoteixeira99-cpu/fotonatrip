@@ -67,6 +67,7 @@ interface OverviewStats {
     photographer_name: string;
     coupon_code: string | null;
     discount_cents: number;
+    photo_count: number;
     created_at: string;
   }[];
 }
@@ -522,6 +523,7 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                   <th className="pb-3 font-medium">Data</th>
                   <th className="pb-3 font-medium">Cliente</th>
                   <th className="pb-3 font-medium">Fotografo</th>
+                  <th className="pb-3 font-medium text-center">Fotos</th>
                   <th className="pb-3 font-medium text-right">Total</th>
                   <th className="pb-3 font-medium text-right">Plataforma</th>
                   <th className="pb-3 font-medium text-center">Cupom</th>
@@ -533,6 +535,7 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                     <td className="py-3 text-muted">{new Date(o.created_at).toLocaleDateString("pt-BR")}</td>
                     <td className="py-3">{o.client_email}</td>
                     <td className="py-3 text-muted">{o.photographer_name}</td>
+                    <td className="py-3 text-center">{o.photo_count}</td>
                     <td className="py-3 text-right text-green-400">{formatPrice(o.total_cents)}</td>
                     <td className="py-3 text-right text-primary">{formatPrice(o.platform_fee_cents)}</td>
                     <td className="py-3 text-center">

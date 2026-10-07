@@ -91,6 +91,12 @@ async function getOverview(from: string | null, to: string | null) {
     }))
     .sort((a, b) => b.revenue_cents - a.revenue_cents);
 
+  // Count items per order
+  const itemsByOrder = new Map<string, number>();
+  for (const item of items || []) {
+    itemsByOrder.set(item.order_id, (itemsByOrder.get(item.order_id) || 0) + 1);
+  }
+
   // Recent orders
   const recentOrders = (orders || []).slice(0, 20).map((o) => ({
     id: o.id,
@@ -100,6 +106,7 @@ async function getOverview(from: string | null, to: string | null) {
     photographer_name: o.photographer_id ? photographerMap.get(o.photographer_id) || "Sem nome" : "—",
     coupon_code: o.coupon_code || null,
     discount_cents: o.discount_cents || 0,
+    photo_count: itemsByOrder.get(o.id) || 0,
     created_at: o.created_at,
   }));
 
