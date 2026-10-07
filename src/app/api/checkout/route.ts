@@ -217,6 +217,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erro ao criar itens do pedido" }, { status: 500 });
   }
 
+  // If total is zero (100% coupon), mark as paid immediately — no MP needed
+  if (finalTotalCents <= 0) {
+    await supabase
+      .from("orders")
+      .update({ status: "paid", updated_at: new Date().toISOString() })
+      .eq("id", order.id);
+
+    return NextResponse.json({
+      order_id: order.id,
+      free: true,
+    });
+  }
+
   // Create Mercado Pago preference
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fotonatrip.com.br";
 

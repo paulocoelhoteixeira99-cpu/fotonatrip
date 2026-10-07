@@ -133,6 +133,13 @@ export default function CarrinhoPage() {
         return;
       }
 
+      // 100% discount — order already marked as paid, go straight to success
+      if (data.free) {
+        clearCart();
+        router.push(`/checkout/sucesso?order=${data.order_id}`);
+        return;
+      }
+
       // Redirect to embedded checkout page
       const params = new URLSearchParams({
         preference_id: data.preference_id,
