@@ -189,14 +189,28 @@ export async function POST(req: NextRequest) {
   }
 
   // Create order items for ALL photos (individual + package)
+  // Track package distribution to fix rounding on last item
+  const pkgDistributed = new Map<string, { total: number; distributed: number; count: number; current: number }>();
+
   const orderItems = photos.map((photo) => {
-    // For package photos, distribute package price evenly (for record keeping)
     const pkg = packages?.find((p) => p.photo_ids.includes(photo.id));
     let priceCents = photo.price_cents;
     if (pkg) {
       const eventData = packageEvents.find((e) => e.id === pkg.event_id);
       if (eventData?.package_price_cents) {
-        priceCents = Math.round(eventData.package_price_cents / pkg.photo_ids.length);
+        const key = pkg.event_id;
+        if (!pkgDistributed.has(key)) {
+          pkgDistributed.set(key, { total: eventData.package_price_cents, distributed: 0, count: pkg.photo_ids.length, current: 0 });
+        }
+        const tracker = pkgDistributed.get(key)!;
+        tracker.current++;
+        if (tracker.current === tracker.count) {
+          // Last item gets remainder to avoid rounding drift
+          priceCents = tracker.total - tracker.distributed;
+        } else {
+          priceCents = Math.round(eventData.package_price_cents / pkg.photo_ids.length);
+          tracker.distributed += priceCents;
+        }
       }
     }
 
@@ -207,6 +221,21 @@ export async function POST(req: NextRequest) {
       price_cents: priceCents,
     };
   });
+
+  // Distribute coupon discount proportionally across items
+  if (discountCents > 0 && totalCents > 0) {
+    const ratio = finalTotalCents / totalCents;
+    let distributed = 0;
+    for (let i = 0; i < orderItems.length; i++) {
+      if (i === orderItems.length - 1) {
+        // Last item gets remainder to avoid rounding drift
+        orderItems[i].price_cents = Math.max(0, finalTotalCents - distributed);
+      } else {
+        orderItems[i].price_cents = Math.round(orderItems[i].price_cents * ratio);
+        distributed += orderItems[i].price_cents;
+      }
+    }
+  }
 
   const { error: itemsError } = await supabase
     .from("order_items")
