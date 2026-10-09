@@ -66,6 +66,7 @@ interface Event {
   is_shared: boolean;
   invite_code: string | null;
   collaborator_commission_pct: number;
+  photographer_id: string;
 }
 
 interface Photo {
@@ -76,6 +77,7 @@ interface Photo {
   original_filename: string | null;
   status: string;
   created_at: string;
+  photographer_id: string;
 }
 
 export default function EventoDetailPage() {
@@ -111,6 +113,7 @@ export default function EventoDetailPage() {
   const [savingCommission, setSavingCommission] = useState(false);
   const [commissionSaved, setCommissionSaved] = useState(true);
   const [regeneratingLink, setRegeneratingLink] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const supabase = createClient();
   const router = useRouter();
@@ -127,6 +130,9 @@ export default function EventoDetailPage() {
         router.push("/dashboard/eventos");
         return;
       }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
 
       setEvent(eventData);
       setPriceInput((eventData.price_per_photo_cents / 100).toFixed(2).replace(".", ","));
@@ -567,6 +573,8 @@ export default function EventoDetailPage() {
 
   if (!event) return null;
 
+  const isOwner = currentUserId === event.photographer_id;
+
   return (
     <div>
       <Link
@@ -596,13 +604,15 @@ export default function EventoDetailPage() {
           ) : (
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{event.title}</h1>
-              <button
-                onClick={() => { setTitleInput(event.title); setEditingTitle(true); }}
-                className="text-muted hover:text-primary transition-colors p-1"
-                title="Editar nome"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
+              {isOwner && (
+                <button
+                  onClick={() => { setTitleInput(event.title); setEditingTitle(true); }}
+                  className="text-muted hover:text-primary transition-colors p-1"
+                  title="Editar nome"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
               <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted">
@@ -631,29 +641,33 @@ export default function EventoDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => { setHasSoldPhotos(null); checkSoldPhotos(); setShowDeleteConfirm(true); }}
-            className="flex items-center gap-2 text-sm text-muted hover:text-red-400 hover:bg-red-400/10 px-4 py-2.5 rounded-xl transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Excluir
-          </button>
-          <button
-            onClick={startEditing}
-            className="flex items-center gap-2 text-sm text-muted hover:text-primary hover:bg-primary/10 px-4 py-2.5 rounded-xl transition-colors"
-          >
-            <Pencil className="w-4 h-4" />
-            Editar
-          </button>
-          {photos.length > 0 && (
-            <button
-              onClick={handleReprocessAll}
-              disabled={reprocessing}
-              className="flex items-center gap-2 text-sm text-muted hover:text-primary hover:bg-primary/10 px-4 py-2.5 rounded-xl transition-colors disabled:opacity-50"
-            >
-              <ScanFace className="w-4 h-4" />
-              {reprocessing ? "Processando..." : "Reprocessar fotos"}
-            </button>
+          {isOwner && (
+            <>
+              <button
+                onClick={() => { setHasSoldPhotos(null); checkSoldPhotos(); setShowDeleteConfirm(true); }}
+                className="flex items-center gap-2 text-sm text-muted hover:text-red-400 hover:bg-red-400/10 px-4 py-2.5 rounded-xl transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Excluir
+              </button>
+              <button
+                onClick={startEditing}
+                className="flex items-center gap-2 text-sm text-muted hover:text-primary hover:bg-primary/10 px-4 py-2.5 rounded-xl transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+                Editar
+              </button>
+              {photos.length > 0 && (
+                <button
+                  onClick={handleReprocessAll}
+                  disabled={reprocessing}
+                  className="flex items-center gap-2 text-sm text-muted hover:text-primary hover:bg-primary/10 px-4 py-2.5 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  <ScanFace className="w-4 h-4" />
+                  {reprocessing ? "Processando..." : "Reprocessar fotos"}
+                </button>
+              )}
+            </>
           )}
           <label className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer whitespace-nowrap">
           {uploading ? (
@@ -825,8 +839,8 @@ export default function EventoDetailPage() {
         </div>
       )}
 
-      {/* Event status */}
-      <div className="glass rounded-2xl p-5 mb-6">
+      {/* Event status — owner only */}
+      {isOwner && <div className="glass rounded-2xl p-5 mb-6">
         <div className="flex items-center gap-2 text-sm font-medium mb-3">
           <CalendarClock className="w-4 h-4 text-primary" />
           Status do evento
@@ -878,10 +892,10 @@ export default function EventoDetailPage() {
           {event.status === "inactive" && "Evento oculto. Clientes nao conseguem ver."}
           {event.status === "scheduled" && "Evento sera ativado automaticamente na data definida."}
         </p>
-      </div>
+      </div>}
 
-      {/* Price per photo + Package */}
-      <div className="glass rounded-2xl p-5 mb-6 space-y-4">
+      {/* Price per photo + Package — owner only */}
+      {isOwner && <div className="glass rounded-2xl p-5 mb-6 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium">
           <DollarSign className="w-4 h-4 text-primary" />
           Precos
@@ -953,10 +967,10 @@ export default function EventoDetailPage() {
         <p className="text-xs text-muted">
           Voce recebe 93% (comissao da plataforma: 7%). O pacote permite ao cliente comprar todas as fotos reconhecidas por um preco unico.
         </p>
-      </div>
+      </div>}
 
-      {/* Shared event: Collaborators section */}
-      {event.is_shared && (
+      {/* Shared event: Collaborators section — owner only */}
+      {event.is_shared && isOwner && (
         <div className="glass rounded-2xl p-5 mb-6 space-y-4">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Users className="w-4 h-4 text-primary" />
@@ -1211,6 +1225,8 @@ export default function EventoDetailPage() {
           {photos.map((photo) => {
             const url = getPhotoUrl(photo.storage_path);
             const isCover = event.cover_url === url;
+            const isOwnPhoto = photo.photographer_id === currentUserId;
+            const canDelete = isOwner || isOwnPhoto;
 
             return (
               <div
@@ -1228,7 +1244,7 @@ export default function EventoDetailPage() {
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                  {!isCover && (
+                  {isOwner && !isCover && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleSetCover(photo.storage_path); }}
                       className="p-2 bg-primary/80 hover:bg-primary rounded-lg text-white transition-colors"
@@ -1237,13 +1253,15 @@ export default function EventoDetailPage() {
                       <Star className="w-4 h-4" />
                     </button>
                   )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); }}
-                    className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-colors"
-                    title="Excluir foto"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); }}
+                      className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-colors"
+                      title="Excluir foto"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
                 {photo.status === "processing" && (
                   <div className="absolute top-2 right-2 bg-black/60 rounded-full px-2 py-1 flex items-center gap-1">
@@ -1277,20 +1295,28 @@ export default function EventoDetailPage() {
             <div className="flex items-center justify-between mt-4">
               <p className="text-white/50 text-sm">{previewPhoto.original_filename}</p>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleSetCover(previewPhoto.storage_path)}
-                  className="flex items-center gap-1.5 bg-primary/80 hover:bg-primary text-white px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  <Star className="w-4 h-4" />
-                  Definir como capa
-                </button>
-                <button
-                  onClick={() => { handleDeletePhoto(previewPhoto.id); setPreviewPhoto(null); }}
-                  className="flex items-center gap-1.5 bg-red-500/80 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Excluir
-                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => handleSetCover(previewPhoto.storage_path)}
+                    className="flex items-center gap-1.5 bg-primary/80 hover:bg-primary text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                  >
+                    <Star className="w-4 h-4" />
+                    Definir como capa
+                  </button>
+                )}
+                {(isOwner || previewPhoto.photographer_id === currentUserId) ? (
+                  <button
+                    onClick={() => { handleDeletePhoto(previewPhoto.id); setPreviewPhoto(null); }}
+                    className="flex items-center gap-1.5 bg-red-500/80 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </button>
+                ) : (
+                  <span className="text-xs text-white/40 italic">
+                    Voce so pode excluir fotos enviadas por voce
+                  </span>
+                )}
               </div>
             </div>
 
