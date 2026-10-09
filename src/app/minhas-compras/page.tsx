@@ -60,11 +60,19 @@ export default function MinhasComprasPage() {
         )
       `)
       .eq("client_id", user.id)
-      .or("status.neq.pending,payment_id.not.is.null")
       .order("created_at", { ascending: false });
 
     if (data) {
-      const mapped = data.map((order: any) => ({
+      // Hide pending orders older than 1 hour (abandoned checkouts)
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
+      const filtered = data.filter((order: any) => {
+        if (order.status === "pending" && new Date(order.created_at).getTime() < oneHourAgo) {
+          return false;
+        }
+        return true;
+      });
+
+      const mapped = filtered.map((order: any) => ({
         ...order,
         items: order.order_items?.map((item: any) => ({
           ...item,

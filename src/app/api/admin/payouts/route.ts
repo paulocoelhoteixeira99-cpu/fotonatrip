@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     let batchesCreated = 0;
 
     for (const [photographerId, group] of byPhotographer) {
-      if (group.total < 1000) continue;
+      if (group.total < 100) continue; // Mínimo R$1,00
 
       const { data: photographer } = await supa
         .from("photographers")
