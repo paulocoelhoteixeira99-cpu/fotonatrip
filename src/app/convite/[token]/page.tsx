@@ -82,21 +82,29 @@ export default function ConvitePage() {
 
       setIsLoggedIn(true);
 
-      // Check if user is photographer
-      const { data: photographer } = await supabase
-        .from("photographers")
-        .select("id, pix_key, pix_key_type")
+      // Check if user is photographer (via profile role)
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("role")
         .eq("id", user.id)
         .single();
 
-      if (!photographer) {
+      if (!userProfile || (userProfile.role !== "photographer" && userProfile.role !== "admin")) {
         setIsPhotographer(false);
         setLoading(false);
         return;
       }
 
       setIsPhotographer(true);
-      setHasPixKey(!!photographer.pix_key && !!photographer.pix_key_type);
+
+      // Check Pix key from photographers table
+      const { data: photographer } = await supabase
+        .from("photographers")
+        .select("id, pix_key, pix_key_type")
+        .eq("id", user.id)
+        .single();
+
+      setHasPixKey(!!photographer?.pix_key && !!photographer?.pix_key_type);
 
       // Check if is owner
       if (user.id === eventData.photographer_id) {
