@@ -113,7 +113,8 @@ export default function ConfiguracoesPage() {
         .eq("id", user.id),
       supabase
         .from("photographers")
-        .update({
+        .upsert({
+          id: user.id,
           business_name: businessName || null,
           bio: bio || null,
           phone: phone || null,
@@ -122,8 +123,7 @@ export default function ConfiguracoesPage() {
           pix_key: pixKey || null,
           pix_key_type: pixKeyType || null,
           updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id),
+        }),
     ]);
 
     if (profileResult.error || photographerResult.error) {
