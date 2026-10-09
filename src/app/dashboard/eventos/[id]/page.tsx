@@ -108,6 +108,7 @@ export default function EventoDetailPage() {
   const [duplicatePhotos, setDuplicatePhotos] = useState<{ filename: string; photoId: string; storagePath: string; watermarkPath: string }[]>([]);
   const [showDupModal, setShowDupModal] = useState(false);
   const [collaborators, setCollaborators] = useState<{ id: string; photographer_id: string; name: string | null; accepted_at: string }[]>([]);
+  const [photographerNames, setPhotographerNames] = useState<Map<string, string>>(new Map());
   const [inviteCopied, setInviteCopied] = useState(false);
   const [commissionInput, setCommissionInput] = useState("");
   const [savingCommission, setSavingCommission] = useState(false);
@@ -155,6 +156,18 @@ export default function EventoDetailPage() {
         .order("created_at", { ascending: false });
 
       setPhotos(photosData || []);
+
+      // Load photographer names for all photos
+      if (photosData && photosData.length > 0) {
+        const uniqueIds = [...new Set(photosData.map((p: Photo) => p.photographer_id))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", uniqueIds);
+        if (profiles) {
+          setPhotographerNames(new Map(profiles.map((p) => [p.id, p.full_name || "Fotografo"])));
+        }
+      }
 
       // Load collaborators if shared event
       if (eventData.is_shared) {
@@ -1293,8 +1306,31 @@ export default function EventoDetailPage() {
             />
 
             <div className="flex items-center justify-between mt-4">
-              <p className="text-white/50 text-sm">{previewPhoto.original_filename}</p>
+              <div>
+                <p className="text-white/70 text-sm">{photographerNames.get(previewPhoto.photographer_id) || "Fotografo"}</p>
+                <p className="text-white/40 text-xs">{previewPhoto.original_filename}</p>
+              </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(getPhotoUrl(previewPhoto.storage_path));
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = previewPhoto.original_filename || "foto.jpg";
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      window.open(getPhotoUrl(previewPhoto.storage_path), "_blank");
+                    }
+                  }}
+                  className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Baixar
+                </button>
                 {isOwner && (
                   <button
                     onClick={() => handleSetCover(previewPhoto.storage_path)}
