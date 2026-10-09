@@ -15,6 +15,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+interface EventSale {
+  id: string;
+  title: string;
+  photo_count: number;
+  price_cents: number;
+  items_sold: number;
+  orders_count: number;
+  revenue_cents: number;
+  net_cents: number;
+  event_date: string | null;
+}
+
 interface OrderGroup {
   order_id: string;
   photo_count: number;
@@ -40,6 +52,9 @@ export default function VendasPage() {
   const [orderCount, setOrderCount] = useState(0);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
   const [payouts, setPayouts] = useState<{ type: string; amount_cents: number; status: string; event_id: string; commission_pct: number | null; created_at: string; order_item_id: string }[]>([]);
+  const [eventSales, setEventSales] = useState<EventSale[]>([]);
+  const [eventSalesPage, setEventSalesPage] = useState(0);
+  const EVENT_SALES_PER_PAGE = 10;
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -151,11 +166,12 @@ export default function VendasPage() {
       .eq("photographer_id", user.id)
       .order("created_at", { ascending: false });
 
+    // Build payout map: order_item_id -> amount the photographer actually receives
+    const payoutByItem = new Map<string, number>();
+
     if (payoutData) {
       setPayouts(payoutData);
 
-      // Build payout map: order_item_id -> amount the photographer actually receives
-      const payoutByItem = new Map<string, number>();
       for (const p of payoutData) {
         if (p.type === "collaborator_payout" || p.type === "host_own_photos") {
           payoutByItem.set(p.order_item_id, p.amount_cents);
@@ -198,6 +214,73 @@ export default function VendasPage() {
         });
         setDailySales(recalcDays);
       }
+    }
+
+    // Build event sales breakdown
+    // Get photographer's events
+    const { data: myEvents } = await supabase
+      .from("events")
+      .select("id, title, photo_count, price_per_photo_cents, event_date")
+      .eq("photographer_id", user.id)
+      .order("created_at", { ascending: false });
+
+    // Also include events where user is a collaborator
+    const { data: collabLinks } = await supabase
+      .from("event_collaborators")
+      .select("event_id")
+      .eq("photographer_id", user.id);
+
+    const collabEventIds = (collabLinks || []).map((c) => c.event_id);
+    let collabEvents: typeof myEvents = [];
+    if (collabEventIds.length > 0) {
+      const { data: ce } = await supabase
+        .from("events")
+        .select("id, title, photo_count, price_per_photo_cents, event_date")
+        .in("id", collabEventIds);
+      collabEvents = ce || [];
+    }
+
+    const allEvents = [...(myEvents || []), ...(collabEvents || [])];
+
+    if (allEvents.length > 0 && data.length > 0) {
+      // Aggregate sales by event for this photographer
+      const byEvent = new Map<string, { items_sold: number; revenue_cents: number; net_cents: number; unique_orders: Set<string> }>();
+      for (const item of data) {
+        const eventId = (item as any).photos?.event_id;
+        if (!eventId) continue;
+        const current = byEvent.get(eventId) || { items_sold: 0, revenue_cents: 0, net_cents: 0, unique_orders: new Set<string>() };
+        current.items_sold += 1;
+        current.revenue_cents += (item as any).price_cents;
+        current.net_cents += (payoutByItem?.get((item as any).id) ?? Math.round((item as any).price_cents * 0.93));
+        current.unique_orders.add((item as any).order_id);
+        byEvent.set(eventId, current);
+      }
+
+      const evSales: EventSale[] = allEvents
+        .map((e) => {
+          const sales = byEvent.get(e.id);
+          return {
+            id: e.id,
+            title: e.title,
+            photo_count: e.photo_count || 0,
+            price_cents: e.price_per_photo_cents || 0,
+            items_sold: sales?.items_sold || 0,
+            orders_count: sales?.unique_orders?.size || 0,
+            revenue_cents: sales?.revenue_cents || 0,
+            net_cents: sales?.net_cents || 0,
+            event_date: e.event_date,
+          };
+        })
+        .filter((e) => e.items_sold > 0)
+        .sort((a, b) => {
+          // Sort by event_date desc, then by revenue
+          const dateA = a.event_date ? new Date(a.event_date).getTime() : 0;
+          const dateB = b.event_date ? new Date(b.event_date).getTime() : 0;
+          if (dateB !== dateA) return dateB - dateA;
+          return b.revenue_cents - a.revenue_cents;
+        });
+
+      setEventSales(evSales);
     }
 
     setLoading(false);
@@ -326,6 +409,85 @@ export default function VendasPage() {
           </Link>
         </div>
       )}
+
+      {/* Event sales table */}
+      {eventSales.length > 0 && (() => {
+        const maxRevenue = Math.max(...eventSales.map((e) => e.net_cents), 1);
+        const paginatedEvents = eventSales.slice(
+          eventSalesPage * EVENT_SALES_PER_PAGE,
+          (eventSalesPage + 1) * EVENT_SALES_PER_PAGE
+        );
+        const totalPages = Math.ceil(eventSales.length / EVENT_SALES_PER_PAGE);
+
+        return (
+          <div className="glass rounded-2xl p-6 mb-8">
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-primary" /> Eventos com vendas ({eventSales.length})
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted border-b border-border">
+                    <th className="pb-3 font-medium">Evento</th>
+                    <th className="pb-3 font-medium text-right">Fotos</th>
+                    <th className="pb-3 font-medium text-right">Vendidas</th>
+                    <th className="pb-3 font-medium text-right">Pedidos</th>
+                    <th className="pb-3 font-medium text-right">Preco unit.</th>
+                    <th className="pb-3 font-medium text-right">Receita</th>
+                    <th className="pb-3 font-medium text-right">Voce recebe</th>
+                    <th className="pb-3 font-medium w-24"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedEvents.map((e) => (
+                    <tr key={e.id} className="border-b border-border/50 last:border-0">
+                      <td className="py-3 font-medium max-w-[200px] truncate">{e.title}</td>
+                      <td className="py-3 text-right text-muted">{e.photo_count}</td>
+                      <td className="py-3 text-right text-primary">{e.items_sold}</td>
+                      <td className="py-3 text-right text-muted">{e.orders_count}</td>
+                      <td className="py-3 text-right text-muted">{formatPrice(e.price_cents)}</td>
+                      <td className="py-3 text-right text-muted">{formatPrice(e.revenue_cents)}</td>
+                      <td className="py-3 text-right text-primary font-medium">{formatPrice(e.net_cents)}</td>
+                      <td className="py-3 pl-3">
+                        <div className="w-full bg-white/5 rounded-full h-2">
+                          <div
+                            className="bg-primary rounded-full h-2 transition-all"
+                            style={{ width: `${Math.max((e.net_cents / maxRevenue) * 100, 2)}%` }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                <p className="text-xs text-muted">
+                  Pagina {eventSalesPage + 1} de {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEventSalesPage((p) => Math.max(0, p - 1))}
+                    disabled={eventSalesPage === 0}
+                    className="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setEventSalesPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={eventSalesPage >= totalPages - 1}
+                    className="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Proximo
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Recent sales table */}
       <div className="glass rounded-2xl overflow-hidden">
