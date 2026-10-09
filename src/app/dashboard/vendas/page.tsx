@@ -19,6 +19,7 @@ interface OrderGroup {
   order_id: string;
   photo_count: number;
   total_cents: number;
+  net_cents?: number;
   created_at: string;
   event_title: string;
   is_package: boolean;
@@ -38,7 +39,7 @@ export default function VendasPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
-  const [payouts, setPayouts] = useState<{ type: string; amount_cents: number; status: string; event_id: string; commission_pct: number | null; created_at: string }[]>([]);
+  const [payouts, setPayouts] = useState<{ type: string; amount_cents: number; status: string; event_id: string; commission_pct: number | null; created_at: string; order_item_id: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -146,12 +147,57 @@ export default function VendasPage() {
     // Load payouts for shared events
     const { data: payoutData } = await supabase
       .from("payouts")
-      .select("type, amount_cents, status, event_id, commission_pct, created_at")
+      .select("type, amount_cents, status, event_id, commission_pct, created_at, order_item_id")
       .eq("photographer_id", user.id)
       .order("created_at", { ascending: false });
 
     if (payoutData) {
       setPayouts(payoutData);
+
+      // Build payout map: order_item_id -> amount the photographer actually receives
+      const payoutByItem = new Map<string, number>();
+      for (const p of payoutData) {
+        if (p.type === "collaborator_payout" || p.type === "host_own_photos") {
+          payoutByItem.set(p.order_item_id, p.amount_cents);
+        }
+      }
+
+      // Recalculate totals using actual payout amounts when available
+      if (payoutByItem.size > 0) {
+        const recalcTotal = data.reduce((sum: number, item: any) => {
+          return sum + (payoutByItem.get(item.id) ?? Math.round(item.price_cents * 0.93));
+        }, 0);
+        setTotalRevenueCents(recalcTotal);
+
+        const recalcMonth = monthItems.reduce((sum: number, item: any) => {
+          return sum + (payoutByItem.get(item.id) ?? Math.round(item.price_cents * 0.93));
+        }, 0);
+        setMonthRevenueCents(recalcMonth);
+
+        // Recalculate order groups with correct net amounts
+        const recalcOrders = orderGroups.map((og) => {
+          const groupItems = grouped.get(og.order_id) || [];
+          const netCents = groupItems.reduce((sum: number, item: any) => {
+            return sum + (payoutByItem.get(item.id) ?? Math.round(item.price_cents * 0.93));
+          }, 0);
+          return { ...og, net_cents: netCents };
+        });
+        setOrders(recalcOrders);
+
+        // Recalculate daily chart
+        const recalcDays = days.map((day) => {
+          const daySalesItems = data.filter(
+            (s: any) => toLocalDate(new Date(s.created_at)) === day.date
+          );
+          return {
+            ...day,
+            total_cents: daySalesItems.reduce((sum: number, item: any) => {
+              return sum + (payoutByItem.get(item.id) ?? Math.round(item.price_cents * 0.93));
+            }, 0),
+          };
+        });
+        setDailySales(recalcDays);
+      }
     }
 
     setLoading(false);
@@ -297,8 +343,9 @@ export default function VendasPage() {
         ) : (
           <div className="divide-y divide-border">
             {orders.slice(0, 20).map((order) => {
-              const netCents = Math.round(order.total_cents * 0.93);
-              const feeCents = order.total_cents - netCents;
+              const defaultNet = Math.round(order.total_cents * 0.93);
+              const netCents = order.net_cents ?? defaultNet;
+              const deductions = order.total_cents - netCents;
               return (
                 <div
                   key={order.order_id}
@@ -340,7 +387,7 @@ export default function VendasPage() {
                       {formatPrice(netCents)}
                     </p>
                     <p className="text-[10px] text-muted">
-                      -{formatPrice(feeCents)} taxa
+                      -{formatPrice(deductions)} taxas
                     </p>
                   </div>
                 </div>
