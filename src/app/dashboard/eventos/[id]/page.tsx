@@ -29,6 +29,10 @@ import {
   Package,
   Pencil,
   AlertTriangle,
+  Users,
+  UserMinus,
+  RefreshCw,
+  Info,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -59,6 +63,9 @@ interface Event {
   cover_url: string | null;
   price_per_photo_cents: number;
   package_price_cents: number | null;
+  is_shared: boolean;
+  invite_code: string | null;
+  collaborator_commission_pct: number;
 }
 
 interface Photo {
@@ -98,6 +105,12 @@ export default function EventoDetailPage() {
   const [pendingUploadFiles, setPendingUploadFiles] = useState<File[]>([]);
   const [duplicatePhotos, setDuplicatePhotos] = useState<{ filename: string; photoId: string; storagePath: string; watermarkPath: string }[]>([]);
   const [showDupModal, setShowDupModal] = useState(false);
+  const [collaborators, setCollaborators] = useState<{ id: string; photographer_id: string; name: string | null; accepted_at: string }[]>([]);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [commissionInput, setCommissionInput] = useState("");
+  const [savingCommission, setSavingCommission] = useState(false);
+  const [commissionSaved, setCommissionSaved] = useState(true);
+  const [regeneratingLink, setRegeneratingLink] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const supabase = createClient();
   const router = useRouter();
@@ -120,6 +133,8 @@ export default function EventoDetailPage() {
       if (eventData.package_price_cents) {
         setPackagePriceInput((eventData.package_price_cents / 100).toFixed(2).replace(".", ","));
       }
+      setCommissionInput(String(eventData.collaborator_commission_pct || 0));
+
       if (eventData.scheduled_at) {
         // Convert UTC to local datetime-local format
         const local = new Date(eventData.scheduled_at);
@@ -134,6 +149,33 @@ export default function EventoDetailPage() {
         .order("created_at", { ascending: false });
 
       setPhotos(photosData || []);
+
+      // Load collaborators if shared event
+      if (eventData.is_shared) {
+        const { data: collabs } = await supabase
+          .from("event_collaborators")
+          .select("id, photographer_id, accepted_at")
+          .eq("event_id", id);
+
+        if (collabs && collabs.length > 0) {
+          const photographerIds = collabs.map((c) => c.photographer_id);
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("id", photographerIds);
+
+          const profileMap = new Map((profiles || []).map((p) => [p.id, p.full_name]));
+          setCollaborators(
+            collabs.map((c) => ({
+              id: c.id,
+              photographer_id: c.photographer_id,
+              name: profileMap.get(c.photographer_id) || null,
+              accepted_at: c.accepted_at,
+            }))
+          );
+        }
+      }
+
       setLoading(false);
     }
 
@@ -912,6 +954,137 @@ export default function EventoDetailPage() {
           Voce recebe 93% (comissao da plataforma: 7%). O pacote permite ao cliente comprar todas as fotos reconhecidas por um preco unico.
         </p>
       </div>
+
+      {/* Shared event: Collaborators section */}
+      {event.is_shared && (
+        <div className="glass rounded-2xl p-5 mb-6 space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Users className="w-4 h-4 text-primary" />
+            Colaboradores
+          </div>
+
+          {/* Invite link */}
+          <div className="space-y-2">
+            <label className="text-xs text-muted">Link de convite</label>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={event.invite_code ? `${typeof window !== "undefined" ? window.location.origin : "https://www.fotonatrip.com.br"}/convite/${event.invite_code}` : ""}
+                className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-muted focus:outline-none select-all"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <button
+                onClick={() => {
+                  if (!event.invite_code) return;
+                  const url = `${window.location.origin}/convite/${event.invite_code}`;
+                  navigator.clipboard.writeText(url);
+                  setInviteCopied(true);
+                  setTimeout(() => setInviteCopied(false), 2000);
+                }}
+                className="flex items-center gap-1.5 text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+              >
+                {inviteCopied ? (<><Check className="w-4 h-4 text-primary" />Copiado!</>) : (<><Copy className="w-4 h-4" />Copiar</>)}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm("Regenerar o link? O link anterior sera invalidado.")) return;
+                  setRegeneratingLink(true);
+                  const { data } = await supabase
+                    .from("events")
+                    .update({ invite_code: crypto.randomUUID() })
+                    .eq("id", event.id)
+                    .select("invite_code")
+                    .single();
+                  if (data) {
+                    setEvent({ ...event, invite_code: data.invite_code });
+                  }
+                  setRegeneratingLink(false);
+                }}
+                disabled={regeneratingLink}
+                className="flex items-center gap-1.5 text-sm bg-white/10 hover:bg-white/15 px-3 py-2 rounded-lg transition-colors whitespace-nowrap disabled:opacity-50"
+                title="Regenerar link de convite"
+              >
+                <RefreshCw className={`w-4 h-4 ${regeneratingLink ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Commission editor */}
+          <div className="space-y-2">
+            <label className="text-xs text-muted">Comissao do anfitriao</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={commissionInput}
+                onChange={(e) => { setCommissionInput(e.target.value); setCommissionSaved(false); }}
+                className="w-20 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
+              />
+              <span className="text-sm text-muted">%</span>
+              <button
+                onClick={async () => {
+                  const pct = parseInt(commissionInput);
+                  if (isNaN(pct) || pct < 1 || pct > 50) return;
+                  setSavingCommission(true);
+                  await supabase.from("events").update({ collaborator_commission_pct: pct }).eq("id", event.id);
+                  setEvent({ ...event, collaborator_commission_pct: pct });
+                  setSavingCommission(false);
+                  setCommissionSaved(true);
+                }}
+                disabled={savingCommission || commissionSaved}
+                className={`text-sm px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                  commissionSaved
+                    ? "bg-primary/15 text-primary border border-primary/30 cursor-default"
+                    : "bg-primary hover:bg-primary-dark text-white disabled:opacity-50"
+                }`}
+              >
+                {savingCommission ? "Salvando..." : commissionSaved ? (
+                  <><Check className="w-3.5 h-3.5" />Salvo</>
+                ) : "Salvar"}
+              </button>
+            </div>
+            <p className="text-xs text-yellow-400/80 bg-yellow-400/10 rounded-lg px-3 py-2 flex items-start gap-2">
+              <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+              A nova comissao se aplica apenas a vendas futuras. Vendas ja realizadas mantem a comissao vigente no momento da compra.
+            </p>
+          </div>
+
+          {/* Collaborators list */}
+          {collaborators.length > 0 ? (
+            <div className="space-y-2">
+              <label className="text-xs text-muted">Fotografos participantes ({collaborators.length})</label>
+              <div className="space-y-1">
+                {collaborators.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
+                    <div>
+                      <p className="text-sm">{c.name || "Fotografo"}</p>
+                      <p className="text-xs text-muted">
+                        Entrou em {new Date(c.accepted_at).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Remover ${c.name || "este fotografo"} do evento? As fotos dele nao serao deletadas, mas ele nao podera mais enviar novas fotos.`)) return;
+                        await supabase.from("event_collaborators").delete().eq("id", c.id);
+                        setCollaborators((prev) => prev.filter((x) => x.id !== c.id));
+                      }}
+                      className="text-muted hover:text-red-400 transition-colors p-1"
+                      title="Remover colaborador"
+                    >
+                      <UserMinus className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted">
+              Nenhum colaborador ainda. Compartilhe o link de convite com outros fotografos.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Sold photos button */}
       <div className="mb-6">

@@ -49,13 +49,17 @@ export async function POST(req: NextRequest) {
   // Packages: use event's package_price_cents
   const mpItems: { id: string; title: string; description: string; quantity: number; unit_price: number; currency_id: string; category_id: string }[] = [];
 
-  // Get event titles for item descriptions
+  // Get event data for item descriptions and shared event logic
   const eventIds = [...new Set(photos.map((p) => p.event_id))];
   const { data: eventTitles } = await supabase
     .from("events")
-    .select("id, title")
+    .select("id, title, is_shared, collaborator_commission_pct, photographer_id")
     .in("id", eventIds);
   const eventMap = new Map((eventTitles || []).map((e) => [e.id, e.title]));
+
+  // Check if any event in the order is shared
+  const hasSharedEvent = (eventTitles || []).some((e) => e.is_shared);
+  const eventsFullMap = new Map((eventTitles || []).map((e) => [e.id, e]));
 
   for (const photo of individualPhotos) {
     const eventTitle = eventMap.get(photo.event_id) || "Evento";
@@ -149,11 +153,12 @@ export async function POST(req: NextRequest) {
   const email = user.email || "";
 
   // Check if all photos are from a single photographer with MP connected
+  // If ANY event is shared, disable marketplace split for the entire order
   const photographerIds = [...new Set(photos.map((p) => p.photographer_id))];
   let useMarketplace = false;
   let photographerAccessToken: string | null = null;
 
-  if (photographerIds.length === 1) {
+  if (!hasSharedEvent && photographerIds.length === 1) {
     const { data: photographer } = await supabase
       .from("photographers")
       .select("mp_access_token, mp_user_id")
@@ -244,6 +249,94 @@ export async function POST(req: NextRequest) {
   if (itemsError) {
     console.error("Order items error:", itemsError);
     return NextResponse.json({ error: "Erro ao criar itens do pedido" }, { status: 500 });
+  }
+
+  // Fetch inserted order_items with IDs for payout creation
+  const { data: insertedItems } = await supabase
+    .from("order_items")
+    .select("id, photo_id, photographer_id, price_cents")
+    .eq("order_id", order.id);
+
+  // Create payouts for shared events (or when order has any shared event)
+  if (hasSharedEvent && insertedItems) {
+    const payoutRows: {
+      type: string;
+      photographer_id: string;
+      order_item_id: string;
+      event_id: string;
+      amount_cents: number;
+      commission_pct: number | null;
+    }[] = [];
+
+    for (const item of insertedItems) {
+      const photo = photos.find((p) => p.id === item.photo_id);
+      if (!photo) continue;
+
+      const eventData = eventsFullMap.get(photo.event_id);
+      if (!eventData) continue;
+
+      const itemPrice = item.price_cents;
+      const platformFee = Math.round(itemPrice * 0.07);
+      const afterPlatform = itemPrice - platformFee;
+
+      if (eventData.is_shared) {
+        if (photo.photographer_id === eventData.photographer_id) {
+          // Host's own photo in shared event: host gets 93%
+          payoutRows.push({
+            type: "host_own_photos",
+            photographer_id: eventData.photographer_id,
+            order_item_id: item.id,
+            event_id: photo.event_id,
+            amount_cents: afterPlatform,
+            commission_pct: null,
+          });
+        } else {
+          // Collaborator's photo: host gets commission%, collaborator gets rest
+          const commissionPct = eventData.collaborator_commission_pct;
+          const hostCommission = Math.round(itemPrice * commissionPct / 100);
+          const collaboratorAmount = afterPlatform - hostCommission;
+
+          payoutRows.push({
+            type: "host_commission",
+            photographer_id: eventData.photographer_id,
+            order_item_id: item.id,
+            event_id: photo.event_id,
+            amount_cents: hostCommission,
+            commission_pct: commissionPct,
+          });
+
+          payoutRows.push({
+            type: "collaborator_payout",
+            photographer_id: photo.photographer_id,
+            order_item_id: item.id,
+            event_id: photo.event_id,
+            amount_cents: collaboratorAmount,
+            commission_pct: commissionPct,
+          });
+        }
+      } else {
+        // Non-shared event in mixed order: host gets 93% via payout
+        payoutRows.push({
+          type: "host_own_photos",
+          photographer_id: photo.photographer_id,
+          order_item_id: item.id,
+          event_id: photo.event_id,
+          amount_cents: afterPlatform,
+          commission_pct: null,
+        });
+      }
+    }
+
+    if (payoutRows.length > 0) {
+      const { error: payoutError } = await supabase
+        .from("payouts")
+        .insert(payoutRows);
+
+      if (payoutError) {
+        console.error("Payout creation error:", payoutError);
+        // Don't fail the order — payouts can be reconciled later
+      }
+    }
   }
 
   // If total is zero (100% coupon), mark as paid immediately — no MP needed

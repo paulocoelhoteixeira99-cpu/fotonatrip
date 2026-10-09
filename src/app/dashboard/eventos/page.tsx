@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { Plus, CalendarDays, Search, CalendarClock } from "lucide-react";
+import { Plus, CalendarDays, Search, CalendarClock, Users } from "lucide-react";
 
 interface Event {
   id: string;
@@ -15,6 +15,9 @@ interface Event {
   status: string;
   scheduled_at: string | null;
   created_at: string;
+  is_shared?: boolean;
+  is_collaborator?: boolean;
+  owner_name?: string;
 }
 
 export default function EventosPage() {
@@ -30,13 +33,46 @@ export default function EventosPage() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
+      // Own events
+      const { data: ownEvents } = await supabase
         .from("events")
         .select("*")
         .eq("photographer_id", user.id)
         .order("created_at", { ascending: false });
 
-      setEvents(data || []);
+      // Events where user is a collaborator
+      const { data: collabRecords } = await supabase
+        .from("event_collaborators")
+        .select("event_id")
+        .eq("photographer_id", user.id);
+
+      let collabEvents: Event[] = [];
+      if (collabRecords && collabRecords.length > 0) {
+        const collabEventIds = collabRecords.map((c) => c.event_id);
+        const { data: events } = await supabase
+          .from("events")
+          .select("*")
+          .in("id", collabEventIds)
+          .order("created_at", { ascending: false });
+
+        if (events && events.length > 0) {
+          // Get owner names
+          const ownerIds = [...new Set(events.map((e) => e.photographer_id))];
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("id", ownerIds);
+          const profileMap = new Map((profiles || []).map((p) => [p.id, p.full_name]));
+
+          collabEvents = events.map((e) => ({
+            ...e,
+            is_collaborator: true,
+            owner_name: profileMap.get(e.photographer_id) || undefined,
+          }));
+        }
+      }
+
+      setEvents([...(ownEvents || []), ...collabEvents]);
       setLoading(false);
     }
 
@@ -128,6 +164,18 @@ export default function EventosPage() {
                 <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
                   {event.title}
                 </h3>
+                {event.is_collaborator && (
+                  <p className="text-xs text-primary flex items-center gap-1 mb-1">
+                    <Users className="w-3 h-3" />
+                    Colaborador{event.owner_name && ` — ${event.owner_name}`}
+                  </p>
+                )}
+                {event.is_shared && !event.is_collaborator && (
+                  <p className="text-xs text-muted flex items-center gap-1 mb-1">
+                    <Users className="w-3 h-3" />
+                    Evento compartilhado
+                  </p>
+                )}
                 {event.location && (
                   <p className="text-xs text-muted mb-3">{event.location}</p>
                 )}

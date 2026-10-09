@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Save, Link2, Unlink, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Save, Link2, Unlink, CheckCircle, AlertCircle, KeyRound } from "lucide-react";
 
 export default function ConfiguracoesPage() {
   const [fullName, setFullName] = useState("");
@@ -14,6 +14,8 @@ export default function ConfiguracoesPage() {
   const [state, setState] = useState("");
   const [mpConnected, setMpConnected] = useState(false);
   const [mpUserId, setMpUserId] = useState<string | null>(null);
+  const [pixKey, setPixKey] = useState("");
+  const [pixKeyType, setPixKeyType] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -57,6 +59,8 @@ export default function ConfiguracoesPage() {
         setState(photographerRes.data.state || "");
         setMpConnected(!!photographerRes.data.mp_user_id);
         setMpUserId(photographerRes.data.mp_user_id || null);
+        setPixKey(photographerRes.data.pix_key || "");
+        setPixKeyType(photographerRes.data.pix_key_type || "");
       }
 
       setLoading(false);
@@ -88,6 +92,8 @@ export default function ConfiguracoesPage() {
           phone: phone || null,
           city: city || null,
           state: state || null,
+          pix_key: pixKey || null,
+          pix_key_type: pixKeyType || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id),
@@ -96,6 +102,14 @@ export default function ConfiguracoesPage() {
     setMessage("Configuracoes salvas com sucesso!");
     setSaving(false);
     setTimeout(() => setMessage(""), 3000);
+
+    // Redirect if ?next= is present (e.g. from invite flow)
+    const next = searchParams.get("next");
+    if (next && pixKey && pixKeyType) {
+      setTimeout(() => {
+        window.location.href = next;
+      }, 1000);
+    }
   }
 
   async function handleDisconnectMP() {
@@ -288,6 +302,53 @@ export default function ConfiguracoesPage() {
               className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50 resize-none"
             />
           </div>
+        </div>
+
+        <div className="glass rounded-2xl p-6 space-y-5">
+          <h2 className="font-semibold text-sm text-muted uppercase tracking-wider flex items-center gap-2">
+            <KeyRound className="w-4 h-4" />
+            Chave Pix
+          </h2>
+
+          <div>
+            <label className="text-sm text-muted mb-2 block">Tipo da chave</label>
+            <select
+              value={pixKeyType}
+              onChange={(e) => setPixKeyType(e.target.value)}
+              className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+            >
+              <option value="">Selecione o tipo</option>
+              <option value="cpf">CPF</option>
+              <option value="cnpj">CNPJ</option>
+              <option value="email">E-mail</option>
+              <option value="phone">Telefone</option>
+              <option value="random">Chave aleatoria</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm text-muted mb-2 block">Chave Pix</label>
+            <input
+              type="text"
+              value={pixKey}
+              onChange={(e) => setPixKey(e.target.value)}
+              placeholder={
+                pixKeyType === "cpf" ? "000.000.000-00" :
+                pixKeyType === "cnpj" ? "00.000.000/0000-00" :
+                pixKeyType === "email" ? "seu@email.com" :
+                pixKeyType === "phone" ? "(11) 99999-9999" :
+                pixKeyType === "random" ? "Chave aleatoria do Pix" :
+                "Selecione o tipo primeiro"
+              }
+              disabled={!pixKeyType}
+              className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50 disabled:opacity-50"
+            />
+          </div>
+
+          <p className="text-xs text-muted">
+            Sua chave Pix e utilizada para receber repasses de vendas em eventos compartilhados.
+            Os repasses sao gerados semanalmente (toda segunda-feira) com valor minimo de R$10,00.
+          </p>
         </div>
 
         <button

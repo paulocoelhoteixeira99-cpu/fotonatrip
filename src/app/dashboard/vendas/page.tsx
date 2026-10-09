@@ -9,6 +9,9 @@ import {
   ImageIcon,
   ShoppingBag,
   CalendarDays,
+  Users,
+  ArrowDownRight,
+  ArrowUpRight,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -35,6 +38,7 @@ export default function VendasPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
+  const [payouts, setPayouts] = useState<{ type: string; amount_cents: number; status: string; event_id: string; commission_pct: number | null; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -138,6 +142,17 @@ export default function VendasPage() {
       });
     }
     setDailySales(days.reverse());
+
+    // Load payouts for shared events
+    const { data: payoutData } = await supabase
+      .from("payouts")
+      .select("type, amount_cents, status, event_id, commission_pct, created_at")
+      .eq("photographer_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (payoutData) {
+      setPayouts(payoutData);
+    }
 
     setLoading(false);
   }
@@ -334,6 +349,84 @@ export default function VendasPage() {
           </div>
         )}
       </div>
+
+      {/* Shared events payouts section */}
+      {payouts.length > 0 && (() => {
+        const hostCommissions = payouts.filter((p) => p.type === "host_commission");
+        const collaboratorPayouts = payouts.filter((p) => p.type === "collaborator_payout");
+        const hostOwnPayouts = payouts.filter((p) => p.type === "host_own_photos");
+
+        const totalHostCommissionPending = hostCommissions.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount_cents, 0);
+        const totalHostCommissionPaid = hostCommissions.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
+        const totalCollabPending = collaboratorPayouts.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount_cents, 0);
+        const totalCollabPaid = collaboratorPayouts.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
+        const totalOwnPending = hostOwnPayouts.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount_cents, 0);
+        const totalOwnPaid = hostOwnPayouts.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
+
+        const hasHostData = hostCommissions.length > 0 || hostOwnPayouts.length > 0;
+        const hasCollabData = collaboratorPayouts.length > 0;
+
+        return (
+          <div className="mt-8 space-y-6">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Eventos compartilhados
+            </h2>
+
+            {hasHostData && (
+              <div className="glass rounded-2xl p-6 space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
+                  <ArrowDownRight className="w-4 h-4 text-primary" />
+                  Recebimentos como anfitriao
+                </h3>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-muted">Comissoes pendentes</p>
+                    <p className="text-lg font-bold text-yellow-400">{formatPrice(totalHostCommissionPending)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted">Comissoes recebidas</p>
+                    <p className="text-lg font-bold text-primary">{formatPrice(totalHostCommissionPaid)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted">Fotos proprias (pendente)</p>
+                    <p className="text-lg font-bold text-yellow-400">{formatPrice(totalOwnPending)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted">Fotos proprias (recebido)</p>
+                    <p className="text-lg font-bold text-primary">{formatPrice(totalOwnPaid)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hasCollabData && (
+              <div className="glass rounded-2xl p-6 space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
+                  <ArrowUpRight className="w-4 h-4 text-primary" />
+                  Vendas como colaborador
+                </h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted">Pendente de recebimento</p>
+                    <p className="text-lg font-bold text-yellow-400">{formatPrice(totalCollabPending)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted">Ja recebido</p>
+                    <p className="text-lg font-bold text-primary">{formatPrice(totalCollabPaid)}</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted">
+                  Repasses semanais via Pix (toda segunda-feira, minimo R$10,00).
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

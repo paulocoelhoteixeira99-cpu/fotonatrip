@@ -31,11 +31,12 @@ import {
   Trash2,
   Power,
   Check,
+  Wallet,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
 
-type Tab = "overview" | "sales" | "growth" | "traffic" | "coupons";
+type Tab = "overview" | "sales" | "growth" | "traffic" | "coupons" | "payouts";
 type Period = "all" | "month" | "week" | "custom";
 
 interface OverviewStats {
@@ -251,6 +252,7 @@ export default function AdminPage() {
   const [growthData, setGrowthData] = useState<GrowthData | null>(null);
   const [trafficData, setTrafficData] = useState<TrafficData | null>(null);
   const [couponsData, setCouponsData] = useState<Coupon[]>([]);
+  const [payoutsData, setPayoutsData] = useState<{ batches: any[]; total_pending_cents: number; total_paid_cents: number } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -284,6 +286,12 @@ export default function AdminPage() {
     setLoading(true);
     if (tab === "coupons") {
       await loadCoupons();
+    } else if (tab === "payouts") {
+      const res = await fetch("/api/admin/payouts");
+      if (res.ok) {
+        const json = await res.json();
+        setPayoutsData(json);
+      }
     } else {
       const params = buildParams();
       params.set("section", tab);
@@ -331,6 +339,7 @@ export default function AdminPage() {
     { key: "growth", label: "Crescimento", icon: UserPlus },
     { key: "traffic", label: "Trafego", icon: Globe },
     { key: "coupons", label: "Cupons", icon: Tag },
+    { key: "payouts", label: "Repasses", icon: Wallet },
   ];
 
   return (
@@ -416,6 +425,7 @@ export default function AdminPage() {
             {activeTab === "growth" && growthData && <GrowthTab data={growthData} />}
             {activeTab === "traffic" && trafficData && <TrafficTab data={trafficData} />}
             {activeTab === "coupons" && <CouponsTab coupons={couponsData} onRefresh={loadCoupons} />}
+            {activeTab === "payouts" && payoutsData && <PayoutsTab data={payoutsData} onRefresh={async () => { const res = await fetch("/api/admin/payouts"); if (res.ok) setPayoutsData(await res.json()); }} />}
           </>
         )}
       </main>
@@ -1256,6 +1266,146 @@ function CouponsTab({ coupons, onRefresh }: { coupons: Coupon[]; onRefresh: () =
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+// ─── Payouts Tab ─────────────────────────────────────────────
+
+function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending_cents: number; total_paid_cents: number }; onRefresh: () => void }) {
+  const [generating, setGenerating] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+
+  async function handleGenerateBatches() {
+    if (!confirm("Gerar lotes de repasse para payouts pendentes >= R$10,00?")) return;
+    setGenerating(true);
+    const res = await fetch("/api/admin/payouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "generate_batches" }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      alert(`${json.batches_created} lote(s) criado(s).`);
+      onRefresh();
+    }
+    setGenerating(false);
+  }
+
+  async function handleMarkPaid(batchId: string) {
+    if (!confirm("Marcar este lote como pago? Confirme que a transferencia Pix foi realizada.")) return;
+    setMarkingPaid(batchId);
+    await fetch("/api/admin/payouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "mark_paid", batch_id: batchId }),
+    });
+    onRefresh();
+    setMarkingPaid(null);
+  }
+
+  const pixTypeLabels: Record<string, string> = {
+    cpf: "CPF", cnpj: "CNPJ", email: "E-mail", phone: "Telefone", random: "Aleatoria",
+  };
+
+  return (
+    <>
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <StatCard icon={Wallet} label="Total pendente" value={formatPrice(data.total_pending_cents)} accent="text-yellow-400" />
+        <StatCard icon={Check} label="Total pago" value={formatPrice(data.total_paid_cents)} accent="text-primary" />
+        <div className="glass rounded-2xl p-5 flex items-center justify-center">
+          <button
+            onClick={handleGenerateBatches}
+            disabled={generating}
+            className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Gerar lotes
+          </button>
+        </div>
+      </div>
+
+      {/* Batches table */}
+      <div className="glass rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold">Lotes de repasse</h2>
+        </div>
+
+        {data.batches.length === 0 ? (
+          <div className="text-center py-16">
+            <Wallet className="w-12 h-12 text-muted/20 mx-auto mb-4" />
+            <p className="text-muted text-sm">
+              Nenhum lote de repasse gerado ainda.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-muted">
+                  <th className="text-left px-6 py-3 font-medium">Data</th>
+                  <th className="text-left px-6 py-3 font-medium">Fotografo</th>
+                  <th className="text-center px-6 py-3 font-medium">Itens</th>
+                  <th className="text-right px-6 py-3 font-medium">Total</th>
+                  <th className="text-left px-6 py-3 font-medium">Chave Pix</th>
+                  <th className="text-center px-6 py-3 font-medium">Status</th>
+                  <th className="text-center px-6 py-3 font-medium">Acao</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {data.batches.map((batch: any) => (
+                  <tr key={batch.id} className="hover:bg-white/3 transition-colors">
+                    <td className="px-6 py-3 whitespace-nowrap">
+                      {new Date(batch.created_at).toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
+                    </td>
+                    <td className="px-6 py-3">
+                      {batch.photographers?.business_name || "Fotografo"}
+                    </td>
+                    <td className="px-6 py-3 text-center">{batch.items_count}</td>
+                    <td className="px-6 py-3 text-right font-semibold text-primary">
+                      {formatPrice(batch.total_cents)}
+                    </td>
+                    <td className="px-6 py-3">
+                      <span className="text-xs">{batch.pix_key}</span>
+                      <span className="text-xs text-muted ml-1">
+                        ({pixTypeLabels[batch.pix_key_type] || batch.pix_key_type})
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-center">
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        batch.status === "paid"
+                          ? "bg-primary/10 text-primary"
+                          : batch.status === "failed"
+                          ? "bg-red-400/10 text-red-400"
+                          : "bg-yellow-400/10 text-yellow-400"
+                      }`}>
+                        {batch.status === "paid" ? "Pago" : batch.status === "failed" ? "Falhou" : "Pendente"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-center">
+                      {batch.status === "pending" && (
+                        <button
+                          onClick={() => handleMarkPaid(batch.id)}
+                          disabled={markingPaid === batch.id}
+                          className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {markingPaid === batch.id ? "..." : "Marcar pago"}
+                        </button>
+                      )}
+                      {batch.status === "paid" && batch.paid_at && (
+                        <span className="text-xs text-muted">
+                          {new Date(batch.paid_at).toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </>
   );
 }

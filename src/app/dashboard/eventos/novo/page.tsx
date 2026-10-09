@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, CalendarClock, DollarSign, Package } from "lucide-react";
+import { ArrowLeft, Loader2, CalendarClock, DollarSign, Package, Users, Info } from "lucide-react";
 import Link from "next/link";
 
 const BRAZILIAN_STATES = [
@@ -32,6 +32,8 @@ export default function NovoEventoPage() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [priceInput, setPriceInput] = useState("15,00");
   const [packagePriceInput, setPackagePriceInput] = useState("");
+  const [isShared, setIsShared] = useState(false);
+  const [commissionPct, setCommissionPct] = useState("10");
   const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -87,6 +89,13 @@ export default function NovoEventoPage() {
       return;
     }
 
+    const commissionPctNum = isShared ? parseInt(commissionPct) : 0;
+    if (isShared && (isNaN(commissionPctNum) || commissionPctNum < 1 || commissionPctNum > 50)) {
+      setError("A comissao do anfitriao deve ser entre 1% e 50%.");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.from("events").insert({
       photographer_id: user.id,
       title,
@@ -99,6 +108,8 @@ export default function NovoEventoPage() {
       scheduled_at: status === "scheduled" ? new Date(scheduledAt).toISOString() : null,
       price_per_photo_cents: priceCents,
       package_price_cents: packageCents,
+      is_shared: isShared,
+      collaborator_commission_pct: isShared ? commissionPctNum : 0,
     });
 
     if (error) {
@@ -286,6 +297,63 @@ export default function NovoEventoPage() {
               Se preenchido, o cliente tera a opcao de comprar todas as suas fotos reconhecidas por este valor.
             </p>
           </div>
+        </div>
+
+        {/* Evento compartilhado */}
+        <div className="glass rounded-2xl p-5 space-y-4">
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            Evento compartilhado
+          </h3>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isShared}
+              onChange={(e) => setIsShared(e.target.checked)}
+              className="w-5 h-5 rounded border-border bg-white/5 text-primary focus:ring-primary accent-[#0d9668]"
+            />
+            <span className="text-sm">Permitir que outros fotografos enviem fotos neste evento</span>
+          </label>
+
+          {isShared && (
+            <>
+              <div>
+                <label className="text-xs text-muted mb-1.5 block">Comissao do anfitriao (%)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={commissionPct}
+                    onChange={(e) => setCommissionPct(e.target.value)}
+                    className="w-24 bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none transition-colors"
+                  />
+                  <span className="text-sm text-muted">%</span>
+                </div>
+                <p className="text-xs text-muted mt-1.5">
+                  Percentual que voce recebe sobre vendas de fotos dos colaboradores (1% a 50%).
+                </p>
+              </div>
+
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                  <Info className="w-4 h-4" />
+                  Como funciona o recebimento?
+                </div>
+                <ul className="text-xs text-muted space-y-1">
+                  <li>A plataforma recebe 100% das vendas e faz o repasse semanal via Pix</li>
+                  <li>Suas fotos vendidas: voce recebe 93% (plataforma fica com 7%)</li>
+                  <li>Fotos de colaboradores: voce recebe {commissionPct || 0}% de comissao</li>
+                  <li>Repasses gerados toda segunda-feira com valor minimo de R$10,00</li>
+                </ul>
+              </div>
+
+              <p className="text-xs text-yellow-400/80 bg-yellow-400/10 rounded-lg px-3 py-2">
+                Uma vez criado como evento compartilhado, essa opcao nao pode ser desativada.
+              </p>
+            </>
+          )}
         </div>
 
         {error && (

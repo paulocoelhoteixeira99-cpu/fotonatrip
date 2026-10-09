@@ -41,6 +41,7 @@ interface Photo {
   watermark_path: string | null;
   price_cents: number;
   status: string;
+  photographer_id?: string;
 }
 
 interface Photographer {
@@ -55,6 +56,7 @@ export default function EventoPublicPage() {
   const searchParams = useSearchParams();
   const [event, setEvent] = useState<Event | null>(null);
   const [photographer, setPhotographer] = useState<Photographer | null>(null);
+  const [photographerNames, setPhotographerNames] = useState<Map<string, string>>(new Map());
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -119,7 +121,7 @@ export default function EventoPublicPage() {
   async function loadPhotos() {
     const { data, count } = await supabase
       .from("photos")
-      .select("id, storage_path, watermark_path, price_cents, status", { count: "exact" })
+      .select("id, storage_path, watermark_path, price_cents, status, photographer_id", { count: "exact" })
       .eq("event_id", id)
       .eq("status", "ready")
       .order("created_at", { ascending: false })
@@ -127,6 +129,29 @@ export default function EventoPublicPage() {
 
     setPhotos(data || []);
     setTotalPhotos(count || 0);
+
+    // Load photographer names for shared events
+    if (data && data.length > 0) {
+      const uniquePhotographerIds = [...new Set(data.map((p) => p.photographer_id).filter(Boolean))];
+      if (uniquePhotographerIds.length > 1) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", uniquePhotographerIds);
+        const { data: photographers } = await supabase
+          .from("photographers")
+          .select("id, business_name")
+          .in("id", uniquePhotographerIds);
+
+        const nameMap = new Map<string, string>();
+        for (const pid of uniquePhotographerIds) {
+          const profile = (profiles || []).find((p) => p.id === pid);
+          const photog = (photographers || []).find((p) => p.id === pid);
+          nameMap.set(pid, photog?.business_name || profile?.full_name || "Fotografo");
+        }
+        setPhotographerNames(nameMap);
+      }
+    }
   }
 
   async function loadUnidentifiedPhotos() {
@@ -139,7 +164,7 @@ export default function EventoPublicPage() {
     // Single query with LEFT JOIN — avoids .in() URL limit with many photo IDs
     const { data: eventPhotos } = await supabase
       .from("photos")
-      .select("id, storage_path, watermark_path, price_cents, status, face_embeddings(photo_id)")
+      .select("id, storage_path, watermark_path, price_cents, status, photographer_id, face_embeddings(photo_id)")
       .eq("event_id", id)
       .eq("status", "ready")
       .order("created_at", { ascending: false });
@@ -388,13 +413,16 @@ export default function EventoPublicPage() {
                           ) : (
                             <button
                               onClick={() => {
-                                const photographerName = photographer?.business_name || photographer?.full_name || "";
+                                const photogId = photo.photographer_id || event!.photographer_id;
+                                const photogName = (photographerNames.size > 0 && photo.photographer_id
+                                  ? photographerNames.get(photo.photographer_id)
+                                  : null) || photographer?.business_name || photographer?.full_name || "";
                                 addItem({
                                   photo_id: photo.id,
                                   event_id: event!.id,
                                   event_title: event!.title,
-                                  photographer_name: photographerName,
-                                  photographer_id: event!.photographer_id,
+                                  photographer_name: photogName,
+                                  photographer_id: photogId,
                                   price_cents: photo.price_cents,
                                   watermark_url: url,
                                 });
@@ -457,13 +485,16 @@ export default function EventoPublicPage() {
                           ) : (
                             <button
                               onClick={() => {
-                                const photographerName = photographer?.business_name || photographer?.full_name || "";
+                                const photogId = photo.photographer_id || event!.photographer_id;
+                                const photogName = (photographerNames.size > 0 && photo.photographer_id
+                                  ? photographerNames.get(photo.photographer_id)
+                                  : null) || photographer?.business_name || photographer?.full_name || "";
                                 addItem({
                                   photo_id: photo.id,
                                   event_id: event!.id,
                                   event_title: event!.title,
-                                  photographer_name: photographerName,
-                                  photographer_id: event!.photographer_id,
+                                  photographer_name: photogName,
+                                  photographer_id: photogId,
                                   price_cents: photo.price_cents,
                                   watermark_url: url,
                                 });
@@ -573,9 +604,15 @@ export default function EventoPublicPage() {
                 alt=""
                 className="w-full max-h-[80vh] object-contain rounded-xl"
               />
-              {photographer && (
-                <p className="text-xs text-muted mt-2 px-1">Foto por <span className="text-foreground font-medium">{photographer.business_name || photographer.full_name}</span></p>
-              )}
+              {(() => {
+                const photoPhotographerName = selectedPhoto.photographer_id && photographerNames.size > 0
+                  ? photographerNames.get(selectedPhoto.photographer_id)
+                  : null;
+                const displayName = photoPhotographerName || (photographer ? (photographer.business_name || photographer.full_name) : null);
+                return displayName ? (
+                  <p className="text-xs text-muted mt-2 px-1">Foto por <span className="text-foreground font-medium">{displayName}</span></p>
+                ) : null;
+              })()}
 
               {/* Info bar */}
               <div className="mt-2 flex items-center justify-between glass rounded-xl p-3">
@@ -593,13 +630,16 @@ export default function EventoPublicPage() {
                 ) : (
                   <button
                     onClick={() => {
-                      const photographerName = photographer?.business_name || photographer?.full_name || "";
+                      const photoPhotogId = selectedPhoto.photographer_id || event.photographer_id;
+                      const photoPhotogName = (photographerNames.size > 0 && selectedPhoto.photographer_id
+                        ? photographerNames.get(selectedPhoto.photographer_id)
+                        : null) || photographer?.business_name || photographer?.full_name || "";
                       addItem({
                         photo_id: selectedPhoto.id,
                         event_id: event.id,
                         event_title: event.title,
-                        photographer_name: photographerName,
-                        photographer_id: event.photographer_id,
+                        photographer_name: photoPhotogName,
+                        photographer_id: photoPhotogId,
                         price_cents: selectedPhoto.price_cents,
                         watermark_url: photoUrl,
                       });
