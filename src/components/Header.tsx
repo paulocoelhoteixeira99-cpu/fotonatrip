@@ -112,21 +112,23 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-3">
           {user ? (
             <>
-              {isPhotographerOrAdmin && (
-                <Link
-                  href="/dashboard"
-                  className="text-sm text-foreground/70 hover:text-foreground transition-colors px-3 py-2 flex items-center gap-1.5"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Link>
-              )}
-
               <Link
                 href="/buscar"
                 className="text-sm bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-full transition-colors font-medium"
               >
                 Buscar fotos
+              </Link>
+
+              <Link
+                href="/carrinho"
+                className="relative p-2 text-foreground/70 hover:text-foreground transition-colors"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
               </Link>
 
               {/* User dropdown */}
@@ -160,7 +162,9 @@ export default function Header() {
                       </div>
 
                       <div className="py-1">
-                        <DropdownLink href="/carrinho" icon={ShoppingCart} label="Carrinho" badge={cartCount} onClick={() => setUserMenuOpen(false)} />
+                        {isPhotographerOrAdmin && (
+                          <DropdownLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={() => setUserMenuOpen(false)} />
+                        )}
                         <DropdownLink href="/minhas-compras" icon={ShoppingBag} label="Minhas compras" onClick={() => setUserMenuOpen(false)} />
                         {isAdmin && (
                           <DropdownLink href="/admin" icon={ShieldCheck} label="Admin" onClick={() => setUserMenuOpen(false)} />
