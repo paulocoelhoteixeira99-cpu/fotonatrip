@@ -150,6 +150,7 @@ export async function POST(req: NextRequest) {
       .update({
         status: orderStatus,
         payment_id: String(result.id),
+        payment_method: isPix ? "pix" : "card",
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId);

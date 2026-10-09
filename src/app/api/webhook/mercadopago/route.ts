@@ -139,12 +139,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    // Determine payment method from MP data
+    const paymentMethod = paymentData.payment_method_id === "pix" ? "pix" : "card";
+
     // Update order
     const { error } = await supabase
       .from("orders")
       .update({
         status: orderStatus,
         payment_id: String(paymentId),
+        payment_method: paymentMethod,
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId);
