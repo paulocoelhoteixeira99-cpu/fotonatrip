@@ -328,7 +328,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (payoutRows.length > 0) {
-      const { error: payoutError } = await supabase
+      // Use service role to bypass RLS — payouts table has no INSERT policy for regular users
+      const { createClient: createServiceClient } = await import("@supabase/supabase-js");
+      const serviceSupabase = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { error: payoutError } = await serviceSupabase
         .from("payouts")
         .insert(payoutRows);
 

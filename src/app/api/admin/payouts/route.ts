@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+
+function getServiceSupabase() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -18,22 +26,24 @@ export async function GET() {
     return NextResponse.json({ error: "Sem permissao" }, { status: 403 });
   }
 
+  const supa = getServiceSupabase();
+
   // Fetch payout batches
-  const { data: batches } = await supabase
+  const { data: batches } = await supa
     .from("payout_batches")
     .select("*, photographers(id, business_name, pix_key, pix_key_type)")
     .order("created_at", { ascending: false })
     .limit(100);
 
   // Summary stats
-  const { data: pendingPayouts } = await supabase
+  const { data: pendingPayouts } = await supa
     .from("payouts")
     .select("amount_cents")
     .eq("status", "pending");
 
   const totalPending = (pendingPayouts || []).reduce((s, p) => s + p.amount_cents, 0);
 
-  const { data: paidBatches } = await supabase
+  const { data: paidBatches } = await supa
     .from("payout_batches")
     .select("total_cents")
     .eq("status", "paid");
@@ -64,18 +74,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sem permissao" }, { status: 403 });
   }
 
+  const supa = getServiceSupabase();
   const body = await req.json();
   const { action, batch_id } = body as { action: string; batch_id: string };
 
   if (action === "mark_paid" && batch_id) {
-    // Mark batch as paid
-    await supabase
+    await supa
       .from("payout_batches")
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("id", batch_id);
 
-    // Mark all payouts in this batch as paid
-    await supabase
+    await supa
       .from("payouts")
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("payout_batch_id", batch_id);
@@ -84,8 +93,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "generate_batches") {
-    // Generate payout batches for pending payouts >= R$10.00
-    const { data: pendingPayouts } = await supabase
+    const { data: pendingPayouts } = await supa
       .from("payouts")
       .select("id, photographer_id, amount_cents")
       .eq("status", "pending")
@@ -109,11 +117,9 @@ export async function POST(req: NextRequest) {
     let batchesCreated = 0;
 
     for (const [photographerId, group] of byPhotographer) {
-      // Minimum R$10.00
       if (group.total < 1000) continue;
 
-      // Get photographer's Pix key
-      const { data: photographer } = await supabase
+      const { data: photographer } = await supa
         .from("photographers")
         .select("pix_key, pix_key_type")
         .eq("id", photographerId)
@@ -121,8 +127,7 @@ export async function POST(req: NextRequest) {
 
       if (!photographer?.pix_key || !photographer?.pix_key_type) continue;
 
-      // Create batch
-      const { data: batch } = await supabase
+      const { data: batch } = await supa
         .from("payout_batches")
         .insert({
           photographer_id: photographerId,
@@ -135,8 +140,7 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (batch) {
-        // Link payouts to batch
-        await supabase
+        await supa
           .from("payouts")
           .update({ payout_batch_id: batch.id })
           .in("id", group.ids);
