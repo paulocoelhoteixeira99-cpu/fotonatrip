@@ -982,6 +982,39 @@ export default function EventoDetailPage() {
         </p>
       </div>}
 
+      {/* Collaborator financial info — visible only to collaborators */}
+      {event.is_shared && !isOwner && (
+        <div className="glass rounded-2xl p-5 mb-6 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <DollarSign className="w-4 h-4 text-primary" />
+            Suas condicoes neste evento
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted">Preco por foto</span>
+              <span>{(event.price_per_photo_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Taxa plataforma</span>
+              <span className="text-red-400">-7%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Comissao do anfitriao</span>
+              <span className="text-red-400">-{event.collaborator_commission_pct}%</span>
+            </div>
+            <div className="border-t border-border pt-2 flex justify-between font-medium">
+              <span>Voce recebe por foto</span>
+              <span className="text-primary">
+                {(Math.round(event.price_per_photo_cents * (93 - event.collaborator_commission_pct) / 100) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-muted">
+            Repasses semanais via Pix (toda segunda-feira, minimo R$10,00).
+          </p>
+        </div>
+      )}
+
       {/* Shared event: Collaborators section — owner only */}
       {event.is_shared && isOwner && (
         <div className="glass rounded-2xl p-5 mb-6 space-y-4">
