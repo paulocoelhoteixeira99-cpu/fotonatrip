@@ -47,7 +47,7 @@ export default function CheckoutContent() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [brickReady, setBrickReady] = useState(false);
-  const [payMethod, setPayMethod] = useState<"card" | "pix">("card");
+  const [payMethod, setPayMethod] = useState<"card" | "pix">("pix");
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [pixLoading, setPixLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -291,17 +291,6 @@ export default function CheckoutContent() {
       {/* Payment method tabs */}
       <div className="flex gap-2 mb-6">
         <button
-          onClick={() => setPayMethod("card")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            payMethod === "card"
-              ? "bg-primary text-white"
-              : "glass text-muted hover:text-foreground"
-          }`}
-        >
-          <CreditCard className="w-4 h-4" />
-          Cartao
-        </button>
-        <button
           onClick={() => setPayMethod("pix")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
             payMethod === "pix"
@@ -311,6 +300,17 @@ export default function CheckoutContent() {
         >
           <QrCode className="w-4 h-4" />
           Pix
+        </button>
+        <button
+          onClick={() => setPayMethod("card")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            payMethod === "card"
+              ? "bg-primary text-white"
+              : "glass text-muted hover:text-foreground"
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          Cartao
         </button>
       </div>
 
