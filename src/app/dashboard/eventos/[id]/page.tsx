@@ -1307,7 +1307,7 @@ export default function EventoDetailPage() {
 
             <div className="flex items-center justify-between mt-4">
               <div>
-                <p className="text-white/70 text-sm">{photographerNames.get(previewPhoto.photographer_id) || "Fotografo"}</p>
+                <p className="text-white/70 text-sm">foto por {photographerNames.get(previewPhoto.photographer_id) || "Fotografo"}</p>
                 <p className="text-white/40 text-xs">{previewPhoto.original_filename}</p>
               </div>
               <div className="flex items-center gap-2">
