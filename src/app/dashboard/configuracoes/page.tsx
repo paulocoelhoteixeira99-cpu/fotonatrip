@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Save, Link2, Unlink, CheckCircle, AlertCircle, KeyRound } from "lucide-react";
+import { Loader2, Save, Link2, Unlink, CheckCircle, AlertCircle, KeyRound, Check } from "lucide-react";
 
 export default function ConfiguracoesPage() {
   const [fullName, setFullName] = useState("");
@@ -18,8 +18,11 @@ export default function ConfiguracoesPage() {
   const [pixKeyType, setPixKeyType] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [message, setMessage] = useState("");
+  const initialValues = useRef<Record<string, string>>({});
   const supabase = createClient();
   const searchParams = useSearchParams();
 
@@ -28,7 +31,6 @@ export default function ConfiguracoesPage() {
     const mpStatus = searchParams.get("mp");
     if (mpStatus === "success") {
       setMessage("Mercado Pago conectado com sucesso!");
-      // Clean URL
       window.history.replaceState({}, "", "/dashboard/configuracoes");
     } else if (mpStatus === "error") {
       setMessage("Erro ao conectar Mercado Pago. Tente novamente.");
@@ -48,26 +50,51 @@ export default function ConfiguracoesPage() {
         supabase.from("photographers").select("*").eq("id", user.id).single(),
       ]);
 
+      const values: Record<string, string> = {};
+
       if (profileRes.data) {
-        setFullName(profileRes.data.full_name || "");
+        const fn = profileRes.data.full_name || "";
+        setFullName(fn);
+        values.fullName = fn;
       }
       if (photographerRes.data) {
-        setBusinessName(photographerRes.data.business_name || "");
-        setBio(photographerRes.data.bio || "");
-        setPhone(photographerRes.data.phone || "");
-        setCity(photographerRes.data.city || "");
-        setState(photographerRes.data.state || "");
-        setMpConnected(!!photographerRes.data.mp_user_id);
-        setMpUserId(photographerRes.data.mp_user_id || null);
-        setPixKey(photographerRes.data.pix_key || "");
-        setPixKeyType(photographerRes.data.pix_key_type || "");
+        const d = photographerRes.data;
+        const bn = d.business_name || "";
+        const b = d.bio || "";
+        const p = d.phone || "";
+        const c = d.city || "";
+        const s = d.state || "";
+        const pk = d.pix_key || "";
+        const pkt = d.pix_key_type || "";
+        setBusinessName(bn);
+        setBio(b);
+        setPhone(p);
+        setCity(c);
+        setState(s);
+        setMpConnected(!!d.mp_user_id);
+        setMpUserId(d.mp_user_id || null);
+        setPixKey(pk);
+        setPixKeyType(pkt);
+        values.businessName = bn;
+        values.bio = b;
+        values.phone = p;
+        values.city = c;
+        values.state = s;
+        values.pixKey = pk;
+        values.pixKeyType = pkt;
       }
 
+      initialValues.current = values;
       setLoading(false);
     }
 
     load();
   }, []);
+
+  function markChanged() {
+    setHasChanges(true);
+    setSaved(false);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -79,7 +106,7 @@ export default function ConfiguracoesPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    await Promise.all([
+    const [profileResult, photographerResult] = await Promise.all([
       supabase
         .from("profiles")
         .update({ full_name: fullName, updated_at: new Date().toISOString() })
@@ -99,9 +126,20 @@ export default function ConfiguracoesPage() {
         .eq("id", user.id),
     ]);
 
-    setMessage("Configuracoes salvas com sucesso!");
+    if (profileResult.error || photographerResult.error) {
+      console.error("Profile save error:", profileResult.error);
+      console.error("Photographer save error:", photographerResult.error);
+      setMessage("Erro ao salvar. Verifique os dados e tente novamente.");
+      setSaving(false);
+      return;
+    }
+
     setSaving(false);
-    setTimeout(() => setMessage(""), 3000);
+    setSaved(true);
+    setHasChanges(false);
+    initialValues.current = {
+      fullName, businessName, bio, phone, city, state, pixKey, pixKeyType,
+    };
 
     // Redirect if ?next= is present (e.g. from invite flow)
     const next = searchParams.get("next");
@@ -236,7 +274,7 @@ export default function ConfiguracoesPage() {
             <input
               type="text"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => { setFullName(e.target.value); markChanged(); }}
               className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
             />
           </div>
@@ -246,7 +284,7 @@ export default function ConfiguracoesPage() {
             <input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => { setPhone(e.target.value); markChanged(); }}
               placeholder="(11) 99999-9999"
               className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
             />
@@ -258,7 +296,7 @@ export default function ConfiguracoesPage() {
               <input
                 type="text"
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
+                onChange={(e) => { setCity(e.target.value); markChanged(); }}
                 className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
               />
             </div>
@@ -267,7 +305,7 @@ export default function ConfiguracoesPage() {
               <input
                 type="text"
                 value={state}
-                onChange={(e) => setState(e.target.value)}
+                onChange={(e) => { setState(e.target.value); markChanged(); }}
                 className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
               />
             </div>
@@ -286,7 +324,7 @@ export default function ConfiguracoesPage() {
             <input
               type="text"
               value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
+              onChange={(e) => { setBusinessName(e.target.value); markChanged(); }}
               placeholder="Ex: Studio Foto Trip"
               className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
             />
@@ -296,7 +334,7 @@ export default function ConfiguracoesPage() {
             <label className="text-sm text-muted mb-2 block">Bio</label>
             <textarea
               value={bio}
-              onChange={(e) => setBio(e.target.value)}
+              onChange={(e) => { setBio(e.target.value); markChanged(); }}
               placeholder="Conte um pouco sobre voce e seu trabalho..."
               rows={4}
               className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50 resize-none"
@@ -314,7 +352,7 @@ export default function ConfiguracoesPage() {
             <label className="text-sm text-muted mb-2 block">Tipo da chave</label>
             <select
               value={pixKeyType}
-              onChange={(e) => setPixKeyType(e.target.value)}
+              onChange={(e) => { setPixKeyType(e.target.value); markChanged(); }}
               className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
             >
               <option value="">Selecione o tipo</option>
@@ -331,7 +369,7 @@ export default function ConfiguracoesPage() {
             <input
               type="text"
               value={pixKey}
-              onChange={(e) => setPixKey(e.target.value)}
+              onChange={(e) => { setPixKey(e.target.value); markChanged(); }}
               placeholder={
                 pixKeyType === "cpf" ? "000.000.000-00" :
                 pixKeyType === "cnpj" ? "00.000.000/0000-00" :
@@ -353,15 +391,31 @@ export default function ConfiguracoesPage() {
 
         <button
           type="submit"
-          disabled={saving}
-          className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-medium transition-colors disabled:opacity-50"
+          disabled={saving || (!hasChanges && !saving)}
+          className={`flex items-center gap-2 px-8 py-3 rounded-xl font-medium transition-all ${
+            saved
+              ? "bg-primary/15 text-primary border border-primary/30"
+              : hasChanges
+              ? "bg-primary hover:bg-primary-dark text-white"
+              : "bg-white/5 text-muted cursor-default"
+          } disabled:opacity-50`}
         >
           {saving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Salvando...
+            </>
+          ) : saved ? (
+            <>
+              <Check className="w-4 h-4" />
+              Salvo
+            </>
           ) : (
-            <Save className="w-4 h-4" />
+            <>
+              <Save className="w-4 h-4" />
+              Salvar
+            </>
           )}
-          Salvar
         </button>
       </form>
     </div>
