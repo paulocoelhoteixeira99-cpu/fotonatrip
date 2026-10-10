@@ -1291,6 +1291,15 @@ export default function EventoDetailPage() {
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                  <a
+                    href={`/api/download?photo_id=${photo.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors"
+                    title="Baixar foto original"
+                    download
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
                   {isOwner && !isCover && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleSetCover(photo.storage_path); }}
@@ -1329,42 +1338,31 @@ export default function EventoDetailPage() {
           onClick={() => setPreviewPhoto(null)}
         >
           <div className="relative max-w-5xl max-h-[90vh] mx-4" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setPreviewPhoto(null)} className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors">
-              <X className="w-6 h-6" />
-            </button>
+            <div className="relative">
+              <button onClick={() => setPreviewPhoto(null)} className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white/70 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+              <img
+                src={getPhotoUrl(previewPhoto.storage_path)}
+                alt=""
+                className="max-h-[75vh] w-auto rounded-xl"
+              />
+            </div>
 
-            <img
-              src={getPhotoUrl(previewPhoto.storage_path)}
-              alt=""
-              className="max-h-[80vh] w-auto rounded-xl"
-            />
-
-            <div className="flex items-center justify-between mt-4">
-              <div>
+            <div className="mt-3">
+              <div className="mb-2">
                 <p className="text-white/70 text-sm">foto por {photographerNames.get(previewPhoto.photographer_id) || "Fotografo"}</p>
                 <p className="text-white/40 text-xs">{previewPhoto.original_filename}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={async () => {
-                    try {
-                      const res = await fetch(getPhotoUrl(previewPhoto.storage_path));
-                      const blob = await res.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = previewPhoto.original_filename || "foto.jpg";
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    } catch {
-                      window.open(getPhotoUrl(previewPhoto.storage_path), "_blank");
-                    }
-                  }}
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={`/api/download?photo_id=${previewPhoto.id}`}
+                  download
                   className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   Baixar
-                </button>
+                </a>
                 {isOwner && (
                   <button
                     onClick={() => handleSetCover(previewPhoto.storage_path)}

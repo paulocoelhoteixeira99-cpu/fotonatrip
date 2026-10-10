@@ -17,29 +17,39 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verify user has a paid order containing this photo
-  const { data: orderItem } = await supabase
-    .from("order_items")
-    .select("id, photo_id, orders!inner(id, client_id, status)")
-    .eq("photo_id", photoId)
-    .eq("orders.client_id", user.id)
-    .eq("orders.status", "paid")
-    .limit(1)
-    .single();
-
-  if (!orderItem) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // Get the original photo path
+  // Get the photo with event info
   const { data: photo } = await supabase
     .from("photos")
-    .select("storage_path, original_filename")
+    .select("storage_path, original_filename, photographer_id, event_id, events!inner(photographer_id)")
     .eq("id", photoId)
     .single();
 
   if (!photo) {
     return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+  }
+
+  // Allow if user is the photographer who uploaded OR the event owner
+  const isPhotographer = photo.photographer_id === user.id;
+  const eventData = photo.events as unknown as { photographer_id: string };
+  const isEventOwner = eventData.photographer_id === user.id;
+
+  let orderItem: { id: string } | null = null;
+
+  if (!isPhotographer && !isEventOwner) {
+    // Otherwise, verify user has a paid order containing this photo
+    const { data: item } = await supabase
+      .from("order_items")
+      .select("id, photo_id, orders!inner(id, client_id, status)")
+      .eq("photo_id", photoId)
+      .eq("orders.client_id", user.id)
+      .eq("orders.status", "paid")
+      .limit(1)
+      .single();
+
+    if (!item) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    orderItem = item;
   }
 
   // Fetch original from CDN (server-side, no CORS issues)
@@ -53,11 +63,13 @@ export async function GET(request: NextRequest) {
   const blob = await res.blob();
   const filename = photo.original_filename || `fotonatrip-${photoId.slice(0, 8)}.jpg`;
 
-  // Track download
-  await supabase
-    .from("order_items")
-    .update({ downloaded_at: new Date().toISOString() })
-    .eq("id", orderItem.id);
+  // Track download (only for client purchases)
+  if (orderItem) {
+    await supabase
+      .from("order_items")
+      .update({ downloaded_at: new Date().toISOString() })
+      .eq("id", orderItem.id);
+  }
 
   return new NextResponse(blob, {
     headers: {
