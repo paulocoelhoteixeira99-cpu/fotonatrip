@@ -1025,12 +1025,12 @@ export default function EventoDetailPage() {
 
           {/* Invite link */}
           <div className="space-y-2">
-            <label className="text-xs text-muted">Link de convite</label>
+            <label className="text-xs text-muted">Link de convite para fotografos</label>
             <div className="flex items-center gap-2">
               <input
                 readOnly
                 value={event.invite_code ? `${typeof window !== "undefined" ? window.location.origin : "https://www.fotonatrip.com.br"}/convite/${event.invite_code}` : ""}
-                className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-muted focus:outline-none select-all"
+                className="flex-1 bg-yellow-400/5 border border-yellow-400/20 rounded-lg px-3 py-2 text-sm text-muted focus:outline-none select-all"
                 onClick={(e) => (e.target as HTMLInputElement).select()}
               />
               <button
@@ -1041,9 +1041,9 @@ export default function EventoDetailPage() {
                   setInviteCopied(true);
                   setTimeout(() => setInviteCopied(false), 2000);
                 }}
-                className="flex items-center gap-1.5 text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+                className="flex items-center gap-1.5 text-sm bg-yellow-400/15 hover:bg-yellow-400/25 text-yellow-400 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
               >
-                {inviteCopied ? (<><Check className="w-4 h-4 text-primary" />Copiado!</>) : (<><Copy className="w-4 h-4" />Copiar</>)}
+                {inviteCopied ? (<><Check className="w-4 h-4" />Copiado!</>) : (<><Users className="w-4 h-4" />Copiar convite</>)}
               </button>
               <button
                 onClick={async () => {
@@ -1146,22 +1146,13 @@ export default function EventoDetailPage() {
         </div>
       )}
 
-      {/* Sold photos button */}
-      <div className="mb-6">
-        <Link
-          href={`/dashboard/vendas/fotos?evento=${event.id}`}
-          className="inline-block bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors"
-        >
-          Ver fotos vendidas
-        </Link>
-      </div>
-
       {/* Share link & QR Code */}
       <div className="glass rounded-2xl p-5 mb-6">
-        <div className="flex items-center gap-2 text-sm font-medium mb-3">
+        <div className="flex items-center gap-2 text-sm font-medium mb-1">
           <Link2 className="w-4 h-4 text-primary" />
           Compartilhar evento
         </div>
+        <p className="text-xs text-muted mb-3">Envie este link para seus clientes encontrarem as fotos.</p>
         <div className="flex items-center gap-2">
           <input
             readOnly
@@ -1176,9 +1167,9 @@ export default function EventoDetailPage() {
               setCopied(true);
               setTimeout(() => setCopied(false), 2000);
             }}
-            className="flex items-center gap-1.5 text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 text-sm bg-primary/15 hover:bg-primary/25 text-primary px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
           >
-            {copied ? (<><Check className="w-4 h-4 text-primary" />Copiado!</>) : (<><Copy className="w-4 h-4" />Copiar</>)}
+            {copied ? (<><Check className="w-4 h-4" />Copiado!</>) : (<><Link2 className="w-4 h-4" />Copiar link</>)}
           </button>
           <button
             onClick={() => setShowQR(!showQR)}
@@ -1217,6 +1208,16 @@ export default function EventoDetailPage() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Sold photos button */}
+      <div className="mb-6">
+        <Link
+          href={`/dashboard/vendas/fotos?evento=${event.id}`}
+          className="inline-block bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors"
+        >
+          Ver fotos vendidas
+        </Link>
       </div>
 
       {/* Upload progress bar */}
