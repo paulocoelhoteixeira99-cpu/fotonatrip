@@ -153,21 +153,32 @@ export async function POST(req: NextRequest) {
   const email = user.email || "";
 
   // Check if all photos are from a single photographer with MP connected
-  // If ANY event is shared, disable marketplace split for the entire order
   const photographerIds = [...new Set(photos.map((p) => p.photographer_id))];
   let useMarketplace = false;
   let photographerAccessToken: string | null = null;
 
-  if (!hasSharedEvent && photographerIds.length === 1) {
-    const { data: photographer } = await supabase
-      .from("photographers")
-      .select("mp_access_token, mp_user_id")
-      .eq("id", photographerIds[0])
-      .single();
+  if (photographerIds.length === 1) {
+    const singlePhotographerId = photographerIds[0];
 
-    if (photographer?.mp_access_token && photographer?.mp_user_id) {
-      useMarketplace = true;
-      photographerAccessToken = photographer.mp_access_token;
+    // For shared events, only allow marketplace if photographer is the HOST
+    // Collaborator photos need platform routing for host commission split
+    let allowMarketplace = true;
+    if (hasSharedEvent) {
+      const sharedEvents = (eventTitles || []).filter((e) => e.is_shared);
+      allowMarketplace = sharedEvents.every((e) => e.photographer_id === singlePhotographerId);
+    }
+
+    if (allowMarketplace) {
+      const { data: photographer } = await supabase
+        .from("photographers")
+        .select("mp_access_token, mp_user_id")
+        .eq("id", singlePhotographerId)
+        .single();
+
+      if (photographer?.mp_access_token && photographer?.mp_user_id) {
+        useMarketplace = true;
+        photographerAccessToken = photographer.mp_access_token;
+      }
     }
   }
 
