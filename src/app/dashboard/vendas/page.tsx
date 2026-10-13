@@ -159,11 +159,12 @@ export default function VendasPage() {
     }
     setDailySales(days.reverse());
 
-    // Load payouts for shared events
+    // Load payouts for shared events — only from paid orders
     const { data: payoutData } = await supabase
       .from("payouts")
-      .select("type, amount_cents, status, event_id, commission_pct, created_at, order_item_id")
+      .select("type, amount_cents, status, event_id, commission_pct, created_at, order_item_id, order_items!inner(orders!inner(status))")
       .eq("photographer_id", user.id)
+      .eq("order_items.orders.status", "paid")
       .order("created_at", { ascending: false });
 
     // Build payout map: order_item_id -> amount the photographer actually receives
