@@ -38,17 +38,25 @@ export async function GET() {
   // Summary stats — only count payouts from PAID orders
   const { data: pendingPayouts } = await supa
     .from("payouts")
-    .select("amount_cents, photographer_id, order_items!inner(orders!inner(status))")
+    .select("amount_cents, photographer_id, type, order_items!inner(orders!inner(status))")
     .eq("status", "pending")
     .eq("order_items.orders.status", "paid");
 
-  const validPending = (pendingPayouts || []) as { amount_cents: number; photographer_id: string }[];
+  const validPending = (pendingPayouts || []) as { amount_cents: number; photographer_id: string; type: string }[];
   const totalPending = validPending.reduce((s, p) => s + p.amount_cents, 0);
 
-  // Breakdown by photographer (descending by amount)
-  const byPhotographer = new Map<string, number>();
+  // Breakdown by photographer (descending by amount), with type split
+  const byPhotographer = new Map<string, { total: number; own_photos: number; commission: number; collaborator: number; count: number }>();
   for (const p of validPending) {
-    byPhotographer.set(p.photographer_id, (byPhotographer.get(p.photographer_id) || 0) + p.amount_cents);
+    if (!byPhotographer.has(p.photographer_id)) {
+      byPhotographer.set(p.photographer_id, { total: 0, own_photos: 0, commission: 0, collaborator: 0, count: 0 });
+    }
+    const group = byPhotographer.get(p.photographer_id)!;
+    group.total += p.amount_cents;
+    group.count++;
+    if (p.type === "host_own_photos") group.own_photos += p.amount_cents;
+    else if (p.type === "host_commission") group.commission += p.amount_cents;
+    else if (p.type === "collaborator_payout") group.collaborator += p.amount_cents;
   }
 
   const photographerIds = [...byPhotographer.keys()];
@@ -62,15 +70,18 @@ export async function GET() {
   const photographerMap = new Map((photographerRows || []).map((p: any) => [p.id, p]));
 
   const pending_breakdown = [...byPhotographer.entries()]
-    .map(([id, amount_cents]) => {
+    .map(([id, group]) => {
       const ph = photographerMap.get(id);
       return {
         photographer_id: id,
         business_name: ph?.business_name || "Fotografo",
         pix_key: ph?.pix_key || null,
         pix_key_type: ph?.pix_key_type || null,
-        amount_cents,
-        items_count: validPending.filter((p) => p.photographer_id === id).length,
+        amount_cents: group.total,
+        own_photos_cents: group.own_photos,
+        commission_cents: group.commission,
+        collaborator_cents: group.collaborator,
+        items_count: group.count,
       };
     })
     .sort((a, b) => b.amount_cents - a.amount_cents);

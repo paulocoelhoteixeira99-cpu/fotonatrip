@@ -262,6 +262,9 @@ export default function AdminPage() {
       pix_key: string | null;
       pix_key_type: string | null;
       amount_cents: number;
+      own_photos_cents: number;
+      commission_cents: number;
+      collaborator_cents: number;
       items_count: number;
     }[];
   } | null>(null);
@@ -1284,7 +1287,7 @@ function CouponsTab({ coupons, onRefresh }: { coupons: Coupon[]; onRefresh: () =
 
 // ─── Payouts Tab ─────────────────────────────────────────────
 
-function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending_cents: number; total_paid_cents: number; pending_breakdown: { photographer_id: string; business_name: string; pix_key: string | null; pix_key_type: string | null; amount_cents: number; items_count: number }[] }; onRefresh: () => void }) {
+function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending_cents: number; total_paid_cents: number; pending_breakdown: { photographer_id: string; business_name: string; pix_key: string | null; pix_key_type: string | null; amount_cents: number; own_photos_cents: number; commission_cents: number; collaborator_cents: number; items_count: number }[] }; onRefresh: () => void }) {
   const [generating, setGenerating] = useState(false);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
@@ -1350,7 +1353,10 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
                 <tr className="text-left text-muted border-b border-border">
                   <th className="pb-3 font-medium">Fotografo</th>
                   <th className="pb-3 font-medium text-center">Itens</th>
-                  <th className="pb-3 font-medium text-right pr-6">Valor pendente</th>
+                  <th className="pb-3 font-medium text-right">Fotos proprias</th>
+                  <th className="pb-3 font-medium text-right">Comissao</th>
+                  <th className="pb-3 font-medium text-right">Colaborador</th>
+                  <th className="pb-3 font-medium text-right pr-6">Total</th>
                   <th className="pb-3 font-medium pl-6">Chave Pix</th>
                 </tr>
               </thead>
@@ -1359,6 +1365,9 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
                   <tr key={p.photographer_id} className="border-b border-border/50 last:border-0">
                     <td className="py-3 font-medium">{p.business_name}</td>
                     <td className="py-3 text-center text-muted">{p.items_count}</td>
+                    <td className="py-3 text-right text-muted">{p.own_photos_cents > 0 ? formatPrice(p.own_photos_cents) : "—"}</td>
+                    <td className="py-3 text-right text-muted">{p.commission_cents > 0 ? formatPrice(p.commission_cents) : "—"}</td>
+                    <td className="py-3 text-right text-muted">{p.collaborator_cents > 0 ? formatPrice(p.collaborator_cents) : "—"}</td>
                     <td className="py-3 text-right pr-6 font-semibold text-yellow-400">{formatPrice(p.amount_cents)}</td>
                     <td className="py-3 pl-6">
                       {p.pix_key ? (
@@ -1377,6 +1386,9 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
                 <tr className="border-t border-border">
                   <td className="pt-3 font-semibold">Total</td>
                   <td className="pt-3 text-center text-muted font-medium">{data.pending_breakdown.reduce((s, p) => s + p.items_count, 0)}</td>
+                  <td className="pt-3 text-right text-muted font-medium">{formatPrice(data.pending_breakdown.reduce((s, p) => s + p.own_photos_cents, 0))}</td>
+                  <td className="pt-3 text-right text-muted font-medium">{formatPrice(data.pending_breakdown.reduce((s, p) => s + p.commission_cents, 0))}</td>
+                  <td className="pt-3 text-right text-muted font-medium">{formatPrice(data.pending_breakdown.reduce((s, p) => s + p.collaborator_cents, 0))}</td>
                   <td className="pt-3 text-right pr-6 font-bold text-yellow-400">{formatPrice(data.total_pending_cents)}</td>
                   <td className="pl-6"></td>
                 </tr>

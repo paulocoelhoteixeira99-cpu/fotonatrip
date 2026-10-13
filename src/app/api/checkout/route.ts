@@ -257,8 +257,9 @@ export async function POST(req: NextRequest) {
     .select("id, photo_id, photographer_id, price_cents")
     .eq("order_id", order.id);
 
-  // Create payouts for shared events (or when order has any shared event)
-  if (hasSharedEvent && insertedItems) {
+  // Create payouts whenever money goes to the platform (not marketplace split)
+  // This covers: shared events, photographers without MP connected, multi-photographer orders
+  if (!useMarketplace && insertedItems) {
     const payoutRows: {
       type: string;
       photographer_id: string;
