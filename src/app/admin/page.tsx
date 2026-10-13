@@ -1342,7 +1342,7 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
       {data.pending_breakdown.length > 0 && (
         <div className="glass rounded-2xl p-6 mb-6">
           <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <Camera className="w-4 h-4 text-yellow-400" /> Pendente por fotografo (ordem decrescente)
+            <Camera className="w-4 h-4 text-yellow-400" /> Pendente por fotografo
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -1350,8 +1350,8 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
                 <tr className="text-left text-muted border-b border-border">
                   <th className="pb-3 font-medium">Fotografo</th>
                   <th className="pb-3 font-medium text-center">Itens</th>
-                  <th className="pb-3 font-medium text-right">Valor pendente</th>
-                  <th className="pb-3 font-medium">Chave Pix</th>
+                  <th className="pb-3 font-medium text-right pr-6">Valor pendente</th>
+                  <th className="pb-3 font-medium pl-6">Chave Pix</th>
                 </tr>
               </thead>
               <tbody>
@@ -1359,8 +1359,8 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
                   <tr key={p.photographer_id} className="border-b border-border/50 last:border-0">
                     <td className="py-3 font-medium">{p.business_name}</td>
                     <td className="py-3 text-center text-muted">{p.items_count}</td>
-                    <td className="py-3 text-right font-semibold text-yellow-400">{formatPrice(p.amount_cents)}</td>
-                    <td className="py-3">
+                    <td className="py-3 text-right pr-6 font-semibold text-yellow-400">{formatPrice(p.amount_cents)}</td>
+                    <td className="py-3 pl-6">
                       {p.pix_key ? (
                         <>
                           <span className="text-xs">{p.pix_key}</span>
@@ -1377,8 +1377,8 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
                 <tr className="border-t border-border">
                   <td className="pt-3 font-semibold">Total</td>
                   <td className="pt-3 text-center text-muted font-medium">{data.pending_breakdown.reduce((s, p) => s + p.items_count, 0)}</td>
-                  <td className="pt-3 text-right font-bold text-yellow-400">{formatPrice(data.total_pending_cents)}</td>
-                  <td></td>
+                  <td className="pt-3 text-right pr-6 font-bold text-yellow-400">{formatPrice(data.total_pending_cents)}</td>
+                  <td className="pl-6"></td>
                 </tr>
               </tfoot>
             </table>
