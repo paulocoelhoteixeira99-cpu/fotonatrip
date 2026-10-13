@@ -35,13 +35,45 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  // Summary stats
+  // Summary stats — only count payouts from PAID orders
   const { data: pendingPayouts } = await supa
     .from("payouts")
-    .select("amount_cents")
-    .eq("status", "pending");
+    .select("amount_cents, photographer_id, order_items!inner(orders!inner(status))")
+    .eq("status", "pending")
+    .eq("order_items.orders.status", "paid");
 
-  const totalPending = (pendingPayouts || []).reduce((s, p) => s + p.amount_cents, 0);
+  const validPending = (pendingPayouts || []) as { amount_cents: number; photographer_id: string }[];
+  const totalPending = validPending.reduce((s, p) => s + p.amount_cents, 0);
+
+  // Breakdown by photographer (descending by amount)
+  const byPhotographer = new Map<string, number>();
+  for (const p of validPending) {
+    byPhotographer.set(p.photographer_id, (byPhotographer.get(p.photographer_id) || 0) + p.amount_cents);
+  }
+
+  const photographerIds = [...byPhotographer.keys()];
+  const { data: photographerRows } = photographerIds.length > 0
+    ? await supa
+        .from("photographers")
+        .select("id, business_name, pix_key, pix_key_type")
+        .in("id", photographerIds)
+    : { data: [] };
+
+  const photographerMap = new Map((photographerRows || []).map((p: any) => [p.id, p]));
+
+  const pending_breakdown = [...byPhotographer.entries()]
+    .map(([id, amount_cents]) => {
+      const ph = photographerMap.get(id);
+      return {
+        photographer_id: id,
+        business_name: ph?.business_name || "Fotografo",
+        pix_key: ph?.pix_key || null,
+        pix_key_type: ph?.pix_key_type || null,
+        amount_cents,
+        items_count: validPending.filter((p) => p.photographer_id === id).length,
+      };
+    })
+    .sort((a, b) => b.amount_cents - a.amount_cents);
 
   const { data: paidBatches } = await supa
     .from("payout_batches")
@@ -54,6 +86,7 @@ export async function GET() {
     batches: batches || [],
     total_pending_cents: totalPending,
     total_paid_cents: totalPaid,
+    pending_breakdown,
   });
 }
 
@@ -93,11 +126,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "generate_batches") {
+    // Only batch payouts from PAID orders
     const { data: pendingPayouts } = await supa
       .from("payouts")
-      .select("id, photographer_id, amount_cents")
+      .select("id, photographer_id, amount_cents, order_items!inner(orders!inner(status))")
       .eq("status", "pending")
-      .is("payout_batch_id", null);
+      .is("payout_batch_id", null)
+      .eq("order_items.orders.status", "paid");
 
     if (!pendingPayouts || pendingPayouts.length === 0) {
       return NextResponse.json({ message: "Nenhum payout pendente", batches_created: 0 });

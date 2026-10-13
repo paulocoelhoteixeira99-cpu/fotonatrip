@@ -252,7 +252,19 @@ export default function AdminPage() {
   const [growthData, setGrowthData] = useState<GrowthData | null>(null);
   const [trafficData, setTrafficData] = useState<TrafficData | null>(null);
   const [couponsData, setCouponsData] = useState<Coupon[]>([]);
-  const [payoutsData, setPayoutsData] = useState<{ batches: any[]; total_pending_cents: number; total_paid_cents: number } | null>(null);
+  const [payoutsData, setPayoutsData] = useState<{
+    batches: any[];
+    total_pending_cents: number;
+    total_paid_cents: number;
+    pending_breakdown: {
+      photographer_id: string;
+      business_name: string;
+      pix_key: string | null;
+      pix_key_type: string | null;
+      amount_cents: number;
+      items_count: number;
+    }[];
+  } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -1272,7 +1284,7 @@ function CouponsTab({ coupons, onRefresh }: { coupons: Coupon[]; onRefresh: () =
 
 // ─── Payouts Tab ─────────────────────────────────────────────
 
-function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending_cents: number; total_paid_cents: number }; onRefresh: () => void }) {
+function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending_cents: number; total_paid_cents: number; pending_breakdown: { photographer_id: string; business_name: string; pix_key: string | null; pix_key_type: string | null; amount_cents: number; items_count: number }[] }; onRefresh: () => void }) {
   const [generating, setGenerating] = useState(false);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
@@ -1325,6 +1337,54 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
           </button>
         </div>
       </div>
+
+      {/* Pending breakdown by photographer */}
+      {data.pending_breakdown.length > 0 && (
+        <div className="glass rounded-2xl p-6 mb-6">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <Camera className="w-4 h-4 text-yellow-400" /> Pendente por fotografo (ordem decrescente)
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted border-b border-border">
+                  <th className="pb-3 font-medium">Fotografo</th>
+                  <th className="pb-3 font-medium text-center">Itens</th>
+                  <th className="pb-3 font-medium text-right">Valor pendente</th>
+                  <th className="pb-3 font-medium">Chave Pix</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.pending_breakdown.map((p) => (
+                  <tr key={p.photographer_id} className="border-b border-border/50 last:border-0">
+                    <td className="py-3 font-medium">{p.business_name}</td>
+                    <td className="py-3 text-center text-muted">{p.items_count}</td>
+                    <td className="py-3 text-right font-semibold text-yellow-400">{formatPrice(p.amount_cents)}</td>
+                    <td className="py-3">
+                      {p.pix_key ? (
+                        <>
+                          <span className="text-xs">{p.pix_key}</span>
+                          <span className="text-xs text-muted ml-1">({pixTypeLabels[p.pix_key_type || ""] || p.pix_key_type})</span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-red-400">Sem chave Pix</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border">
+                  <td className="pt-3 font-semibold">Total</td>
+                  <td className="pt-3 text-center text-muted font-medium">{data.pending_breakdown.reduce((s, p) => s + p.items_count, 0)}</td>
+                  <td className="pt-3 text-right font-bold text-yellow-400">{formatPrice(data.total_pending_cents)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Batches table */}
       <div className="glass rounded-2xl overflow-hidden">
