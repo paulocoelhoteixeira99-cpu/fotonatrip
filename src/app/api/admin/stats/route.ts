@@ -103,7 +103,7 @@ async function getOverview(from: string | null, to: string | null) {
     client_email: o.client_email,
     total_cents: o.total_cents,
     platform_fee_cents: o.platform_fee_cents || 0,
-    photographer_name: o.photographer_id ? photographerMap.get(o.photographer_id) || "Sem nome" : "—",
+    photographer_name: o.photographer_id ? photographerMap.get(o.photographer_id) || "Sem nome" : "Compartilhado",
     coupon_code: o.coupon_code || null,
     discount_cents: o.discount_cents || 0,
     photo_count: itemsByOrder.get(o.id) || 0,
