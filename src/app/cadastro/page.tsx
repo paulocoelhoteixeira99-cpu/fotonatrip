@@ -67,7 +67,7 @@ export default function CadastroPage() {
           </div>
           <h1 className="text-2xl font-bold mb-3">Conta criada!</h1>
           <p className="text-muted mb-8">
-            Enviamos um email de confirmacao para <strong className="text-foreground">{email}</strong>.
+            Enviamos um email de confirmação para <strong className="text-foreground">{email}</strong>.
             Clique no link para ativar sua conta.
           </p>
           <Link
@@ -101,7 +101,7 @@ export default function CadastroPage() {
         <div className="glass rounded-3xl p-8">
           <h1 className="text-2xl font-bold mb-2">Criar conta</h1>
           <p className="text-muted text-sm mb-6">
-            Escolha como voce quer usar a plataforma.
+            Escolha como você quer usar a plataforma.
           </p>
 
           {/* Role selector */}
@@ -129,7 +129,7 @@ export default function CadastroPage() {
               }`}
             >
               <CameraIcon className="w-6 h-6" />
-              <span className="text-sm font-medium">Fotografo</span>
+              <span className="text-sm font-medium">Fotógrafo</span>
               <span className="text-xs text-muted">Vender fotos</span>
             </button>
           </div>
@@ -138,9 +138,9 @@ export default function CadastroPage() {
             <div className="flex items-start gap-3 bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6">
               <Info className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
               <p className="text-xs text-muted">
-                Os eventos e fotos sao mantidos por <strong className="text-foreground">3 meses</strong> apos a criacao.
-                Depois desse periodo, fotos nao compradas sao removidas automaticamente para liberar espaco.
-                Fotos ja compradas ficam disponiveis para sempre no cadastro do cliente.
+                Os eventos e fotos são mantidos por <strong className="text-foreground">3 meses</strong> após a criação.
+                Depois desse período, fotos não compradas são removidas automaticamente para liberar espaço.
+                Fotos já compradas ficam disponíveis para sempre no cadastro do cliente.
               </p>
             </div>
           )}
@@ -166,10 +166,10 @@ export default function CadastroPage() {
             Cadastrar com Google
           </button>
           <p className="text-[11px] text-muted text-center mt-2">
-            Ao continuar, voce aceita os{" "}
+            Ao continuar, você aceita os{" "}
             <Link href="/termos" target="_blank" className="text-primary hover:text-primary-light transition-colors">Termos de Uso</Link>{" "}
             e a{" "}
-            <Link href="/privacidade" target="_blank" className="text-primary hover:text-primary-light transition-colors">Politica de Privacidade</Link>.
+            <Link href="/privacidade" target="_blank" className="text-primary hover:text-primary-light transition-colors">Política de Privacidade</Link>.
           </p>
 
           <div className="flex items-center gap-3 my-2">
@@ -227,7 +227,7 @@ export default function CadastroPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimo 6 caracteres"
+                  placeholder="Mínimo 6 caracteres"
                   required
                   className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50 pr-12"
                 />
@@ -262,7 +262,7 @@ export default function CadastroPage() {
                   </Link>{" "}
                   e a{" "}
                   <Link href="/privacidade" target="_blank" className="text-primary hover:text-primary-light transition-colors">
-                    Politica de Privacidade
+                    Política de Privacidade
                   </Link>.
                 </span>
               </label>
@@ -277,7 +277,7 @@ export default function CadastroPage() {
                 <span className="text-xs text-muted leading-relaxed">
                   Autorizo o uso de reconhecimento facial para busca de fotos, conforme a{" "}
                   <Link href="/privacidade" target="_blank" className="text-primary hover:text-primary-light transition-colors">
-                    Politica de Privacidade
+                    Política de Privacidade
                   </Link>.
                 </span>
               </label>
@@ -303,7 +303,7 @@ export default function CadastroPage() {
           </form>
 
           <p className="text-center text-sm text-muted mt-6">
-            Ja tem conta?{" "}
+            Já tem conta?{" "}
             <Link
               href="/login"
               className="text-primary hover:text-primary-light transition-colors font-medium"

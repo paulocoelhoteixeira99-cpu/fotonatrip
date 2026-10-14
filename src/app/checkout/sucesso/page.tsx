@@ -77,8 +77,8 @@ function SucessoContent() {
 
       <p className="text-muted mb-8">
         {isPending
-          ? "Seu pagamento esta sendo processado. Assim que for confirmado, suas fotos estarao disponiveis para download."
-          : "Suas fotos ja estao disponiveis para download sem marca d'agua. Aproveite!"}
+          ? "Seu pagamento esta sendo processado. Assim que for confirmado, suas fotos estarão disponíveis para download."
+          : "Suas fotos já estão disponíveis para download sem marca d'agua. Aproveite!"}
       </p>
 
       {orderId && (
@@ -90,7 +90,7 @@ function SucessoContent() {
       {isPending && (
         <div className="flex items-center justify-center gap-2 text-sm text-yellow-400 mb-6">
           <Loader2 className="w-4 h-4 animate-spin" />
-          Verificando pagamento automaticamente...
+          Verificando pagamento automaticamente…
         </div>
       )}
 
@@ -107,7 +107,7 @@ function SucessoContent() {
                 Verificando...
               </>
             ) : (
-              "Ja paguei, verificar agora"
+              "Já paguei, verificar agora"
             )}
           </button>
         )}

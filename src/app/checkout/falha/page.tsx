@@ -16,11 +16,11 @@ export default function CheckoutFalhaPage() {
               <XCircle className="w-10 h-10 text-red-400" />
             </div>
 
-            <h1 className="text-2xl font-bold mb-3">Pagamento nao aprovado</h1>
+            <h1 className="text-2xl font-bold mb-3">Pagamento não aprovado</h1>
 
             <p className="text-muted mb-8">
               Houve um problema com o pagamento. Suas fotos continuam no carrinho
-              para voce tentar novamente.
+              para você tentar novamente.
             </p>
 
             <div className="flex flex-col gap-3">

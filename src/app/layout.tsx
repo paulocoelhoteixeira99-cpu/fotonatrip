@@ -18,12 +18,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FOTONATRIP - A melhor plataforma de venda de fotos online",
   description:
-    "Tire uma selfie e encontre todas as fotos profissionais feitas de voce durante sua viagem. Busca por reconhecimento facial.",
-  keywords: ["fotos", "viagem", "reconhecimento facial", "fotografo", "eventos"],
+    "Tire uma selfie e encontre todas as fotos profissionais feitas de você durante sua viagem. Busca por reconhecimento facial.",
+  keywords: ["fotos", "viagem", "reconhecimento facial", "fotógrafo", "eventos"],
   openGraph: {
     title: "FOTONATRIP - A melhor plataforma de venda de fotos online",
     description:
-      "Tire uma selfie e encontre todas as fotos profissionais feitas de voce durante sua viagem.",
+      "Tire uma selfie e encontre todas as fotos profissionais feitas de você durante sua viagem.",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
 };

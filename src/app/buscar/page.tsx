@@ -391,7 +391,7 @@ function BuscarContent() {
               {noFace && (
                 <div className="glass rounded-xl p-4 mb-6 max-w-md mx-auto">
                   <p className="text-sm text-red-400">
-                    Nao conseguimos detectar um rosto na foto. Tente outra selfie com o rosto bem visivel.
+                    Não conseguimos detectar um rosto na foto. Tente outra selfie com o rosto bem visível.
                   </p>
                 </div>
               )}
@@ -455,7 +455,7 @@ function BuscarContent() {
                 <div className="glass rounded-3xl p-10 text-center">
                   <ImageIcon className="w-12 h-12 text-muted/30 mx-auto mb-4" />
                   <p className="text-muted text-sm mb-6 max-w-sm mx-auto">
-                    Nao encontramos fotos suas neste evento. Tente com outra selfie ou verifique se selecionou o evento correto.
+                    Não encontramos fotos suas neste evento. Tente com outra selfie ou verifique se selecionou o evento correto.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button onClick={reset} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Tentar outra selfie</button>

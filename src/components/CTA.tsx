@@ -33,7 +33,7 @@ export default function CTA() {
             </h2>
             <p className="mt-6 text-muted text-lg max-w-lg mx-auto">
               Tire uma selfie agora e descubra as fotos profissionais feitas de
-              voce. E rapido, facil e seguro.
+              você. É rápido, fácil e seguro.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
               <Link
@@ -47,7 +47,7 @@ export default function CTA() {
                 href="/cadastro"
                 className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-foreground px-8 py-4 rounded-full transition-all font-medium text-lg backdrop-blur hover:scale-105"
               >
-                Cadastrar como fotografo
+                Cadastrar como fotógrafo
               </Link>
             </div>
           </div>

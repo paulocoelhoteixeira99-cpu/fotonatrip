@@ -61,14 +61,14 @@ export default function NovoEventoPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setError("Voce precisa estar logado.");
+      setError("Você precisa estar logado.");
       setLoading(false);
       return;
     }
 
     const priceCents = Math.round(parseFloat(priceInput.replace(",", ".")) * 100);
     if (isNaN(priceCents) || priceCents <= 0) {
-      setError("Informe um preco valido por foto.");
+      setError("Informe um preço válido por foto.");
       setLoading(false);
       return;
     }
@@ -78,20 +78,20 @@ export default function NovoEventoPage() {
       : null;
 
     if (packageCents !== null && (isNaN(packageCents) || packageCents <= 0)) {
-      setError("Informe um preco valido para o pacote ou deixe em branco.");
+      setError("Informe um preço válido para o pacote ou deixe em branco.");
       setLoading(false);
       return;
     }
 
     if (status === "scheduled" && !scheduledAt) {
-      setError("Informe a data de ativacao para eventos agendados.");
+      setError("Informe a data de ativação para eventos agendados.");
       setLoading(false);
       return;
     }
 
     const commissionPctNum = isShared ? parseInt(commissionPct) : 0;
     if (isShared && (isNaN(commissionPctNum) || commissionPctNum < 1 || commissionPctNum > 50)) {
-      setError("A comissao do anfitriao deve ser entre 1% e 50%.");
+      setError("A comissão do anfitrião deve ser entre 1% e 50%.");
       setLoading(false);
       return;
     }
@@ -133,7 +133,7 @@ export default function NovoEventoPage() {
 
       <h1 className="text-2xl font-bold mb-2">Novo evento</h1>
       <p className="text-muted text-sm mb-8">
-        Preencha as informacoes do evento para comecar a enviar fotos.
+        Preencha as informações do evento para começar a enviar fotos.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -152,7 +152,7 @@ export default function NovoEventoPage() {
         </div>
 
         <div>
-          <label className="text-sm text-muted mb-2 block">Descricao</label>
+          <label className="text-sm text-muted mb-2 block">Descrição</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}

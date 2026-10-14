@@ -165,7 +165,7 @@ export default function EventoDetailPage() {
           .select("id, full_name")
           .in("id", uniqueIds);
         if (profiles) {
-          setPhotographerNames(new Map(profiles.map((p) => [p.id, p.full_name || "Fotografo"])));
+          setPhotographerNames(new Map(profiles.map((p) => [p.id, p.full_name || "Fotógrafo"])));
         }
       }
 
@@ -1118,7 +1118,7 @@ export default function EventoDetailPage() {
                 {collaborators.map((c) => (
                   <div key={c.id} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
                     <div>
-                      <p className="text-sm">{c.name || "Fotografo"}</p>
+                      <p className="text-sm">{c.name || "Fotógrafo"}</p>
                       <p className="text-xs text-muted">
                         Entrou em {new Date(c.accepted_at).toLocaleDateString("pt-BR")}
                       </p>
@@ -1351,7 +1351,7 @@ export default function EventoDetailPage() {
 
             <div className="mt-3">
               <div className="mb-2">
-                <p className="text-white/70 text-sm">foto por {photographerNames.get(previewPhoto.photographer_id) || "Fotografo"}</p>
+                <p className="text-white/70 text-sm">foto por {photographerNames.get(previewPhoto.photographer_id) || "Fotógrafo"}</p>
                 <p className="text-white/40 text-xs">{previewPhoto.original_filename}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">

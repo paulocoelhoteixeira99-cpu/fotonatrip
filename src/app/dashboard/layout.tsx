@@ -17,10 +17,10 @@ import {
 import type { User } from "@supabase/supabase-js";
 
 const navItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Inicio" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Início" },
   { href: "/dashboard/eventos", icon: CalendarDays, label: "Eventos" },
   { href: "/dashboard/vendas", icon: TrendingUp, label: "Vendas" },
-  { href: "/dashboard/configuracoes", icon: Settings, label: "Configuracoes" },
+  { href: "/dashboard/configuracoes", icon: Settings, label: "Configurações" },
 ];
 
 export default function DashboardLayout({
@@ -147,7 +147,7 @@ export default function DashboardLayout({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">
-                {profile?.full_name || "Usuario"}
+                {profile?.full_name || "Usuário"}
               </p>
               <p className="text-xs text-muted truncate">{user.email}</p>
             </div>

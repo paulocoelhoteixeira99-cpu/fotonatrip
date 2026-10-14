@@ -91,7 +91,7 @@ export default function EventosPage() {
             </h1>
             <p className="text-muted text-lg max-w-xl mx-auto">
               Explore os eventos fotografados pelos nossos parceiros. Encontre
-              suas fotos e leve a recordacao para casa.
+              suas fotos e leve a recordação para casa.
             </p>
           </div>
 
@@ -118,7 +118,7 @@ export default function EventosPage() {
                   className="bg-white/5 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
                 />
               </div>
-              <span className="text-xs text-muted">ate</span>
+              <span className="text-xs text-muted">até</span>
               <input
                 type="date"
                 value={dateTo}
@@ -246,7 +246,7 @@ export default function EventosPage() {
                     disabled={page >= totalPages - 1}
                     className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm glass hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    Proximo
+                    Próximo
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>

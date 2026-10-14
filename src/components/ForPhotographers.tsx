@@ -15,33 +15,33 @@ import Link from "next/link";
 const benefits = [
   {
     icon: DollarSign,
-    title: "Apenas 7% de comissao",
-    description: "A menor taxa do mercado. Voce define o preco, voce fica com a maior parte.",
+    title: "Apenas 7% de comissão",
+    description: "A menor taxa do mercado. Você define o preço, você fica com a maior parte.",
   },
   {
     icon: Zap,
-    title: "Pagamento automatico",
+    title: "Pagamento automático",
     description: "O dinheiro cai direto na sua conta do Mercado Pago. Sem esperar repasses.",
   },
   {
     icon: BarChart3,
     title: "Dashboard completo",
-    description: "Acompanhe vendas, visualizacoes e performance dos seus eventos em tempo real.",
+    description: "Acompanhe vendas, visualizações e performance dos seus eventos em tempo real.",
   },
   {
     icon: Shield,
     title: "Suas fotos protegidas",
-    description: "Marca d'agua automatica nas previews. Download so apos o pagamento.",
+    description: "Marca d'água automática nas previews. Download só após o pagamento.",
   },
   {
     icon: Users,
     title: "Mais clientes",
-    description: "A busca facial traz os clientes ate voce. Sem precisar procurar um por um.",
+    description: "A busca facial traz os clientes até você. Sem precisar procurar um por um.",
   },
   {
     icon: TrendingUp,
-    title: "Escale seu negocio",
-    description: "Foque em fotografar. A plataforma cuida da venda, entrega e cobranca.",
+    title: "Escale seu negócio",
+    description: "Foque em fotografar. A plataforma cuida da venda, entrega e cobrança.",
   },
 ];
 
@@ -65,15 +65,15 @@ export default function ForPhotographers() {
             transition={{ duration: 0.6 }}
           >
             <span className="text-sm text-primary font-medium uppercase tracking-wider">
-              Para fotografos
+              Para fotógrafos
             </span>
             <h2 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight leading-tight">
               Venda suas fotos com a{" "}
               <span className="gradient-text">menor taxa</span> do mercado
             </h2>
             <p className="mt-6 text-muted text-lg leading-relaxed">
-              Cadastre-se, envie suas fotos e deixe a inteligencia artificial
-              conectar seus clientes as fotos deles. Voce foca no que faz de
+              Cadastre-se, envie suas fotos e deixe a inteligência artificial
+              conectar seus clientes às fotos deles. Você foca no que faz de
               melhor: fotografar.
             </p>
 
@@ -82,7 +82,7 @@ export default function ForPhotographers() {
                 href="/cadastro"
                 className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-full transition-all font-medium glow-green hover:scale-105"
               >
-                Comecar agora
+                Começar agora
               </Link>
               <Link
                 href="#recursos"

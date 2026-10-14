@@ -55,7 +55,7 @@ export default function ConvitePage() {
         .single();
 
       if (!eventData) {
-        setError("Convite invalido ou expirado.");
+        setError("Convite inválido ou expirado.");
         setLoading(false);
         return;
       }

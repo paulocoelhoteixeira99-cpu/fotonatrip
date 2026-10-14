@@ -54,11 +54,13 @@ src/
       page.tsx                  # Overview do fotografo (stats + eventos recentes)
       eventos/                  # Lista de eventos do fotografo
       eventos/novo/             # Criar novo evento (com preco, pacote, agendamento)
-      eventos/[id]/             # Gerenciar evento (upload, delete, reprocess, QR code)
+      eventos/[id]/             # Gerenciar evento (upload, delete, reprocess, QR code, share link, invite link)
       upload/                   # Upload em lote (alternativo)
-      vendas/                   # Relatorio de vendas (grafico 30 dias, tabela)
-      configuracoes/            # Perfil + conexao Mercado Pago OAuth
+      vendas/                   # Relatorio de vendas (grafico 30 dias, eventos com vendas, tabela recentes)
+      vendas/fotos/             # Fotos vendidas (filtro por evento)
+      configuracoes/            # Perfil + conexao Mercado Pago OAuth (upsert)
     admin/                      # Dashboard admin (stats da plataforma, filtros por periodo)
+    convite/[token]/            # Aceitar convite de evento compartilhado
     termos/                     # Termos de uso (server component, estatico)
     privacidade/                # Politica de privacidade LGPD (server component)
     ajuda/                      # FAQ / Central de ajuda (server component)
@@ -72,6 +74,7 @@ src/
       mp/callback/              # GET: callback OAuth MP (salvar tokens)
       mp/disconnect/            # POST: desconectar MP
       admin/stats/              # GET: metricas admin (role check)
+      admin/payouts/            # GET/POST: lotes de pagamento (gerar, marcar pago)
   lib/
     supabase/client.ts          # Browser Supabase client (createBrowserClient)
     supabase/server.ts          # Server Supabase client (createServerClient + cookies)
@@ -79,7 +82,7 @@ src/
     photos.ts                   # getPhotoUrl (CDN), deletePhotoFiles (DO server)
     cart.tsx                    # CartProvider context (localStorage, package vs individual logic)
   components/
-    Header.tsx                  # Header fixo com menu desktop/mobile, auth, cart badge
+    Header.tsx                  # Header fixo com menu desktop/mobile, auth, cart badge (cart fora do dropdown desktop)
     Hero.tsx                    # Hero section da landing page
     HowItWorks.tsx              # 4 etapas do processo
     Features.tsx                # 4 features da plataforma
@@ -102,11 +105,15 @@ supabase/
 |--------|-----------|
 | `profiles` | Extensao de auth.users (full_name, role: client/photographer/admin) |
 | `photographers` | Dados extras do fotografo (business_name, phone, city, state, mp_*) |
-| `events` | Eventos com status (active/inactive/scheduled), preco, pacote |
+| `events` | Eventos com status (active/inactive/scheduled), preco, pacote, is_shared, invite_code, collaborator_commission_pct |
+| `event_collaborators` | Fotografos convidados para eventos compartilhados (event_id, photographer_id, accepted_at) |
 | `photos` | Fotos com paths (storage, watermark), status (processing/ready/failed), preco em centavos |
 | `face_embeddings` | Embeddings 512d (vector) com bounding box por face detectada |
-| `orders` | Pedidos (client_id, status, total_cents, platform_fee_cents, payment_id, photographer_id) |
+| `orders` | Pedidos (client_id, status, total_cents, platform_fee_cents, payment_id, payment_method, coupon_id/code/discount_cents) |
 | `order_items` | Itens do pedido (photo_id, photographer_id, price_cents, downloaded_at) |
+| `coupons` | Cupons de desconto (code, discount_type, discount_value, max_uses, expires_at) |
+| `payouts` | Repasses individuais por venda (photographer_id, order_item_id, amount_cents, type, status) |
+| `payout_batches` | Lotes de pagamento agrupados por fotografo (total_cents, pix_key, status) |
 
 ### Funcoes e Triggers
 
@@ -124,7 +131,9 @@ supabase/
 - profiles, photographers, events, photos, face_embeddings: SELECT publico
 - orders/order_items: SELECT restrito a client_id ou photographer_id
 - Photographers gerenciam seus proprios recursos (events, photos)
+- Event owner pode deletar fotos de colaboradores no proprio evento (policy 019)
 - Clients criam orders e order_items (INSERT com check de auth.uid)
+- Payouts: INSERT via service role (sem policy para users), SELECT por photographer_id
 
 ## Regras de Negocio
 
@@ -150,8 +159,9 @@ supabase/
 
 ### Pagamento (Mercado Pago)
 - Checkout cria order (pending) + MP Preference
-- **Cartao**: Payment Brick, taxa processamento 4.99%
-- **Pix**: QR code gerado, polling /api/check-payment a cada 3s, taxa 0.99%
+- **Pix** (default, tab esquerda): QR code gerado, polling /api/check-payment a cada 3s, taxa 0.99%
+- **Cartao** (tab direita): Payment Brick, taxa processamento 4.99%
+- `orders.payment_method` salva "pix" ou "card" ao processar/webhook
 - `calcAdjusted()` arredonda para CIMA para cobrir taxa
 - Webhook MP valida assinatura HMAC-SHA256 (MP_WEBHOOK_SECRET)
 - Webhook nao faz downgrade de status (paid nunca volta para pending)
@@ -185,6 +195,17 @@ supabase/
 - Agendamento: `scheduled_at` + RPC `activate_scheduled_events()` chamado nas paginas publicas
 - Campo `is_active` legado (migrado para `status` na migration 011)
 - Cidades carregadas via API do IBGE por estado selecionado
+
+### Eventos Compartilhados
+- Dono do evento pode convidar colaboradores via link (`/convite/[token]`)
+- `events.is_shared` = true quando tem colaboradores
+- `events.collaborator_commission_pct` = % do dono sobre vendas do colaborador
+- Split financeiro: plataforma 7% + comissao anfitriao X% + restante para colaborador
+- Checkout cria payouts via service role (type: host_own_photos, host_commission, collaborator_payout)
+- Admin gera lotes de pagamento (`payout_batches`) agrupados por fotografo (minimo R$1)
+- Pagina do evento: convite (amarelo) vs compartilhar (verde) diferenciados visualmente
+- Colaborador ve condicoes financeiras mas nao edita preco/status/comissao do evento
+- Dono pode deletar fotos de qualquer colaborador; colaborador so deleta as proprias
 
 ### Retencao de Dados
 - Cron no DO Droplet a cada 6 horas para limpeza de dados antigos
@@ -344,6 +365,10 @@ Mudancas significativas incluem:
 - Circular RLS entre orders/order_items causa 500 — usar SECURITY DEFINER function
 - Lightbox mobile cortando fotos: causa real era overflow horizontal na pagina (tabs excedendo viewport) que alterava o zoom do browser — fix com `overflow-x-hidden` no wrapper
 - /buscar e /eventos/[id] compartilham UX de grid e lightbox — sempre sincronizar mudancas entre as duas
+- Payouts INSERT falhava silenciosamente: tabela sem INSERT RLS policy, checkout usava client do usuario em vez de service role
+- Admin payouts endpoint nao conseguia ler/escrever: SELECT policy era `photographer_id = auth.uid()` — admin nao e fotografo, precisa service role
+- Configuracoes nao salvava para fotografo sem row: `UPDATE` afeta 0 rows silenciosamente — usar `upsert` em vez de `update`
+- Pedidos pendentes abandonados (>1h) ficavam para sempre em "minhas compras" — filtrar client-side
 
 ## TODO
 

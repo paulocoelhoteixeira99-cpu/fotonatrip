@@ -147,7 +147,7 @@ export default function EventoPublicPage() {
         for (const pid of uniquePhotographerIds) {
           const profile = (profiles || []).find((p) => p.id === pid);
           const photog = (photographers || []).find((p) => p.id === pid);
-          nameMap.set(pid, photog?.business_name || profile?.full_name || "Fotografo");
+          nameMap.set(pid, photog?.business_name || profile?.full_name || "Fotógrafo");
         }
         setPhotographerNames(nameMap);
       }
@@ -247,7 +247,7 @@ export default function EventoPublicPage() {
         <Header />
         <main className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <p className="text-muted text-lg mb-4">Evento nao encontrado.</p>
+            <p className="text-muted text-lg mb-4">Evento não encontrado.</p>
             <Link
               href="/eventos"
               className="text-primary hover:text-primary-light transition-colors"
@@ -444,7 +444,7 @@ export default function EventoPublicPage() {
           photos.length === 0 ? (
             <div className="text-center py-20">
               <ImageIcon className="w-12 h-12 text-muted/30 mx-auto mb-4" />
-              <p className="text-muted">Nenhuma foto disponivel neste evento.</p>
+              <p className="text-muted">Nenhuma foto disponível neste evento.</p>
             </div>
           ) : (
             <>
@@ -567,7 +567,7 @@ export default function EventoPublicPage() {
                     disabled={page >= totalPages - 1}
                     className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm glass hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    Proximo
+                    Próximo
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>

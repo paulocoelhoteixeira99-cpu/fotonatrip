@@ -95,7 +95,7 @@ export default function DashboardPage() {
       bg: "bg-purple-400/10",
     },
     {
-      label: "Receita liquida",
+      label: "Receita líquida",
       value: formatPrice(stats.totalRevenueCents),
       icon: DollarSign,
       color: "text-yellow-400",
@@ -108,7 +108,7 @@ export default function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-muted text-sm mt-1">
-          Visao geral da sua conta.
+          Visão geral da sua conta.
         </p>
       </div>
 
@@ -144,7 +144,7 @@ export default function DashboardPage() {
           <div className="text-center py-12">
             <CalendarDays className="w-10 h-10 text-muted/30 mx-auto mb-4" />
             <p className="text-muted text-sm mb-4">
-              Voce ainda nao criou nenhum evento.
+              Você ainda não criou nenhum evento.
             </p>
             <Link
               href="/dashboard/eventos/novo"

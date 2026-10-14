@@ -15,7 +15,7 @@ export default function Footer() {
               />
             </Link>
             <p className="mt-4 text-sm text-muted leading-relaxed">
-              Encontre suas fotos de viagem com inteligencia artificial.
+              Encontre suas fotos de viagem com inteligência artificial.
             </p>
           </div>
 
@@ -35,7 +35,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/cadastro" className="text-sm text-muted hover:text-foreground transition-colors">
-                  Para fotografos
+                  Para fotógrafos
                 </Link>
               </li>
             </ul>
@@ -84,7 +84,7 @@ export default function Footer() {
             {new Date().getFullYear()} fotonatrip. Todos os direitos reservados.
           </p>
           <p className="text-xs text-muted">
-            Feito com dedicacao no Brasil
+            Feito com dedicação no Brasil
           </p>
         </div>
       </div>

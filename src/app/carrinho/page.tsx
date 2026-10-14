@@ -62,7 +62,7 @@ export default function CarrinhoPage() {
         });
         setCouponError(null);
       } else {
-        setCouponError(data.message || "Cupom invalido");
+        setCouponError(data.message || "Cupom inválido");
         setAppliedCoupon(null);
       }
     } catch {
@@ -151,7 +151,7 @@ export default function CarrinhoPage() {
       }
       router.push(`/checkout?${params.toString()}`);
     } catch {
-      setError("Erro de conexao. Tente novamente.");
+      setError("Erro de conexão. Tente novamente.");
       setLoading(false);
     }
   }
@@ -188,14 +188,14 @@ export default function CarrinhoPage() {
           <p className="text-muted mb-8 sm:mb-10">
             {count > 0
               ? `${photoCount} foto${photoCount !== 1 ? "s" : ""} selecionada${photoCount !== 1 ? "s" : ""}`
-              : "Seu carrinho esta vazio"}
+              : "Seu carrinho está vazio"}
           </p>
 
           {count === 0 ? (
             <div className="glass rounded-3xl p-10 sm:p-16 text-center">
               <ImageIcon className="w-16 h-16 text-muted/20 mx-auto mb-6" />
               <p className="text-muted mb-6">
-                Voce ainda nao adicionou nenhuma foto ao carrinho.
+                Você ainda não adicionou nenhuma foto ao carrinho.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
@@ -355,7 +355,7 @@ export default function CarrinhoPage() {
                             <p className="text-xs text-muted">
                               {item.is_package
                                 ? "Todas as fotos reconhecidas"
-                                : "Foto em alta resolucao"}
+                                : "Foto em alta resolução"}
                             </p>
                           </div>
                           <span className="text-sm font-semibold whitespace-nowrap">

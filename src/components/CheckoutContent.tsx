@@ -137,7 +137,7 @@ export default function CheckoutContent() {
         router.push(`/checkout/sucesso?order=${orderId}&status=pending`);
       }
     } catch {
-      setError("Erro de conexao. Tente novamente.");
+      setError("Erro de conexão. Tente novamente.");
     }
     setPixLoading(false);
   }
@@ -184,7 +184,7 @@ export default function CheckoutContent() {
           </div>
           <h2 className="text-xl font-bold mb-2">Pague com Pix</h2>
           <p className="text-muted text-sm mb-6">
-            Escaneie o QR Code ou copie o codigo para pagar{" "}
+            Escaneie o QR Code ou copie o código para pagar{" "}
             <span className="font-semibold text-foreground">
               {formatPrice(pixAmount * 100)}
             </span>
@@ -219,7 +219,7 @@ export default function CheckoutContent() {
                 ) : (
                   <>
                     <Copy className="w-4 h-4" />
-                    Copiar codigo Pix
+                    Copiar código Pix
                   </>
                 )}
               </button>
@@ -228,7 +228,7 @@ export default function CheckoutContent() {
 
           <div className="flex items-center justify-center gap-2 text-xs text-yellow-400 mb-4">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Aguardando confirmacao do pagamento...
+            Aguardando confirmação do pagamento...
           </div>
 
           <Link
@@ -273,7 +273,7 @@ export default function CheckoutContent() {
         </div>
         <div className="flex justify-between text-sm mb-2">
           <span className="text-muted">
-            Taxa de processamento ({payMethod === "card" ? "cartao" : "Pix"})
+            Taxa de processamento ({payMethod === "card" ? "cartão" : "Pix"})
           </span>
           <span className="text-yellow-400">
             + {formatPrice(currentFee * 100)}
@@ -310,8 +310,8 @@ export default function CheckoutContent() {
           }`}
         >
           <CreditCard className="w-4 h-4" />
-          Cartao
-        </button>
+          Cartão
+     </button>
       </div>
 
       {error && (
@@ -333,7 +333,7 @@ export default function CheckoutContent() {
           {!brickReady && !processing && (
             <div className="flex items-center justify-center gap-3 py-10">
               <Loader2 className="w-5 h-5 animate-spin text-muted" />
-              <span className="text-sm text-muted">Carregando formulario...</span>
+              <span className="text-sm text-muted">Carregando formulário...</span>
             </div>
           )}
 
@@ -377,17 +377,17 @@ export default function CheckoutContent() {
                     router.push(`/checkout/sucesso?order=${orderId}`);
                   } else if (data.status === "rejected") {
                     const reasons: Record<string, string> = {
-                      cc_rejected_bad_filled_card_number: "Numero do cartao incorreto.",
+                      cc_rejected_bad_filled_card_number: "Número do cartão incorreto.",
                       cc_rejected_bad_filled_date: "Data de validade incorreta.",
-                      cc_rejected_bad_filled_security_code: "Codigo de seguranca incorreto.",
-                      cc_rejected_bad_filled_other: "Dados do cartao incorretos.",
+                      cc_rejected_bad_filled_security_code: "Código de segurança incorreto.",
+                      cc_rejected_bad_filled_other: "Dados do cartão incorretos.",
                       cc_rejected_insufficient_amount: "Saldo insuficiente.",
-                      cc_rejected_call_for_authorize: "Ligue para a operadora do cartao para autorizar.",
-                      cc_rejected_card_disabled: "Cartao desabilitado. Ative-o com a operadora.",
-                      cc_rejected_max_attempts: "Limite de tentativas. Use outro cartao.",
-                      cc_rejected_duplicated_payment: "Pagamento duplicado. Ja existe um pagamento com esse valor.",
-                      cc_rejected_high_risk: "Pagamento recusado por seguranca. Tente outro cartao.",
-                      cc_rejected_card_type_not_allowed: "Tipo de cartao nao aceito.",
+                      cc_rejected_call_for_authorize: "Ligue para a operadora do cartão para autorizar.",
+                      cc_rejected_card_disabled: "Cartão desabilitado. Ative-o com a operadora.",
+                      cc_rejected_max_attempts: "Limite de tentativas. Use outro cartão.",
+                      cc_rejected_duplicated_payment: "Pagamento duplicado. Já existe um pagamento com esse valor.",
+                      cc_rejected_high_risk: "Pagamento recusado por seguranca. Tente outro cartão.",
+                      cc_rejected_card_type_not_allowed: "Tipo de cartão não aceito.",
                       cc_rejected_other_reason: "Pagamento recusado pela operadora.",
                     };
                     const detail = data.status_detail || "";
@@ -401,7 +401,7 @@ export default function CheckoutContent() {
                     );
                   }
                 } catch {
-                  setError("Erro de conexao. Tente novamente.");
+                  setError("Erro de conexão. Tente novamente.");
                   setProcessing(false);
                 }
               }}
@@ -414,7 +414,7 @@ export default function CheckoutContent() {
               onError={(err) => {
                 console.error("Payment Brick error:", err);
                 if (!brickReady) {
-                  setError("Erro ao carregar formulario. Tente recarregar a pagina.");
+                  setError("Erro ao carregar formulário. Tente recarregar a página.");
                 }
               }}
             />
@@ -426,9 +426,9 @@ export default function CheckoutContent() {
       {payMethod === "pix" && (
         <div className="glass rounded-2xl p-6 sm:p-8 text-center">
           <QrCode className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h3 className="font-semibold mb-2">Pagamento instantaneo via Pix</h3>
+          <h3 className="font-semibold mb-2">Pagamento instantâneo via Pix</h3>
           <p className="text-muted text-sm mb-6">
-            Clique no botao abaixo para gerar o QR Code Pix no valor de{" "}
+            Clique no botão abaixo para gerar o QR Code Pix no valor de{" "}
             <span className="font-semibold text-foreground">
               {formatPrice(pixAmount * 100)}
             </span>
@@ -451,7 +451,7 @@ export default function CheckoutContent() {
             )}
           </button>
           <p className="text-xs text-muted mt-4">
-            O Pix tem limite diario de transferencias. Consulte o app do seu banco.
+            O Pix tem limite diário de transferências. Consulte o app do seu banco.
           </p>
         </div>
       )}

@@ -12,7 +12,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 const navLinks = [
   { href: "/#como-funciona", label: "Como funciona" },
   { href: "/eventos", label: "Eventos", isRoute: true },
-  { href: "/#fotografos", label: "Para fotografos" },
+  { href: "/#fotografos", label: "Para fotógrafos" },
   { href: "/#recursos", label: "Recursos" },
 ];
 
@@ -31,7 +31,7 @@ export default function Header() {
   const isAdmin = profile?.role === "admin";
 
   async function handleLogout() {
-    if (!window.confirm("Voce deseja mesmo sair?")) return;
+    if (!window.confirm("Você deseja mesmo sair?")) return;
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
@@ -141,7 +141,7 @@ export default function Header() {
                     {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
                   </div>
                   <span className="text-sm text-white font-medium max-w-[120px] truncate">
-                    {profile?.full_name?.split(" ")[0] || "Usuario"}
+                    {profile?.full_name?.split(" ")[0] || "Usuário"}
                   </span>
                   <ChevronDown className={`w-4 h-4 text-white/70 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -197,7 +197,7 @@ export default function Header() {
                 href="/cadastro"
                 className="text-sm bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-full transition-colors font-medium"
               >
-                Sou fotografo
+                Sou fotógrafo
               </Link>
             </>
           )}
@@ -343,7 +343,7 @@ export default function Header() {
                     onClick={() => setMenuOpen(false)}
                     className="text-sm bg-primary hover:bg-primary-dark text-white px-4 py-3 rounded-xl transition-colors font-medium text-center mt-1"
                   >
-                    Sou fotografo
+                    Sou fotógrafo
                   </Link>
                 </>
               )}

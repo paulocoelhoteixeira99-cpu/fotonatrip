@@ -121,7 +121,7 @@ export default function MinhasComprasPage() {
           );
           setCheckMessage("Pagamento confirmado!");
         } else if (data.status === "pending") {
-          setCheckMessage("Pagamento ainda nao confirmado. Tente novamente em alguns minutos.");
+          setCheckMessage("Pagamento ainda não confirmado. Tente novamente em alguns minutos.");
         } else {
           setOrders((prev) =>
             prev.map((o) => (o.id === orderId ? { ...o, status: data.status } : o))
@@ -131,7 +131,7 @@ export default function MinhasComprasPage() {
         setCheckMessage(data.error || "Erro ao verificar pagamento.");
       }
     } catch {
-      setCheckMessage("Erro de conexao. Tente novamente.");
+      setCheckMessage("Erro de conexão. Tente novamente.");
     }
     setCheckingPayment(null);
     setTimeout(() => setCheckMessage(null), 5000);
@@ -154,7 +154,7 @@ export default function MinhasComprasPage() {
             Minhas compras
           </h1>
           <p className="text-muted mb-10">
-            Suas fotos compradas e downloads disponiveis.
+            Suas fotos compradas e downloads disponíveis.
           </p>
 
           {loading ? (
@@ -165,7 +165,7 @@ export default function MinhasComprasPage() {
             <div className="glass rounded-3xl p-16 text-center">
               <ShoppingBag className="w-16 h-16 text-muted/20 mx-auto mb-6" />
               <p className="text-muted mb-6">
-                Voce ainda nao fez nenhuma compra.
+                Você ainda não fez nenhuma compra.
               </p>
               <Link
                 href="/buscar"

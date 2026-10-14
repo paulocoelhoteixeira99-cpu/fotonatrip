@@ -54,7 +54,7 @@ export default function EsqueciSenhaPage() {
               </div>
               <h1 className="text-2xl font-bold mb-3">Email enviado!</h1>
               <p className="text-muted text-sm mb-6">
-                Enviamos um link de recuperacao para{" "}
+                Enviamos um link de recuperação para{" "}
                 <strong className="text-foreground">{email}</strong>. Verifique
                 sua caixa de entrada.
               </p>
@@ -107,7 +107,7 @@ export default function EsqueciSenhaPage() {
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    "Enviar link de recuperacao"
+                    "Enviar link de recuperação"
                   )}
                 </button>
               </form>

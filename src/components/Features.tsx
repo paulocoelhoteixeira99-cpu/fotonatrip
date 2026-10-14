@@ -14,16 +14,16 @@ const features = [
   },
   {
     icon: Globe,
-    title: "Eventos e pontos turisticos",
+    title: "Eventos e pontos turísticos",
     description:
-      "De shows e festas a pontos turisticos e parques. Encontre suas fotos em qualquer lugar que tenha um fotografo parceiro.",
+      "De shows e festas a pontos turísticos e parques. Encontre suas fotos em qualquer lugar que tenha um fotógrafo parceiro.",
     highlight: false,
   },
   {
     icon: Lock,
     title: "Privacidade em primeiro lugar",
     description:
-      "Seus dados faciais sao usados apenas para a busca e nunca sao compartilhados. As fotos ficam armazenadas com seguranca.",
+      "Seus dados faciais são usados apenas para a busca e nunca são compartilhados. As fotos ficam armazenadas com segurança.",
     highlight: false,
   },
   {
@@ -61,8 +61,8 @@ export default function Features() {
             <span className="gradient-text">conecta</span> pessoas
           </h2>
           <p className="mt-4 text-muted text-lg max-w-xl mx-auto">
-            Uma plataforma feita para tornar a experiencia de encontrar e comprar
-            fotos algo magico.
+            Uma plataforma feita para tornar a experiência de encontrar e comprar
+            fotos algo mágico.
           </p>
         </motion.div>
 

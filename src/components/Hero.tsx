@@ -17,17 +17,17 @@ const floatingPhotos = [
   },
   {
     src: "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=400&h=500&fit=crop&q=80",
-    alt: "Vista panoramica do Rio de Janeiro",
+    alt: "Vista panorâmica do Rio de Janeiro",
     rotate: -2,
   },
   {
     src: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=400&h=500&fit=crop&q=80",
-    alt: "Praia paradisiaca vista de cima",
+    alt: "Praia paradisíaca vista de cima",
     rotate: 5,
   },
   {
     src: "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=400&h=500&fit=crop&crop=faces&q=80",
-    alt: "Fotografo registrando viajante",
+    alt: "Fotógrafo registrando viajante",
     rotate: -3,
   },
   {
@@ -45,7 +45,7 @@ const features = [
   },
   {
     icon: Zap,
-    title: "Rapido e simples",
+    title: "Rápido e simples",
     description: "Encontre suas fotos em segundos",
   },
   {
@@ -105,8 +105,8 @@ export default function Hero() {
               className="mt-3 text-base md:text-lg text-muted leading-relaxed"
             >
               Tire uma selfie e encontre, em segundos, todas as fotos
-              profissionais feitas de voce durante a viagem. Simples,{" "}
-              <strong className="text-foreground">rapido e magico</strong>.
+              profissionais feitas de você durante a viagem. Simples,{" "}
+              <strong className="text-foreground">rápido e mágico</strong>.
             </motion.p>
 
             {/* Search Button */}

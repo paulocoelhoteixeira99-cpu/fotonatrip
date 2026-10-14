@@ -7,30 +7,30 @@ import { Camera, ScanFace, ShoppingBag, Download } from "lucide-react";
 const steps = [
   {
     icon: Camera,
-    title: "Fotografo registra o evento",
+    title: "Fotógrafo registra o evento",
     description:
-      "O fotografo faz as fotos do evento ou ponto turistico e envia para a plataforma.",
+      "O fotógrafo faz as fotos do evento ou ponto turístico e envia para a plataforma.",
     color: "from-emerald-500/20 to-emerald-600/5",
   },
   {
     icon: ScanFace,
-    title: "Voce tira uma selfie",
+    title: "Você tira uma selfie",
     description:
-      "Use a camera do seu celular para tirar uma selfie rapida. A IA faz o resto.",
+      "Use a câmera do seu celular para tirar uma selfie rápida. A IA faz o resto.",
     color: "from-green-500/20 to-green-600/5",
   },
   {
     icon: ShoppingBag,
     title: "Encontre e compre",
     description:
-      "Veja todas as fotos profissionais onde voce aparece e escolha as que quiser.",
+      "Veja todas as fotos profissionais onde você aparece e escolha as que quiser.",
     color: "from-teal-500/20 to-teal-600/5",
   },
   {
     icon: Download,
     title: "Baixe em alta qualidade",
     description:
-      "Receba suas fotos em alta resolucao, prontas para postar e guardar para sempre.",
+      "Receba suas fotos em alta resolução, prontas para postar e guardar para sempre.",
     color: "from-emerald-400/20 to-emerald-500/5",
   },
 ];
@@ -60,8 +60,8 @@ export default function HowItWorks() {
             <span className="gradient-text">selfie</span>
           </h2>
           <p className="mt-4 text-muted text-lg max-w-xl mx-auto">
-            Em poucos segundos voce encontra todas as fotos profissionais feitas
-            de voce.
+            Em poucos segundos você encontra todas as fotos profissionais feitas
+            de você.
           </p>
         </motion.div>
 
