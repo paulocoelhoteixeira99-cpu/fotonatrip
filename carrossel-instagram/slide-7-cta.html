@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px;
+    height: 1350px;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0a0a0a;
+    color: #ededed;
+    overflow: hidden;
+    position: relative;
+  }
+  .slide {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 40px 50px;
+  }
+  /* Background effects */
+  .glow-1 {
+    position: absolute;
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(13,150,104,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .glow-2 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(34,211,153,0.06) 0%, transparent 70%);
+    border-radius: 50%;
+    bottom: 10%;
+    right: -50px;
+  }
+  /* Decorative lines */
+  .line-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(13,150,104,0.3), transparent);
+  }
+  .line-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(13,150,104,0.3), transparent);
+  }
+  /* CTA card */
+  .cta-card {
+    position: relative;
+    background: linear-gradient(135deg, rgba(13,150,104,0.1), rgba(20,20,20,0.7));
+    border: 1px solid rgba(13,150,104,0.2);
+    border-radius: 36px;
+    padding: 70px 60px;
+    text-align: center;
+    max-width: 960px;
+    width: 100%;
+    box-shadow: 0 0 100px rgba(13,150,104,0.1);
+  }
+  /* Logo */
+  .logo {
+    margin-bottom: 50px;
+  }
+  .logo img {
+    height: 90px;
+    filter: drop-shadow(0 0 30px rgba(13,150,104,0.4));
+    position: relative;
+    left: -12px;
+  }
+  .cta-title {
+    font-size: 60px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -1.5px;
+    margin-bottom: 24px;
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #059669, #0d9668, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .cta-subtitle {
+    font-size: 26px;
+    color: #a3a3a3;
+    line-height: 1.6;
+    margin-bottom: 45px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  /* Button */
+  .cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, #059669, #0d9668);
+    color: white;
+    padding: 22px 48px;
+    border-radius: 50px;
+    font-size: 22px;
+    font-weight: 700;
+    box-shadow: 0 0 60px rgba(13,150,104,0.3);
+    margin-bottom: 50px;
+  }
+  .cta-button svg {
+    width: 24px;
+    height: 24px;
+    stroke: white;
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* Divider */
+  .divider {
+    width: 60px;
+    height: 2px;
+    background: rgba(13,150,104,0.3);
+    margin: 0 auto 40px;
+    border-radius: 1px;
+  }
+  /* Social info */
+  .social-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .social-handle {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(20,20,20,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 28px;
+    border-radius: 50px;
+  }
+  .social-handle svg {
+    width: 24px;
+    height: 24px;
+    fill: #a3a3a3;
+  }
+  .social-handle span {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ededed;
+  }
+  .social-url {
+    font-size: 17px;
+    color: #0d9668;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  /* Floating badge */
+  .free-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(13,150,104,0.1);
+    border: 1px solid rgba(13,150,104,0.2);
+    padding: 10px 22px;
+    border-radius: 50px;
+    margin-bottom: 30px;
+  }
+  .free-badge .dot {
+    width: 8px;
+    height: 8px;
+    background: #34d399;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(34,211,153,0.5);
+  }
+  .free-badge span {
+    font-size: 15px;
+    color: #34d399;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+  <div class="line-top"></div>
+  <div class="line-bottom"></div>
+
+  <div class="cta-card">
+    <!-- Logo -->
+    <div class="logo">
+      <img src="../logo-fotonatrip.png" alt="Fotonatrip">
+    </div>
+
+    <!-- Free badge -->
+    <div class="free-badge">
+      <div class="dot"></div>
+      <span>Cadastro gratuito</span>
+    </div>
+
+    <!-- Title -->
+    <h2 class="cta-title">
+      Quer testar com seu<br><span class="gradient-text">próximo evento?</span>
+    </h2>
+
+    <!-- Subtitle -->
+    <p class="cta-subtitle">
+      Acesse o link na bio e crie sua conta grátis. Suba suas fotos e comece a vender hoje.
+    </p>
+
+    <!-- Button -->
+    <div class="cta-button">
+      Começar agora
+      <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Social -->
+    <div class="social-info">
+      <div class="social-handle">
+        <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        <span>@fotonatrip_oficial</span>
+      </div>
+      <div class="social-url">www.fotonatrip.com.br</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

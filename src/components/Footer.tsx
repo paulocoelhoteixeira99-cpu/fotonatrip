@@ -10,7 +10,7 @@ export default function Footer() {
             <Link href="/" className="flex items-center gap-2">
               <img
                 src="/logo-fotonatrip.png"
-                alt="fotonatrip"
+                alt="Fotonatrip - Plataforma de venda de fotos de evento"
                 className="h-10 w-auto"
               />
             </Link>
@@ -79,7 +79,13 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="mt-12 pt-8 border-t border-border">
+          <p className="text-xs text-muted/60 leading-relaxed max-w-3xl">
+            Fotonatrip é uma plataforma de venda de fotos de eventos online. Ideal para fotógrafos de evento, fotógrafos de festa e fotógrafos de viagem que querem vender fotos profissionais de forma automática. Seus clientes encontram as próprias fotos por reconhecimento facial — basta tirar uma selfie. Com upload em lote, watermark automática, QR Code para divulgação no evento, pagamento via Pix e cartão, e repasse direto ao fotógrafo. A menor taxa do mercado: apenas 7%.
+          </p>
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-muted">
             {new Date().getFullYear()} fotonatrip. Todos os direitos reservados.
           </p>

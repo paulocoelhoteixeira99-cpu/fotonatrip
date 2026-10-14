@@ -4,9 +4,9 @@ import Link from "next/link";
 import { FileText } from "lucide-react";
 
 export const metadata = {
-  title: "Termos de Uso | fotonatrip",
+  title: "Termos de Uso",
   description:
-    "Termos e condicoes de uso da plataforma fotonatrip.",
+    "Termos e condições de uso da plataforma Fotonatrip. Leia antes de utilizar nossos serviços.",
 };
 
 export default function TermosPage() {

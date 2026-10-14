@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px;
+    height: 1350px;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0a0a0a;
+    color: #ededed;
+    overflow: hidden;
+    position: relative;
+  }
+  .slide {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 70px;
+    position: relative;
+  }
+  .glow {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(13,150,104,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .label {
+    font-size: 15px;
+    color: #0d9668;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+  .title {
+    font-size: 48px;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.15;
+    letter-spacing: -1.5px;
+    margin-bottom: 10px;
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #059669, #0d9668, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    font-size: 22px;
+    color: #a3a3a3;
+    text-align: center;
+    margin-bottom: 45px;
+    max-width: 650px;
+  }
+  /* Dashboard mockup */
+  .dashboard {
+    width: 100%;
+    max-width: 920px;
+    background: rgba(20,20,20,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 0 80px rgba(13,150,104,0.08);
+  }
+  .dash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .dash-title {
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .dash-badge {
+    background: rgba(13,150,104,0.15);
+    border: 1px solid rgba(13,150,104,0.25);
+    color: #34d399;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .dash-content {
+    padding: 32px;
+  }
+  /* Upload area */
+  .upload-zone {
+    border: 2px dashed rgba(13,150,104,0.3);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    background: rgba(13,150,104,0.03);
+    margin-bottom: 30px;
+  }
+  .upload-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 18px;
+    background: rgba(13,150,104,0.1);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .upload-icon svg {
+    width: 36px;
+    height: 36px;
+    stroke: #0d9668;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .upload-text {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .upload-sub {
+    font-size: 15px;
+    color: #a3a3a3;
+  }
+  /* Progress card (matches site) */
+  .progress-card {
+    background: rgba(20,20,20,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+  .progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .progress-label {
+    font-size: 16px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .progress-label svg {
+    width: 20px;
+    height: 20px;
+    stroke: #0d9668;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .progress-pct {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0d9668;
+  }
+  .progress-track {
+    width: 100%;
+    height: 12px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 50px;
+    background: #0d9668;
+  }
+  .progress-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+  }
+  .progress-footer-text {
+    font-size: 13px;
+    color: #a3a3a3;
+  }
+  .progress-cancel {
+    font-size: 13px;
+    color: #f87171;
+    font-weight: 500;
+  }
+  /* Processed photos grid */
+  .processed-section {
+    margin-top: 4px;
+  }
+  .processed-label {
+    font-size: 14px;
+    color: #a3a3a3;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .processed-label .count {
+    color: #34d399;
+    font-weight: 700;
+  }
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+  .thumb-grid .thumb {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .thumb-grid .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .thumb-check {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    background: rgba(13,150,104,0.85);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .thumb-check span {
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="glow"></div>
+
+  <div class="label">A solução</div>
+  <h2 class="title">Você só faz <span class="gradient-text">UMA coisa</span>:</h2>
+  <p class="subtitle">Subir suas fotos. A gente cuida do resto.</p>
+
+  <!-- Dashboard mockup -->
+  <div class="dashboard">
+    <div class="dash-header">
+      <div class="dash-title">Gerenciar Evento</div>
+      <div class="dash-badge">Ativo</div>
+    </div>
+    <div class="dash-content">
+      <!-- Upload zone -->
+      <div class="upload-zone">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="upload-text">Arraste suas fotos aqui</div>
+        <div class="upload-sub">ou clique para selecionar</div>
+      </div>
+
+      <!-- Progress bar (matching the real site) -->
+      <div class="progress-card">
+        <div class="progress-header">
+          <span class="progress-label">
+            <svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M16 20h2a2 2 0 0 0 2-2v-2"/><circle cx="12" cy="11" r="3"/><path d="M12 14a4 4 0 0 0-4 4"/><path d="M12 14a4 4 0 0 1 4 4"/></svg>
+            Processando 15 de 47...
+          </span>
+          <span class="progress-pct">32%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:32%"></div>
+        </div>
+        <div class="progress-footer">
+          <span class="progress-footer-text">Upload + watermark + detecção facial por IA (servidor)</span>
+          <span class="progress-cancel">Cancelar</span>
+        </div>
+      </div>
+
+      <!-- Processed photos -->
+      <div class="processed-section">
+        <div class="processed-label"><span class="count">15</span> fotos processadas</div>
+        <div class="thumb-grid">
+          <div class="thumb"><img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=120&h=120&fit=crop&crop=faces&q=80" alt=""><div class="thumb-check"><span>&#10003;</span></div></div>
+          <div class="thumb"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces&q=80" alt=""><div class="thumb-check"><span>&#10003;</span></div></div>
+          <div class="thumb"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=faces&q=80" alt=""><div class="thumb-check"><span>&#10003;</span></div></div>
+          <div class="thumb"><img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=120&h=120&fit=crop&crop=faces&q=80" alt=""><div class="thumb-check"><span>&#10003;</span></div></div>
+          <div class="thumb"><img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&h=120&fit=crop&crop=faces&q=80" alt=""><div class="thumb-check"><span>&#10003;</span></div></div>
+          <div class="thumb"><img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=faces&q=80" alt=""><div class="thumb-check"><span>&#10003;</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

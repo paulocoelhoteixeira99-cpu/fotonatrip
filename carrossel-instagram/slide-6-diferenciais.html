@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px;
+    height: 1350px;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0a0a0a;
+    color: #ededed;
+    overflow: hidden;
+    position: relative;
+  }
+  .slide {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 80px 70px;
+    position: relative;
+  }
+  .glow-1 {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(13,150,104,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    top: 10%;
+    right: -150px;
+  }
+  .glow-2 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%);
+    border-radius: 50%;
+    bottom: 15%;
+    left: -100px;
+  }
+  .label {
+    font-size: 15px;
+    color: #0d9668;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+  .title {
+    font-size: 52px;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.15;
+    letter-spacing: -1.5px;
+    margin-bottom: 60px;
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #059669, #0d9668, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  /* Benefits grid */
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 920px;
+  }
+  .benefit-card {
+    background: rgba(20,20,20,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 36px 32px;
+    transition: all 0.3s;
+  }
+  .benefit-card:hover {
+    background: rgba(30,30,30,0.8);
+    transform: translateY(-2px);
+  }
+  .benefit-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .benefit-icon svg {
+    width: 30px;
+    height: 30px;
+    stroke: #0d9668;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .bi-1 { background: linear-gradient(135deg, rgba(13,150,104,0.2), rgba(13,150,104,0.05)); }
+  .bi-2 { background: linear-gradient(135deg, rgba(34,211,153,0.2), rgba(34,211,153,0.05)); }
+  .bi-3 { background: linear-gradient(135deg, rgba(5,150,105,0.2), rgba(5,150,105,0.05)); }
+  .bi-4 { background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05)); }
+  .bi-5 { background: linear-gradient(135deg, rgba(52,211,153,0.2), rgba(52,211,153,0.05)); }
+  .bi-6 { background: linear-gradient(135deg, rgba(4,120,87,0.2), rgba(4,120,87,0.05)); }
+  .benefit-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .benefit-desc {
+    font-size: 16px;
+    color: #a3a3a3;
+    line-height: 1.5;
+  }
+  /* Highlight card */
+  .benefit-card.highlight {
+    background: linear-gradient(135deg, rgba(13,150,104,0.12), rgba(20,20,20,0.7));
+    border: 1px solid rgba(13,150,104,0.2);
+    box-shadow: 0 0 60px rgba(13,150,104,0.08);
+  }
+  .highlight .benefit-title {
+    background: linear-gradient(135deg, #059669, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <div class="label">Diferenciais</div>
+  <h2 class="title">Por que fotógrafos estão<br><span class="gradient-text">usando</span>:</h2>
+
+  <div class="benefits-grid">
+    <!-- 1. Upload em lote -->
+    <div class="benefit-card">
+      <div class="benefit-icon bi-1">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="benefit-title">Upload em lote</div>
+      <div class="benefit-desc">Suba centenas de fotos de uma vez. A plataforma processa tudo automaticamente.</div>
+    </div>
+
+    <!-- 2. Watermark automática -->
+    <div class="benefit-card">
+      <div class="benefit-icon bi-2">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="benefit-title">Watermark automática</div>
+      <div class="benefit-desc">Proteção automática em todas as previews. Original só após pagamento.</div>
+    </div>
+
+    <!-- 3. QR Code -->
+    <div class="benefit-card">
+      <div class="benefit-icon bi-3">
+        <svg viewBox="0 0 24 24"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="4" height="4" rx="0.5"/><line x1="22" y1="14" x2="22" y2="22"/><line x1="14" y1="22" x2="22" y2="22"/></svg>
+      </div>
+      <div class="benefit-title">QR Code no evento</div>
+      <div class="benefit-desc">Gere um QR Code exclusivo e divulgue no evento para seus clientes.</div>
+    </div>
+
+    <!-- 4. Painel de vendas -->
+    <div class="benefit-card">
+      <div class="benefit-icon bi-4">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </div>
+      <div class="benefit-title">Painel de vendas</div>
+      <div class="benefit-desc">Acompanhe vendas, faturamento e performance dos seus eventos em tempo real.</div>
+    </div>
+
+    <!-- 5. Eventos compartilhados -->
+    <div class="benefit-card">
+      <div class="benefit-icon bi-5">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="benefit-title">Eventos compartilhados</div>
+      <div class="benefit-desc">Convide outros fotógrafos para o mesmo evento e divida os lucros.</div>
+    </div>
+
+    <!-- 6. Taxa justa (highlight) -->
+    <div class="benefit-card highlight">
+      <div class="benefit-icon bi-6">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="benefit-title">Taxa justa: só 7%</div>
+      <div class="benefit-desc">A menor taxa do mercado. Você fica com 93% de cada venda. Sem surpresas.</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

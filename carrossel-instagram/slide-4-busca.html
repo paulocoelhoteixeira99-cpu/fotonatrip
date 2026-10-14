@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1080px; height: 1350px; font-family: 'Inter', system-ui, sans-serif; background: #0a0a0a; color: #ededed; overflow: hidden; }
+  .slide { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 50px 50px 50px; position: relative; }
+  .glow { position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(13,150,104,0.08) 0%, transparent 70%); border-radius: 50%; top: 20%; left: 50%; transform: translateX(-50%); pointer-events: none; }
+  .label { font-size: 15px; color: #0d9668; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+  .title { font-size: 66px; font-weight: 800; text-align: center; line-height: 1.1; letter-spacing: -2px; margin-bottom: 6px; }
+  .gradient-text { background: linear-gradient(135deg, #059669, #0d9668, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { font-size: 28px; color: #a3a3a3; text-align: center; margin-bottom: 20px; line-height: 1.4; }
+  /* 3 Step Flow */
+  .flow { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; width: 980px; }
+  .flow-step { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .flow-icon-wrap { width: 90px; height: 90px; border-radius: 24px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .flow-icon-wrap.step1, .flow-icon-wrap.step2 { background: linear-gradient(135deg, rgba(13,150,104,0.15), rgba(13,150,104,0.05)); border: 1px solid rgba(13,150,104,0.25); }
+  .flow-icon-wrap.step3 { background: linear-gradient(135deg, rgba(34,211,153,0.15), rgba(34,211,153,0.05)); border: 1px solid rgba(34,211,153,0.25); }
+  .flow-icon-wrap svg { width: 38px; height: 38px; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .step1 svg, .step2 svg { stroke: #0d9668; }
+  .step3 svg { stroke: #34d399; }
+  .flow-step-num { font-size: 13px; font-weight: 700; color: #0d9668; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .flow-step-title { font-size: 30px; font-weight: 700; margin-bottom: 4px; }
+  .flow-step-desc { font-size: 22px; color: #a3a3a3; line-height: 1.3; }
+  .flow-arrow { display: flex; align-items: center; padding-top: 30px; }
+  .flow-arrow svg { width: 28px; height: 28px; stroke: #262626; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* Results card */
+  .results-mockup { width: 980px; flex: 1; background: rgba(20,20,20,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 24px; box-shadow: 0 0 60px rgba(13,150,104,0.06); display: flex; flex-direction: column; }
+  .results-header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .results-selfie { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #0d9668, #34d399); border: 3px solid rgba(13,150,104,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .results-selfie svg { width: 26px; height: 26px; stroke: white; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .results-info { flex: 1; }
+  .results-title { font-size: 34px; font-weight: 700; }
+  .results-count { font-size: 24px; color: #a3a3a3; margin-top: 2px; }
+  /* Photo grid */
+  .photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; flex: 1; }
+  .photo-card { border-radius: 14px; position: relative; overflow: hidden; min-height: 0; }
+  .photo-card .bg { position: absolute; inset: 0; }
+  .pc-1 .bg { background: linear-gradient(135deg, #1a3a2a, #0d6648, #1a3a2a); }
+  .pc-2 .bg { background: linear-gradient(135deg, #1a2a3a, #1a6a8a, #1a2a3a); }
+  .pc-3 .bg { background: linear-gradient(135deg, #2a1a3a, #5a2a8a, #2a1a3a); }
+  .pc-5 .bg { background: linear-gradient(135deg, #1a3a3a, #1a8a6a, #1a3a3a); }
+  .pc-6 .bg { background: linear-gradient(135deg, #3a1a2a, #8a2a5a, #3a1a2a); }
+  .pc-7 .bg { background: linear-gradient(135deg, #2a3a1a, #5a8a1a, #2a3a1a); }
+  .pc-8 .bg { background: linear-gradient(135deg, #1a1a3a, #3a3a8a, #1a1a3a); }
+  .photo-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="glow"></div>
+  <div class="label">Busca por selfie</div>
+  <h2 class="title">Seu cliente encontra<br>as fotos em <span class="gradient-text">segundos</span></h2>
+  <p class="subtitle">Reconhecimento facial automático.<br>Sem marcar, sem numerar, sem enviar.</p>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-icon-wrap step1"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+      <div class="flow-step-num">Passo 1</div>
+      <div class="flow-step-title">Tira uma selfie</div>
+      <div class="flow-step-desc">Usando a câmera<br>do celular</div>
+    </div>
+    <div class="flow-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="flow-step">
+      <div class="flow-icon-wrap step2"><svg viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+      <div class="flow-step-num">Passo 2</div>
+      <div class="flow-step-title">IA analisa</div>
+      <div class="flow-step-desc">Compara com<br>todas as fotos</div>
+    </div>
+    <div class="flow-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="flow-step">
+      <div class="flow-icon-wrap step3"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+      <div class="flow-step-num">Passo 3</div>
+      <div class="flow-step-title">Resultados!</div>
+      <div class="flow-step-desc">Todas as fotos<br>encontradas</div>
+    </div>
+  </div>
+  <div class="results-mockup">
+    <div class="results-header">
+      <div class="results-selfie"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="results-info">
+        <div class="results-title">Fotos encontradas</div>
+        <div class="results-count">7 fotos com seu rosto</div>
+      </div>
+    </div>
+    <div class="photo-grid">
+      <div class="photo-card pc-1"><div class="bg"></div><img src="https://images.pexels.com/photos/3781538/pexels-photo-3781538.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt=""></div>
+      <div class="photo-card pc-2"><div class="bg"></div><img src="https://images.pexels.com/photos/3775117/pexels-photo-3775117.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt=""></div>
+      <div class="photo-card pc-3"><div class="bg"></div><img src="https://images.pexels.com/photos/3771809/pexels-photo-3771809.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt=""></div>
+      <div class="photo-card pc-5"><div class="bg"></div><img src="https://images.pexels.com/photos/3764542/pexels-photo-3764542.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt=""></div>
+      <div class="photo-card pc-6"><div class="bg"></div><img src="https://images.pexels.com/photos/3781529/pexels-photo-3781529.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt=""></div>
+      <div class="photo-card pc-7"><div class="bg"></div><img src="https://images.pexels.com/photos/3755760/pexels-photo-3755760.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt=""></div>
+      <div class="photo-card pc-8"><div class="bg"></div><img src="https://images.pexels.com/photos/948873/pexels-photo-948873.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt=""></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Central de Ajuda | fotonatrip",
+  title: "Central de Ajuda",
   description:
-    "Tire suas duvidas sobre como encontrar, comprar e baixar suas fotos na fotonatrip.",
+    "Tire suas dúvidas sobre como encontrar, comprar e baixar suas fotos na Fotonatrip.",
 };
 
 const faqs = [

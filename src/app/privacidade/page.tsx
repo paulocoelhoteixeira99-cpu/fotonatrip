@@ -4,9 +4,9 @@ import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 
 export const metadata = {
-  title: "Politica de Privacidade | fotonatrip",
+  title: "Política de Privacidade",
   description:
-    "Saiba como a fotonatrip coleta, utiliza e protege seus dados pessoais, incluindo dados biometricos.",
+    "Saiba como a Fotonatrip coleta, utiliza e protege seus dados pessoais, incluindo dados biométricos de reconhecimento facial.",
 };
 
 export default function PrivacidadePage() {

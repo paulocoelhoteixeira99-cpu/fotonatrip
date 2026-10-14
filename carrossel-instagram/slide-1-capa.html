@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px;
+    height: 1350px;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0a0a0a;
+    color: #ededed;
+    overflow: hidden;
+    position: relative;
+  }
+  .slide {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 50px 60px;
+  }
+  /* Green glow orbs */
+  .glow-1 {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(13,150,104,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .glow-2 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    bottom: 20%;
+    right: -100px;
+    pointer-events: none;
+  }
+  /* Floating photo frames */
+  .photo-frame {
+    position: absolute;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.06);
+    opacity: 0.15;
+    background: #141414;
+  }
+  .pf-1 { width: 140px; height: 180px; top: 80px; left: 60px; transform: rotate(-8deg); }
+  .pf-2 { width: 120px; height: 155px; top: 120px; right: 70px; transform: rotate(6deg); }
+  .pf-3 { width: 110px; height: 140px; bottom: 180px; left: 90px; transform: rotate(5deg); }
+  .pf-4 { width: 130px; height: 168px; bottom: 140px; right: 100px; transform: rotate(-4deg); }
+  .pf-5 { width: 100px; height: 130px; top: 350px; left: 30px; transform: rotate(-3deg); }
+  .pf-6 { width: 115px; height: 148px; top: 300px; right: 30px; transform: rotate(7deg); }
+  .photo-frame .inner {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(13,150,104,0.1), rgba(20,20,20,0.8));
+  }
+  /* Logo */
+  .logo {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 50px;
+  }
+  .logo img {
+    height: 140px;
+    filter: drop-shadow(0 0 30px rgba(13,150,104,0.3));
+    position: relative;
+    left: -20px;
+  }
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(20,20,20,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 12px 24px;
+    border-radius: 50px;
+    margin-bottom: 44px;
+    position: relative;
+    z-index: 2;
+  }
+  .badge span {
+    font-size: 18px;
+    color: #a3a3a3;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .badge .dot {
+    width: 8px;
+    height: 8px;
+    background: #0d9668;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(13,150,104,0.5);
+  }
+  /* Main text */
+  .title {
+    font-size: 82px;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.1;
+    letter-spacing: -2px;
+    position: relative;
+    z-index: 2;
+    max-width: 950px;
+  }
+  .title .highlight {
+    background: linear-gradient(135deg, #059669, #0d9668, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    font-size: 30px;
+    color: #a3a3a3;
+    text-align: center;
+    margin-top: 36px;
+    line-height: 1.5;
+    position: relative;
+    z-index: 2;
+    max-width: 700px;
+    font-weight: 400;
+  }
+  /* Bottom line */
+  .bottom-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #262626, transparent);
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <!-- Background effects -->
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <!-- Floating photo frames -->
+  <div class="photo-frame pf-1"><div class="inner"></div></div>
+  <div class="photo-frame pf-2"><div class="inner"></div></div>
+  <div class="photo-frame pf-3"><div class="inner"></div></div>
+  <div class="photo-frame pf-4"><div class="inner"></div></div>
+  <div class="photo-frame pf-5"><div class="inner"></div></div>
+  <div class="photo-frame pf-6"><div class="inner"></div></div>
+
+  <!-- Logo -->
+  <div class="logo">
+    <img src="../logo-fotonatrip.png" alt="Fotonatrip">
+  </div>
+
+  <!-- Badge -->
+  <div class="badge">
+    <div class="dot"></div>
+    <span>Para fotógrafos</span>
+  </div>
+
+  <!-- Title -->
+  <h1 class="title">
+    Você ainda manda foto por <span class="highlight">WhatsApp?</span>
+  </h1>
+
+  <!-- Subtitle -->
+  <p class="subtitle">
+    Existe um jeito melhor de vender suas fotos de evento.
+  </p>
+
+</div>
+</body>
+</html>

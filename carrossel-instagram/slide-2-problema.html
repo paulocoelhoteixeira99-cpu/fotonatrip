@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1080px; height: 1350px; font-family: 'Inter', system-ui, sans-serif; background: #0a0a0a; color: #ededed; overflow: hidden; }
+  .slide { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 60px 50px 60px; position: relative; }
+  .glow { position: absolute; width: 500px; height: 500px; background: radial-gradient(circle, rgba(220,60,60,0.06) 0%, transparent 70%); border-radius: 50%; top: 5%; right: -100px; pointer-events: none; }
+  .label { font-size: 15px; color: #ef4444; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+  .title { font-size: 72px; font-weight: 800; text-align: center; line-height: 1.08; letter-spacing: -2px; margin-bottom: 22px; }
+  .chat-mockup { width: 980px; background: rgba(20,20,20,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 20px 26px; margin-bottom: 22px; }
+  .chat-header { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 14px; }
+  .chat-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .chat-avatar svg { width: 24px; height: 24px; fill: white; }
+  .chat-name { font-size: 34px; font-weight: 600; }
+  .chat-status { font-size: 24px; color: #a3a3a3; margin-top: 2px; }
+  .messages { display: flex; flex-direction: column; }
+  .msg { max-width: 800px; padding: 12px 18px; border-radius: 18px; font-size: 32px; line-height: 1.3; margin-bottom: 8px; }
+  .msg-received { background: #1a1a1a; border: 1px solid rgba(255,255,255,0.05); border-top-left-radius: 6px; color: #ededed; }
+  .msg-sent { max-width: 790px; background: rgba(13,150,104,0.15); border: 1px solid rgba(13,150,104,0.2); border-top-right-radius: 6px; margin-left: auto; color: #ededed; }
+  .msg:last-child { margin-bottom: 0; }
+  .msg-time { font-size: 20px; color: #666; margin-top: 3px; text-align: right; }
+  .pain-points { width: 980px; }
+  .pain-grid { display: flex; flex-direction: column; gap: 12px; }
+  .pain-item { display: flex; align-items: center; gap: 18px; background: rgba(20,20,20,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(239,68,68,0.12); border-radius: 18px; height: 78px; padding: 0 26px; }
+  .pain-icon { width: 46px; height: 46px; border-radius: 14px; background: rgba(239,68,68,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pain-icon span { color: #ef4444; font-size: 26px; font-weight: 700; }
+  .pain-text { font-size: 34px; font-weight: 500; color: #d4d4d4; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="glow"></div>
+  <div class="label">O problema</div>
+  <h2 class="title">A dor de todo fotógrafo<br>de evento:</h2>
+  <div class="chat-mockup">
+    <div class="chat-header">
+      <div class="chat-avatar"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg></div>
+      <div>
+        <div class="chat-name">Clientes do Evento</div>
+        <div class="chat-status">47 mensagens não lidas</div>
+      </div>
+    </div>
+    <div class="messages">
+      <div class="msg msg-received">Oi! Me manda minhas fotos? Eu estava de camisa azul<div class="msg-time">14:23</div></div>
+      <div class="msg msg-received">Qual é a minha? Não sei o número<div class="msg-time">14:45</div></div>
+      <div class="msg msg-sent">Oi! Vou procurar e te envio, são mais de 500 fotos...<div class="msg-time">16:02</div></div>
+      <div class="msg msg-received">Conseguiu achar? Estou esperando desde ontem<div class="msg-time">09:15</div></div>
+    </div>
+  </div>
+  <div class="pain-points">
+    <div class="pain-grid">
+      <div class="pain-item"><div class="pain-icon"><span>&times;</span></div><div class="pain-text">Horas enviando foto uma por uma</div></div>
+      <div class="pain-item"><div class="pain-icon"><span>&times;</span></div><div class="pain-text">Cliente some e nunca paga</div></div>
+      <div class="pain-item"><div class="pain-icon"><span>&times;</span></div><div class="pain-text">Sem controle de quem comprou o que</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

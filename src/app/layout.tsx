@@ -16,15 +16,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FOTONATRIP - A melhor plataforma de venda de fotos online",
+  metadataBase: new URL("https://www.fotonatrip.com.br"),
+  title: {
+    default: "Fotonatrip — Venda suas fotos de evento com reconhecimento facial",
+    template: "%s | Fotonatrip",
+  },
   description:
-    "Tire uma selfie e encontre todas as fotos profissionais feitas de você durante sua viagem. Busca por reconhecimento facial.",
-  keywords: ["fotos", "viagem", "reconhecimento facial", "fotógrafo", "eventos"],
+    "Plataforma onde fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial. Upload em lote, watermark automática, pagamento via Pix e cartão.",
+  keywords: [
+    "venda de fotos", "fotos de evento", "reconhecimento facial",
+    "fotógrafo de evento", "busca por selfie", "fotos de viagem",
+    "plataforma para fotógrafos", "fotonatrip",
+  ],
   openGraph: {
-    title: "FOTONATRIP - A melhor plataforma de venda de fotos online",
+    type: "website",
+    locale: "pt_BR",
+    siteName: "Fotonatrip",
+    title: "Fotonatrip — Venda suas fotos de evento com reconhecimento facial",
     description:
-      "Tire uma selfie e encontre todas as fotos profissionais feitas de você durante sua viagem.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+      "Fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial. Simples, rápido e seguro.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Fotonatrip" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fotonatrip — Venda suas fotos de evento com reconhecimento facial",
+    description:
+      "Fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial.",
+    images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "https://www.fotonatrip.com.br",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
