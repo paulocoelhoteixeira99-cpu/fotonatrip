@@ -15,9 +15,10 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "Fotonatrip",
+  alternateName: "Foto na Trip",
   url: "https://www.fotonatrip.com.br",
   description:
-    "Plataforma onde fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial.",
+    "Fotonatrip (Foto na Trip) — plataforma onde fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial.",
   applicationCategory: "PhotographyApplication",
   operatingSystem: "Web",
   offers: {
@@ -29,6 +30,7 @@ const jsonLd = {
   creator: {
     "@type": "Organization",
     name: "Fotonatrip",
+    alternateName: "Foto na Trip",
     url: "https://www.fotonatrip.com.br",
     email: "fotonatrip2026@gmail.com",
     sameAs: ["https://www.instagram.com/fotonatrip_oficial"],

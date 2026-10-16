@@ -22,26 +22,28 @@ export const metadata: Metadata = {
     template: "%s | Fotonatrip",
   },
   description:
-    "Plataforma onde fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial. Upload em lote, watermark automática, pagamento via Pix e cartão.",
+    "Fotonatrip (Foto na Trip) — plataforma onde fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial. Upload em lote, watermark automática, pagamento via Pix e cartão.",
   keywords: [
+    "fotonatrip", "foto na trip", "foto na trip plataforma",
     "venda de fotos", "fotos de evento", "reconhecimento facial",
     "fotógrafo de evento", "busca por selfie", "fotos de viagem",
-    "plataforma para fotógrafos", "fotonatrip",
+    "plataforma para fotógrafos", "comprar fotos de evento",
+    "encontrar minhas fotos", "fotos de festa",
   ],
   openGraph: {
     type: "website",
     locale: "pt_BR",
     siteName: "Fotonatrip",
-    title: "Fotonatrip — Venda suas fotos de evento com reconhecimento facial",
+    title: "Fotonatrip (Foto na Trip) — Venda suas fotos de evento com reconhecimento facial",
     description:
-      "Fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial. Simples, rápido e seguro.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Fotonatrip" }],
+      "Fotonatrip (Foto na Trip) — fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial. Simples, rápido e seguro.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Fotonatrip - Foto na Trip" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fotonatrip — Venda suas fotos de evento com reconhecimento facial",
+    title: "Fotonatrip (Foto na Trip) — Venda suas fotos de evento com reconhecimento facial",
     description:
-      "Fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial.",
+      "Fotonatrip (Foto na Trip) — fotógrafos vendem fotos de eventos e clientes encontram suas fotos por reconhecimento facial.",
     images: ["/og-image.png"],
   },
   alternates: {

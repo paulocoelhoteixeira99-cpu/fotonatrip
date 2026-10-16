@@ -81,7 +81,7 @@ export default function Footer() {
 
         <div className="mt-12 pt-8 border-t border-border">
           <p className="text-xs text-muted/60 leading-relaxed max-w-3xl">
-            Fotonatrip é uma plataforma de venda de fotos de eventos online. Ideal para fotógrafos de evento, fotógrafos de festa e fotógrafos de viagem que querem vender fotos profissionais de forma automática. Seus clientes encontram as próprias fotos por reconhecimento facial — basta tirar uma selfie. Com upload em lote, watermark automática, QR Code para divulgação no evento, pagamento via Pix e cartão, e repasse direto ao fotógrafo. A menor taxa do mercado: apenas 7%.
+            Fotonatrip (Foto na Trip) é uma plataforma de venda de fotos de eventos online. Ideal para fotógrafos de evento, fotógrafos de festa e fotógrafos de viagem que querem vender fotos profissionais de forma automática. Seus clientes encontram as próprias fotos por reconhecimento facial — basta tirar uma selfie. Com upload em lote, watermark automática, QR Code para divulgação no evento, pagamento via Pix e cartão, e repasse direto ao fotógrafo. A menor taxa do mercado: apenas 7%. Pesquise por Foto na Trip ou Fotonatrip e encontre a melhor plataforma para fotógrafos de evento do Brasil.
           </p>
         </div>
 
