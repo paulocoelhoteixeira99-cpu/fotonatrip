@@ -91,6 +91,8 @@ export default function EventoDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
+  const [deletingPhoto, setDeletingPhoto] = useState(false);
   const [priceInput, setPriceInput] = useState("");
   const [packagePriceInput, setPackagePriceInput] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
@@ -429,16 +431,21 @@ export default function EventoDetailPage() {
     setEvent({ ...event, cover_url: url });
   }
 
-  async function handleDeletePhoto(photoId: string) {
-    const photo = photos.find((p) => p.id === photoId);
-    await supabase.from("face_embeddings").delete().eq("photo_id", photoId);
-    await supabase.from("photos").delete().eq("id", photoId);
+  async function confirmDeletePhoto() {
+    if (!photoToDelete) return;
+    setDeletingPhoto(true);
+    const photo = photos.find((p) => p.id === photoToDelete);
+    await supabase.from("face_embeddings").delete().eq("photo_id", photoToDelete);
+    await supabase.from("photos").delete().eq("id", photoToDelete);
     if (photo) {
       const paths = [photo.storage_path];
       if (photo.watermark_path) paths.push(photo.watermark_path);
       deletePhotoFiles(paths);
     }
-    setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    setPhotos((prev) => prev.filter((p) => p.id !== photoToDelete));
+    if (previewPhoto?.id === photoToDelete) setPreviewPhoto(null);
+    setPhotoToDelete(null);
+    setDeletingPhoto(false);
   }
 
   const [hasSoldPhotos, setHasSoldPhotos] = useState<boolean | null>(null);
@@ -848,6 +855,46 @@ export default function EventoDetailPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete photo confirmation modal */}
+      {photoToDelete && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="glass rounded-2xl p-8 max-w-sm w-full">
+            <div className="w-12 h-12 rounded-xl bg-red-400/10 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-400" />
+            </div>
+            <h3 className="text-lg font-bold text-center mb-2">
+              Excluir foto?
+            </h3>
+            <p className="text-sm text-muted text-center mb-6">
+              Essa ação não pode ser desfeita. A foto será removida permanentemente do evento.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPhotoToDelete(null)}
+                disabled={deletingPhoto}
+                className="flex-1 glass hover:bg-white/10 py-3 rounded-xl text-sm font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeletePhoto}
+                disabled={deletingPhoto}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingPhoto ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  "Sim, excluir"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1311,7 +1358,7 @@ export default function EventoDetailPage() {
                   )}
                   {canDelete && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); }}
+                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete(photo.id); }}
                       className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-colors"
                       title="Excluir foto"
                     >
@@ -1374,7 +1421,7 @@ export default function EventoDetailPage() {
                 )}
                 {(isOwner || previewPhoto.photographer_id === currentUserId) ? (
                   <button
-                    onClick={() => { handleDeletePhoto(previewPhoto.id); setPreviewPhoto(null); }}
+                    onClick={() => setPhotoToDelete(previewPhoto.id)}
                     className="flex items-center gap-1.5 bg-red-500/80 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
