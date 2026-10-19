@@ -89,6 +89,7 @@ interface EventSale {
 interface GrowthData {
   daily_growth: { date: string; clients: number; photographers: number }[];
   cumulative_growth: { date: string; total_clients: number; total_photographers: number }[];
+  monthly_revenue?: { month: string; revenue_cents: number; platform_fee_cents: number; orders_count: number }[];
 }
 
 interface TrafficData {
@@ -177,11 +178,17 @@ function BarChart({
   bars,
   labelKey,
   height = 160,
+  showValues = false,
+  formatValue,
+  formatLabel,
 }: {
   data: Record<string, unknown>[];
   bars: { key: string; color: string; label: string }[];
   labelKey: string;
   height?: number;
+  showValues?: boolean;
+  formatValue?: (val: number) => string;
+  formatLabel?: (val: string, isLast: boolean) => string;
 }) {
   if (data.length === 0) return <p className="text-muted text-sm text-center py-8">Sem dados ainda.</p>;
 
@@ -193,6 +200,8 @@ function BarChart({
   // Show at most ~30 bars
   const step = Math.max(1, Math.floor(data.length / 30));
   const filtered = data.filter((_, i) => i % step === 0 || i === data.length - 1);
+
+  const fmtVal = formatValue || ((v: number) => String(v));
 
   return (
     <div>
@@ -210,9 +219,15 @@ function BarChart({
           const isLast = i === filtered.length - 1;
           const dd = dateStr.slice(8, 10);
           const mm = dateStr.slice(5, 7);
+          const total = bars.reduce((s, b) => s + ((d[b.key] as number) || 0), 0);
           return (
             <div key={dateStr} className="flex flex-col items-center gap-0.5 flex-1 min-w-[18px]">
-              <div className="w-full flex items-end gap-[1px]" style={{ height: height - 30 }}>
+              {showValues && total > 0 && (
+                <span className="text-[8px] text-muted whitespace-nowrap leading-none">
+                  {bars.length === 1 ? fmtVal(total) : bars.map((b) => fmtVal((d[b.key] as number) || 0)).join("/")}
+                </span>
+              )}
+              <div className="w-full flex items-end gap-[1px]" style={{ height: height - (showValues ? 44 : 30) }}>
                 {bars.map((b) => {
                   const val = (d[b.key] as number) || 0;
                   const pct = Math.max((val / maxVal) * 100, val > 0 ? 6 : 2);
@@ -221,13 +236,13 @@ function BarChart({
                       key={b.key}
                       className={`flex-1 rounded-t transition-colors ${val > 0 ? b.color : "bg-white/5"} hover:opacity-80`}
                       style={{ height: `${pct}%` }}
-                      title={`${b.label}: ${val}`}
+                      title={`${b.label}: ${fmtVal(val)}`}
                     />
                   );
                 })}
               </div>
               <span className={`text-[8px] whitespace-nowrap ${isLast ? "text-primary font-semibold" : "text-muted"}`}>
-                {isLast ? "Hoje" : `${dd}/${mm}`}
+                {formatLabel ? formatLabel(dateStr, isLast) : (isLast ? "Hoje" : `${dd}/${mm}`)}
               </span>
             </div>
           );
@@ -757,35 +772,62 @@ function GrowthTab({ data }: { data: GrowthData }) {
         />
       </div>
 
+      {/* Monthly revenue chart */}
+      {data.monthly_revenue && data.monthly_revenue.length > 0 && (
+        <div className="glass rounded-2xl p-6 mb-8">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-primary" /> Receita e comissão por mês (últimos 6 meses)
+          </h2>
+          <BarChart
+            data={data.monthly_revenue}
+            bars={[
+              { key: "revenue_cents", color: "bg-green-400", label: "Receita total" },
+              { key: "platform_fee_cents", color: "bg-primary", label: "Comissão plataforma (7%)" },
+            ]}
+            labelKey="month"
+            height={200}
+            showValues
+            formatValue={(v) => `R$${(v / 100).toFixed(0)}`}
+            formatLabel={(val) => {
+              const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+              const m = parseInt(val.slice(5, 7), 10);
+              return MONTHS[m - 1] || val;
+            }}
+          />
+        </div>
+      )}
+
       {/* Daily new signups chart */}
       <div className="glass rounded-2xl p-6 mb-8">
         <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <UserPlus className="w-4 h-4 text-primary" /> Novos cadastros por dia (ultimos 90 dias)
+          <UserPlus className="w-4 h-4 text-primary" /> Novos cadastros por dia (últimos 90 dias)
         </h2>
         <BarChart
           data={data.daily_growth}
           bars={[
             { key: "clients", color: "bg-blue-400", label: "Clientes" },
-            { key: "photographers", color: "bg-primary", label: "Fotografos" },
+            { key: "photographers", color: "bg-primary", label: "Fotógrafos" },
           ]}
           labelKey="date"
           height={180}
+          showValues
         />
       </div>
 
       {/* Cumulative growth chart */}
       <div className="glass rounded-2xl p-6">
         <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-primary" /> Crescimento acumulado (ultimos 90 dias)
+          <TrendingUp className="w-4 h-4 text-primary" /> Crescimento acumulado (últimos 90 dias)
         </h2>
         <BarChart
           data={data.cumulative_growth}
           bars={[
             { key: "total_clients", color: "bg-blue-400", label: "Clientes" },
-            { key: "total_photographers", color: "bg-primary", label: "Fotografos" },
+            { key: "total_photographers", color: "bg-primary", label: "Fotógrafos" },
           ]}
           labelKey="date"
           height={180}
+          showValues
         />
       </div>
     </>

@@ -254,7 +254,42 @@ async function getGrowth() {
     return { date: d.date, total_clients: cumClients, total_photographers: cumPhotographers };
   });
 
-  return { daily_growth: dailyGrowth, cumulative_growth: cumulativeGrowth };
+  // Monthly revenue (last 6 months)
+  const sixMonthsAgo = new Date(now);
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
+  const sixMonthsAgoStr = sixMonthsAgo.toISOString().split("T")[0];
+
+  const { data: paidOrders } = await supabase
+    .from("orders")
+    .select("total_cents, platform_fee_cents, created_at")
+    .eq("status", "paid")
+    .gte("created_at", `${sixMonthsAgoStr}T00:00:00`);
+
+  const monthlyMap = new Map<string, { revenue_cents: number; platform_fee_cents: number; orders_count: number }>();
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now);
+    d.setMonth(d.getMonth() - (5 - i));
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    monthlyMap.set(key, { revenue_cents: 0, platform_fee_cents: 0, orders_count: 0 });
+  }
+
+  for (const o of paidOrders || []) {
+    const key = o.created_at.slice(0, 7);
+    const entry = monthlyMap.get(key);
+    if (entry) {
+      entry.revenue_cents += o.total_cents || 0;
+      entry.platform_fee_cents += o.platform_fee_cents || 0;
+      entry.orders_count += 1;
+    }
+  }
+
+  const monthlyRevenue = [...monthlyMap.entries()].map(([month, data]) => ({
+    month: `${month}-01`,
+    ...data,
+  }));
+
+  return { daily_growth: dailyGrowth, cumulative_growth: cumulativeGrowth, monthly_revenue: monthlyRevenue };
 }
 
 // ─── Traffic ────────────────────────────────────────────────
