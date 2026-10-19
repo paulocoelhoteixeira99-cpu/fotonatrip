@@ -203,6 +203,8 @@ function BarChart({
 
   const fmtVal = formatValue || ((v: number) => String(v));
 
+  const barAreaH = height - 28;
+
   return (
     <div>
       <div className="flex items-center gap-4 mb-3">
@@ -219,25 +221,25 @@ function BarChart({
           const isLast = i === filtered.length - 1;
           const dd = dateStr.slice(8, 10);
           const mm = dateStr.slice(5, 7);
-          const total = bars.reduce((s, b) => s + ((d[b.key] as number) || 0), 0);
           return (
             <div key={dateStr} className="flex flex-col items-center gap-0.5 flex-1 min-w-[18px]">
-              {showValues && total > 0 && (
-                <span className="text-[8px] text-muted whitespace-nowrap leading-none">
-                  {bars.length === 1 ? fmtVal(total) : bars.map((b) => fmtVal((d[b.key] as number) || 0)).join("/")}
-                </span>
-              )}
-              <div className="w-full flex items-end gap-[1px]" style={{ height: height - (showValues ? 44 : 30) }}>
+              <div className="w-full flex items-end gap-[1px]" style={{ height: barAreaH }}>
                 {bars.map((b) => {
                   const val = (d[b.key] as number) || 0;
                   const pct = Math.max((val / maxVal) * 100, val > 0 ? 6 : 2);
                   return (
-                    <div
-                      key={b.key}
-                      className={`flex-1 rounded-t transition-colors ${val > 0 ? b.color : "bg-white/5"} hover:opacity-80`}
-                      style={{ height: `${pct}%` }}
-                      title={`${b.label}: ${fmtVal(val)}`}
-                    />
+                    <div key={b.key} className="flex-1 flex flex-col items-center justify-end" style={{ height: "100%" }}>
+                      {showValues && val > 0 && (
+                        <span className="text-[7px] text-muted whitespace-nowrap leading-none mb-0.5">
+                          {fmtVal(val)}
+                        </span>
+                      )}
+                      <div
+                        className={`w-full rounded-t transition-colors ${val > 0 ? b.color : "bg-white/5"} hover:opacity-80`}
+                        style={{ height: `${pct}%` }}
+                        title={`${b.label}: ${fmtVal(val)}`}
+                      />
+                    </div>
                   );
                 })}
               </div>
