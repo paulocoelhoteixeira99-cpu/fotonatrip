@@ -700,7 +700,7 @@ function SalesTab({ data }: { data: { event_sales: EventSale[] } }) {
                     <td className="py-3 text-right text-muted">{e.photo_count}</td>
                     <td className="py-3 text-right text-primary">{e.items_sold}</td>
                     <td className="py-3 text-right">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${soldPct >= 50 ? "bg-green-500/15 text-green-400" : soldPct >= 20 ? "bg-yellow-500/15 text-yellow-400" : "bg-white/10 text-muted"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${soldPct >= 20 ? "bg-green-500/15 text-green-400" : soldPct >= 10 ? "bg-yellow-500/15 text-yellow-400" : "bg-red-500/15 text-red-400"}`}>
                         {soldPct}%
                       </span>
                     </td>
