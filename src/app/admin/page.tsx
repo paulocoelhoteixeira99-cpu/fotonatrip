@@ -683,19 +683,27 @@ function SalesTab({ data }: { data: { event_sales: EventSale[] } }) {
                   <th className="pb-3 font-medium">Fotografo</th>
                   <th className="pb-3 font-medium text-right">Fotos</th>
                   <th className="pb-3 font-medium text-right">Vendidas</th>
+                  <th className="pb-3 font-medium text-right">% vendidas</th>
                   <th className="pb-3 font-medium text-right">Pedidos</th>
-                  <th className="pb-3 font-medium text-right">Preco unit.</th>
+                  <th className="pb-3 font-medium text-right">Preço unit.</th>
                   <th className="pb-3 font-medium text-right">Receita</th>
                   <th className="pb-3 font-medium w-32"></th>
                 </tr>
               </thead>
               <tbody>
-                {withSales.map((e) => (
+                {withSales.map((e) => {
+                  const soldPct = e.photo_count > 0 ? Math.round((e.items_sold / e.photo_count) * 100) : 0;
+                  return (
                   <tr key={e.id} className="border-b border-border/50 last:border-0">
                     <td className="py-3 font-medium max-w-[200px] truncate">{e.title}</td>
                     <td className="py-3 text-muted">{e.photographer}</td>
                     <td className="py-3 text-right text-muted">{e.photo_count}</td>
                     <td className="py-3 text-right text-primary">{e.items_sold}</td>
+                    <td className="py-3 text-right">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${soldPct >= 50 ? "bg-green-500/15 text-green-400" : soldPct >= 20 ? "bg-yellow-500/15 text-yellow-400" : "bg-white/10 text-muted"}`}>
+                        {soldPct}%
+                      </span>
+                    </td>
                     <td className="py-3 text-right text-muted">{e.orders_count}</td>
                     <td className="py-3 text-right text-muted">{formatPrice(e.price_cents)}</td>
                     <td className="py-3 text-right text-green-400 font-medium">{formatPrice(e.revenue_cents)}</td>
@@ -703,7 +711,8 @@ function SalesTab({ data }: { data: { event_sales: EventSale[] } }) {
                       <MiniBar value={e.revenue_cents} max={maxRevenue} />
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

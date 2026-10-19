@@ -432,19 +432,27 @@ export default function VendasPage() {
                     <th className="pb-3 font-medium">Evento</th>
                     <th className="pb-3 font-medium text-right">Fotos</th>
                     <th className="pb-3 font-medium text-right">Vendidas</th>
+                    <th className="pb-3 font-medium text-right">% vendidas</th>
                     <th className="pb-3 font-medium text-right">Pedidos</th>
-                    <th className="pb-3 font-medium text-right">Preco unit.</th>
+                    <th className="pb-3 font-medium text-right">Preço unit.</th>
                     <th className="pb-3 font-medium text-right">Receita</th>
-                    <th className="pb-3 font-medium text-right">Voce recebe</th>
+                    <th className="pb-3 font-medium text-right">Você recebe</th>
                     <th className="pb-3 font-medium w-24"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedEvents.map((e) => (
+                  {paginatedEvents.map((e) => {
+                    const soldPct = e.photo_count > 0 ? Math.round((e.items_sold / e.photo_count) * 100) : 0;
+                    return (
                     <tr key={e.id} className="border-b border-border/50 last:border-0">
                       <td className="py-3 font-medium max-w-[200px] truncate">{e.title}</td>
                       <td className="py-3 text-right text-muted">{e.photo_count}</td>
                       <td className="py-3 text-right text-primary">{e.items_sold}</td>
+                      <td className="py-3 text-right">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${soldPct >= 50 ? "bg-green-500/15 text-green-400" : soldPct >= 20 ? "bg-yellow-500/15 text-yellow-400" : "bg-white/10 text-muted"}`}>
+                          {soldPct}%
+                        </span>
+                      </td>
                       <td className="py-3 text-right text-muted">{e.orders_count}</td>
                       <td className="py-3 text-right text-muted">{formatPrice(e.price_cents)}</td>
                       <td className="py-3 text-right text-muted">{formatPrice(e.revenue_cents)}</td>
@@ -458,7 +466,8 @@ export default function VendasPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
