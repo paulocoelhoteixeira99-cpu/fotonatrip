@@ -181,6 +181,7 @@ function BarChart({
   showValues = false,
   formatValue,
   formatLabel,
+  aggregateMode = "sum",
 }: {
   data: Record<string, unknown>[];
   bars: { key: string; color: string; label: string }[];
@@ -189,17 +190,40 @@ function BarChart({
   showValues?: boolean;
   formatValue?: (val: number) => string;
   formatLabel?: (val: string, isLast: boolean) => string;
+  aggregateMode?: "sum" | "last";
 }) {
   if (data.length === 0) return <p className="text-muted text-sm text-center py-8">Sem dados ainda.</p>;
 
+  // Show at most ~30 groups — aggregate skipped entries into each bucket
+  const step = Math.max(1, Math.floor(data.length / 30));
+  const filtered: Record<string, unknown>[] = [];
+  for (let i = 0; i < data.length; i += step) {
+    const end = Math.min(i + step, data.length);
+    if (aggregateMode === "last") {
+      // For cumulative data, take the last entry in the bucket
+      filtered.push({ ...data[end - 1] });
+    } else {
+      // For daily data, sum all entries in the bucket
+      const bucket = { ...data[i] };
+      for (let j = i + 1; j < end; j++) {
+        for (const b of bars) {
+          (bucket[b.key] as number) = ((bucket[b.key] as number) || 0) + ((data[j][b.key] as number) || 0);
+        }
+      }
+      filtered.push(bucket);
+    }
+  }
+  // Ensure last entry is always included
+  const lastDate = (data[data.length - 1][labelKey] as string);
+  const filteredLastDate = (filtered[filtered.length - 1][labelKey] as string);
+  if (filteredLastDate !== lastDate) {
+    filtered.push({ ...data[data.length - 1] });
+  }
+
   const maxVal = Math.max(
-    ...data.flatMap((d) => bars.map((b) => (d[b.key] as number) || 0)),
+    ...filtered.flatMap((d) => bars.map((b) => (d[b.key] as number) || 0)),
     1
   );
-
-  // Show at most ~30 bars
-  const step = Math.max(1, Math.floor(data.length / 30));
-  const filtered = data.filter((_, i) => i % step === 0 || i === data.length - 1);
 
   const fmtVal = formatValue || ((v: number) => String(v));
 
@@ -830,6 +854,7 @@ function GrowthTab({ data }: { data: GrowthData }) {
           labelKey="date"
           height={180}
           showValues
+          aggregateMode="last"
         />
       </div>
     </>
