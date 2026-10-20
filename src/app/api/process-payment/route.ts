@@ -52,19 +52,28 @@ export async function POST(req: NextRequest) {
     // Get order items with photo/event info for MP additional_info
     const { data: orderItems } = await supabase
       .from("order_items")
-      .select("id, photographer_id, price_cents, photos(event_id, events(title))")
+      .select("id, photographer_id, price_cents, photos(event_id, events(title, is_shared))")
       .eq("order_id", orderId);
 
     if (order && orderItems?.length) {
-      const { data: photographer } = await supabase
-        .from("photographers")
-        .select("mp_access_token, mp_user_id")
-        .eq("id", orderItems[0].photographer_id)
-        .single();
+      // Check if ALL items are from the same photographer
+      const photographerIds = [...new Set(orderItems.map((item) => item.photographer_id))];
+      // Check if any event is shared — shared events ALWAYS go through platform
+      const hasSharedEvent = orderItems.some(
+        (item: Record<string, unknown>) => (item.photos as Record<string, unknown>)?.events && ((item.photos as Record<string, unknown>).events as Record<string, unknown>)?.is_shared
+      );
 
-      if (photographer?.mp_access_token && photographer?.mp_user_id) {
-        accessToken = photographer.mp_access_token;
-        applicationFee = order.platform_fee_cents / 100;
+      if (photographerIds.length === 1 && !hasSharedEvent) {
+        const { data: photographer } = await supabase
+          .from("photographers")
+          .select("mp_access_token, mp_user_id")
+          .eq("id", photographerIds[0])
+          .single();
+
+        if (photographer?.mp_access_token && photographer?.mp_user_id) {
+          accessToken = photographer.mp_access_token;
+          applicationFee = order.platform_fee_cents / 100;
+        }
       }
     }
 

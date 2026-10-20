@@ -153,32 +153,23 @@ export async function POST(req: NextRequest) {
   const email = user.email || "";
 
   // Check if all photos are from a single photographer with MP connected
+  // Shared events ALWAYS go through platform (for payout tracking)
   const photographerIds = [...new Set(photos.map((p) => p.photographer_id))];
   let useMarketplace = false;
   let photographerAccessToken: string | null = null;
 
-  if (photographerIds.length === 1) {
+  if (photographerIds.length === 1 && !hasSharedEvent) {
     const singlePhotographerId = photographerIds[0];
 
-    // For shared events, only allow marketplace if photographer is the HOST
-    // Collaborator photos need platform routing for host commission split
-    let allowMarketplace = true;
-    if (hasSharedEvent) {
-      const sharedEvents = (eventTitles || []).filter((e) => e.is_shared);
-      allowMarketplace = sharedEvents.every((e) => e.photographer_id === singlePhotographerId);
-    }
+    const { data: photographer } = await supabase
+      .from("photographers")
+      .select("mp_access_token, mp_user_id")
+      .eq("id", singlePhotographerId)
+      .single();
 
-    if (allowMarketplace) {
-      const { data: photographer } = await supabase
-        .from("photographers")
-        .select("mp_access_token, mp_user_id")
-        .eq("id", singlePhotographerId)
-        .single();
-
-      if (photographer?.mp_access_token && photographer?.mp_user_id) {
-        useMarketplace = true;
-        photographerAccessToken = photographer.mp_access_token;
-      }
+    if (photographer?.mp_access_token && photographer?.mp_user_id) {
+      useMarketplace = true;
+      photographerAccessToken = photographer.mp_access_token;
     }
   }
 
