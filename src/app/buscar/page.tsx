@@ -282,12 +282,16 @@ function BuscarContent() {
                             src={event.cover_url}
                             alt={event.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={(e) => {
+                              const img = e.currentTarget;
+                              img.style.display = "none";
+                              img.parentElement!.querySelector(".cover-fallback")?.classList.remove("hidden");
+                            }}
                           />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-transparent">
-                            <ImageIcon className="w-10 h-10 text-muted/20" />
-                          </div>
-                        )}
+                        ) : null}
+                        <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-transparent cover-fallback ${event.cover_url ? "hidden" : ""}`}>
+                          <ImageIcon className="w-10 h-10 text-muted/20" />
+                        </div>
                         <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
                           <ImageIcon className="w-3 h-3 text-white" />
                           <span className="text-xs text-white font-medium">{event.photo_count}</span>

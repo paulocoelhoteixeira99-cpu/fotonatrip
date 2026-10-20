@@ -117,6 +117,7 @@ export default function EventoDetailPage() {
   const [commissionSaved, setCommissionSaved] = useState(true);
   const [regeneratingLink, setRegeneratingLink] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [photoFilter, setPhotoFilter] = useState<string>("all");
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const supabase = createClient();
   const router = useRouter();
@@ -441,6 +442,14 @@ export default function EventoDetailPage() {
       const paths = [photo.storage_path];
       if (photo.watermark_path) paths.push(photo.watermark_path);
       deletePhotoFiles(paths);
+
+      // If deleted photo was the cover, pick another or clear
+      if (event && event.cover_url === getPhotoUrl(photo.storage_path)) {
+        const remaining = photos.filter((p) => p.id !== photoToDelete);
+        const newCoverUrl = remaining.length > 0 ? getPhotoUrl(remaining[0].storage_path) : null;
+        await supabase.from("events").update({ cover_url: newCoverUrl }).eq("id", event.id);
+        setEvent({ ...event, cover_url: newCoverUrl });
+      }
     }
     setPhotos((prev) => prev.filter((p) => p.id !== photoToDelete));
     if (previewPhoto?.id === photoToDelete) setPreviewPhoto(null);
@@ -1305,6 +1314,44 @@ export default function EventoDetailPage() {
         </div>
       )}
 
+      {/* Photographer filter tabs for shared events */}
+      {event.is_shared && photos.length > 0 && (() => {
+        const photographerIds = [...new Set(photos.map((p) => p.photographer_id))];
+        if (photographerIds.length <= 1) return null;
+        return (
+          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+            <button
+              onClick={() => setPhotoFilter("all")}
+              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                photoFilter === "all"
+                  ? "bg-primary text-white"
+                  : "bg-white/5 text-muted hover:text-white hover:bg-white/10"
+              }`}
+            >
+              Todas ({photos.length})
+            </button>
+            {photographerIds.map((pid) => {
+              const count = photos.filter((p) => p.photographer_id === pid).length;
+              const name = photographerNames.get(pid) || "Fotógrafo";
+              const isMe = pid === currentUserId;
+              return (
+                <button
+                  key={pid}
+                  onClick={() => setPhotoFilter(pid)}
+                  className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                    photoFilter === pid
+                      ? "bg-primary text-white"
+                      : "bg-white/5 text-muted hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  {isMe ? "Minhas" : name} ({count})
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* Photos grid */}
       {photos.length === 0 ? (
         <div className="glass rounded-2xl text-center py-16">
@@ -1316,7 +1363,7 @@ export default function EventoDetailPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {photos.map((photo) => {
+          {(photoFilter === "all" ? photos : photos.filter((p) => p.photographer_id === photoFilter)).map((photo) => {
             const url = getPhotoUrl(photo.storage_path);
             const isCover = event.cover_url === url;
             const isOwnPhoto = photo.photographer_id === currentUserId;
