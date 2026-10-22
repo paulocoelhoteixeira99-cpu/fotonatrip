@@ -376,12 +376,12 @@ export default function VendasPage() {
                 key={day.date}
                 className="flex flex-col items-center gap-1 flex-1 min-w-[28px]"
               >
-                {valueBrl !== null && (
-                  <span className="text-[9px] font-semibold text-primary whitespace-nowrap">
-                    R${valueBrl}
-                  </span>
-                )}
-                <div className="w-full flex items-end" style={{ height: 120 }}>
+                <div className="w-full flex flex-col items-center justify-end" style={{ height: 140 }}>
+                  {valueBrl !== null && (
+                    <span className="text-[9px] font-semibold text-primary whitespace-nowrap mb-1">
+                      R${valueBrl}
+                    </span>
+                  )}
                   <div
                     className={`w-full rounded-t transition-colors ${
                       day.count > 0
