@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
   TrendingUp,
   Shield,
@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 const benefits = [
   {
@@ -48,6 +49,25 @@ const benefits = [
 export default function ForPhotographers() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [isPhotographer, setIsPhotographer] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.role === "photographer" || data?.role === "admin") {
+              setIsPhotographer(true);
+            }
+          });
+      }
+    });
+  }, []);
 
   return (
     <section id="fotografos" className="relative py-32" ref={ref}>
@@ -79,10 +99,10 @@ export default function ForPhotographers() {
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
               <Link
-                href="/cadastro"
+                href={isPhotographer ? "/dashboard" : "/cadastro"}
                 className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-full transition-all font-medium glow-green hover:scale-105"
               >
-                Começar agora
+                {isPhotographer ? "Acessar Dashboard" : "Começar agora"}
               </Link>
               <Link
                 href="#recursos"

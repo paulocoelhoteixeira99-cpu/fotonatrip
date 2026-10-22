@@ -130,10 +130,10 @@ export default function EventoPublicPage() {
     setPhotos(data || []);
     setTotalPhotos(count || 0);
 
-    // Load photographer names for shared events
+    // Load photographer names for all photos (supports shared events with multiple photographers)
     if (data && data.length > 0) {
       const uniquePhotographerIds = [...new Set(data.map((p) => p.photographer_id).filter(Boolean))];
-      if (uniquePhotographerIds.length > 1) {
+      if (uniquePhotographerIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, full_name")
@@ -401,6 +401,11 @@ export default function EventoPublicPage() {
                         </div>
                       </div>
                       <div className="p-3">
+                        {photographerNames.size > 1 && photo.photographer_id && (
+                          <p className="text-[10px] text-muted mb-1 truncate">
+                            Foto por {photographerNames.get(photo.photographer_id) || "Fotógrafo"}
+                          </p>
+                        )}
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-semibold">
                             {formatPrice(photo.price_cents)}
@@ -414,9 +419,8 @@ export default function EventoPublicPage() {
                             <button
                               onClick={() => {
                                 const photogId = photo.photographer_id || event!.photographer_id;
-                                const photogName = (photographerNames.size > 0 && photo.photographer_id
-                                  ? photographerNames.get(photo.photographer_id)
-                                  : null) || photographer?.business_name || photographer?.full_name || "";
+                                const photogName = (photo.photographer_id && photographerNames.get(photo.photographer_id))
+                                  || photographer?.business_name || photographer?.full_name || "";
                                 addItem({
                                   photo_id: photo.id,
                                   event_id: event!.id,
@@ -473,6 +477,11 @@ export default function EventoPublicPage() {
                         </div>
                       </div>
                       <div className="p-3">
+                        {photographerNames.size > 1 && photo.photographer_id && (
+                          <p className="text-[10px] text-muted mb-1 truncate">
+                            Foto por {photographerNames.get(photo.photographer_id) || "Fotógrafo"}
+                          </p>
+                        )}
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-semibold">
                             {formatPrice(photo.price_cents)}
@@ -486,9 +495,8 @@ export default function EventoPublicPage() {
                             <button
                               onClick={() => {
                                 const photogId = photo.photographer_id || event!.photographer_id;
-                                const photogName = (photographerNames.size > 0 && photo.photographer_id
-                                  ? photographerNames.get(photo.photographer_id)
-                                  : null) || photographer?.business_name || photographer?.full_name || "";
+                                const photogName = (photo.photographer_id && photographerNames.get(photo.photographer_id))
+                                  || photographer?.business_name || photographer?.full_name || "";
                                 addItem({
                                   photo_id: photo.id,
                                   event_id: event!.id,
@@ -605,10 +613,8 @@ export default function EventoPublicPage() {
                 className="w-full max-h-[80vh] object-contain rounded-xl"
               />
               {(() => {
-                const photoPhotographerName = selectedPhoto.photographer_id && photographerNames.size > 0
-                  ? photographerNames.get(selectedPhoto.photographer_id)
-                  : null;
-                const displayName = photoPhotographerName || (photographer ? (photographer.business_name || photographer.full_name) : null);
+                const displayName = (selectedPhoto.photographer_id && photographerNames.get(selectedPhoto.photographer_id))
+                  || photographer?.business_name || photographer?.full_name || null;
                 return displayName ? (
                   <p className="text-xs text-muted mt-2 px-1">Foto por <span className="text-foreground font-medium">{displayName}</span></p>
                 ) : null;
@@ -631,9 +637,8 @@ export default function EventoPublicPage() {
                   <button
                     onClick={() => {
                       const photoPhotogId = selectedPhoto.photographer_id || event.photographer_id;
-                      const photoPhotogName = (photographerNames.size > 0 && selectedPhoto.photographer_id
-                        ? photographerNames.get(selectedPhoto.photographer_id)
-                        : null) || photographer?.business_name || photographer?.full_name || "";
+                      const photoPhotogName = (selectedPhoto.photographer_id && photographerNames.get(selectedPhoto.photographer_id))
+                        || photographer?.business_name || photographer?.full_name || "";
                       addItem({
                         photo_id: selectedPhoto.id,
                         event_id: event.id,

@@ -293,12 +293,32 @@ export default function EventoDetailPage() {
     setShowDupModal(false);
 
     const photoIds = duplicatePhotos.map((d) => d.photoId);
+
+    // Check if any duplicate has order_items (sold photos can't be replaced)
+    const { count: soldCount } = await supabase
+      .from("order_items")
+      .select("id", { count: "exact", head: true })
+      .in("photo_id", photoIds);
+
+    if (soldCount && soldCount > 0) {
+      alert("Algumas fotos duplicadas possuem pedidos vinculados e não podem ser substituídas. Use 'Pular' para enviar apenas as novas.");
+      setDuplicatePhotos([]);
+      setPendingUploadFiles([]);
+      return;
+    }
+
     const paths = duplicatePhotos.flatMap((d) =>
       [d.storagePath, d.watermarkPath].filter(Boolean)
     );
 
-    await supabase.from("face_embeddings").delete().in("photo_id", photoIds);
-    await supabase.from("photos").delete().in("id", photoIds);
+    const { error } = await supabase.from("photos").delete().in("id", photoIds);
+    if (error) {
+      alert("Erro ao substituir fotos. Tente novamente.");
+      setDuplicatePhotos([]);
+      setPendingUploadFiles([]);
+      return;
+    }
+
     if (paths.length > 0) await deletePhotoFiles(paths);
 
     setPhotos((prev) => prev.filter((p) => !photoIds.includes(p.id)));
@@ -436,8 +456,28 @@ export default function EventoDetailPage() {
     if (!photoToDelete) return;
     setDeletingPhoto(true);
     const photo = photos.find((p) => p.id === photoToDelete);
-    await supabase.from("face_embeddings").delete().eq("photo_id", photoToDelete);
-    await supabase.from("photos").delete().eq("id", photoToDelete);
+
+    // Check for order_items linked to this photo (FK would block delete)
+    const { count: soldCount } = await supabase
+      .from("order_items")
+      .select("id", { count: "exact", head: true })
+      .eq("photo_id", photoToDelete);
+
+    if (soldCount && soldCount > 0) {
+      alert("Esta foto possui pedidos vinculados e não pode ser excluída.");
+      setPhotoToDelete(null);
+      setDeletingPhoto(false);
+      return;
+    }
+
+    const { error } = await supabase.from("photos").delete().eq("id", photoToDelete);
+    if (error) {
+      alert("Erro ao excluir foto. Tente novamente.");
+      setPhotoToDelete(null);
+      setDeletingPhoto(false);
+      return;
+    }
+
     if (photo) {
       const paths = [photo.storage_path];
       if (photo.watermark_path) paths.push(photo.watermark_path);

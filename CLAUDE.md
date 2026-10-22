@@ -167,7 +167,9 @@ supabase/
 - Webhook nao faz downgrade de status (paid nunca volta para pending)
 - Webhook sempre retorna 200 (mesmo com erro, para parar retries do MP)
 - Download via `/api/download` verifica `orders.client_id` + status=paid
-- Marketplace: se fotografo tem MP conectado via OAuth, split payment automatico
+- Marketplace: se fotografo tem MP conectado via OAuth, split payment automatico (apenas eventos NAO compartilhados)
+- **Eventos compartilhados SEMPRE vao pela plataforma** (mesmo que so tenha fotos do host) — garante payout tracking correto
+- Tanto checkout quanto process-payment verificam: `photographerIds.length === 1 && !hasSharedEvent`
 
 ### Mercado Pago OAuth (Marketplace)
 - `/api/mp/connect` -> redireciona para auth.mercadopago.com.br
@@ -369,6 +371,8 @@ Mudancas significativas incluem:
 - Admin payouts endpoint nao conseguia ler/escrever: SELECT policy era `photographer_id = auth.uid()` — admin nao e fotografo, precisa service role
 - Configuracoes nao salvava para fotografo sem row: `UPDATE` afeta 0 rows silenciosamente — usar `upsert` em vez de `update`
 - Pedidos pendentes abandonados (>1h) ficavam para sempre em "minhas compras" — filtrar client-side
+- process-payment verificava apenas orderItems[0] para decidir marketplace — pedidos mistos iam pro fotografo errado. Checkout e process-payment DEVEM ter a mesma logica de roteamento
+- Eventos compartilhados NUNCA devem usar marketplace (mesmo so fotos do host) — necessario para payout tracking correto
 
 ## TODO
 
