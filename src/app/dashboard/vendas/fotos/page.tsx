@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice } from "@/lib/cart";
 import { getPhotoUrl } from "@/lib/photos";
-import { ArrowLeft, ImageIcon, X, ShoppingBag } from "lucide-react";
+import { ArrowLeft, X, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+
+const PHOTOS_PER_PAGE = 50;
 
 export default function FotosVendidasPage() {
   return (
@@ -25,6 +27,7 @@ interface SoldPhoto {
   price_cents: number;
   sold_count: number;
   total_revenue_cents: number;
+  last_sold_at: string;
 }
 
 function FotosVendidasContent() {
@@ -34,7 +37,14 @@ function FotosVendidasContent() {
   const [eventTitle, setEventTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewPhoto, setPreviewPhoto] = useState<SoldPhoto | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const supabase = createClient();
+
+  const totalPages = Math.ceil(photos.length / PHOTOS_PER_PAGE);
+  const paginatedPhotos = useMemo(
+    () => photos.slice((currentPage - 1) * PHOTOS_PER_PAGE, currentPage * PHOTOS_PER_PAGE),
+    [photos, currentPage]
+  );
 
   useEffect(() => {
     loadSoldPhotos();
@@ -61,7 +71,7 @@ function FotosVendidasContent() {
       .from("order_items")
       .select(`
         photo_id, price_cents,
-        orders!inner(status),
+        orders!inner(status, created_at),
         photos!inner(storage_path, watermark_path, event_id, events(title))
       `)
       .eq("photographer_id", user.id)
@@ -91,10 +101,14 @@ function FotosVendidasContent() {
     const photoMap = new Map<string, SoldPhoto>();
     for (const item of data as any[]) {
       const pid = item.photo_id;
+      const orderDate = item.orders?.created_at || "";
       const existing = photoMap.get(pid);
       if (existing) {
         existing.sold_count += 1;
         existing.total_revenue_cents += Math.round(item.price_cents * 0.93);
+        if (orderDate > existing.last_sold_at) {
+          existing.last_sold_at = orderDate;
+        }
       } else {
         photoMap.set(pid, {
           photo_id: pid,
@@ -105,13 +119,14 @@ function FotosVendidasContent() {
           price_cents: item.price_cents,
           sold_count: 1,
           total_revenue_cents: Math.round(item.price_cents * 0.93),
+          last_sold_at: orderDate,
         });
       }
     }
 
-    // Sort by sold_count desc, then by revenue desc
+    // Sort by most recent sale first
     const sorted = Array.from(photoMap.values()).sort(
-      (a, b) => b.sold_count - a.sold_count || b.total_revenue_cents - a.total_revenue_cents
+      (a, b) => b.last_sold_at.localeCompare(a.last_sold_at)
     );
 
     setPhotos(sorted);
@@ -167,47 +182,71 @@ function FotosVendidasContent() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {photos.map((photo) => {
-            const url = getPhotoUrl(photo.storage_path);
-            return (
-              <div
-                key={photo.photo_id}
-                className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 transition-all"
-              >
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {paginatedPhotos.map((photo) => {
+              const url = getPhotoUrl(photo.storage_path);
+              return (
                 <div
-                  className="aspect-[3/4] overflow-hidden relative cursor-pointer"
-                  onClick={() => setPreviewPhoto(photo)}
+                  key={photo.photo_id}
+                  className="group glass rounded-2xl overflow-hidden hover:-translate-y-1 transition-all"
                 >
-                  <img
-                    src={url}
-                    alt=""
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                  {photo.sold_count > 1 && (
-                    <div className="absolute top-2 right-2 bg-primary/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      {photo.sold_count}x vendida
+                  <div
+                    className="aspect-[3/4] overflow-hidden relative cursor-pointer"
+                    onClick={() => setPreviewPhoto(photo)}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                    {photo.sold_count > 1 && (
+                      <div className="absolute top-2 right-2 bg-primary/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {photo.sold_count}x vendida
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    {!eventoFilter && (
+                      <p className="text-xs text-muted truncate mb-1">{photo.event_title}</p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-primary">
+                        {formatPrice(photo.total_revenue_cents)}
+                      </span>
+                      <span className="text-[10px] text-muted">
+                        {photo.sold_count}x
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  {!eventoFilter && (
-                    <p className="text-xs text-muted truncate mb-1">{photo.event_title}</p>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-primary">
-                      {formatPrice(photo.total_revenue_cents)}
-                    </span>
-                    <span className="text-[10px] text-muted">
-                      {photo.sold_count}x
-                    </span>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <button
+                onClick={() => { setCurrentPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                disabled={currentPage === 1}
+                className="p-2 rounded-xl glass text-sm disabled:opacity-30 hover:bg-white/10 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-sm text-muted">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() => { setCurrentPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-xl glass text-sm disabled:opacity-30 hover:bg-white/10 transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Photo preview lightbox */}
