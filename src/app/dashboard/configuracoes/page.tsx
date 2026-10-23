@@ -385,7 +385,7 @@ export default function ConfiguracoesPage() {
 
           <p className="text-xs text-muted">
             Sua chave Pix e utilizada para receber repasses de vendas em eventos compartilhados.
-            Os repasses sao gerados semanalmente (toda segunda-feira) com valor minimo de R$10,00.
+            Os repasses são gerados semanalmente (toda sexta-feira) com valor mínimo de R$10,00.
           </p>
         </div>
 

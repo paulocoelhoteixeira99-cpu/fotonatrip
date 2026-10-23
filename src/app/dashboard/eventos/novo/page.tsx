@@ -345,7 +345,7 @@ export default function NovoEventoPage() {
                   <li>A plataforma recebe 100% das vendas e faz o repasse semanal via Pix</li>
                   <li>Suas fotos vendidas: voce recebe 93% (plataforma fica com 7%)</li>
                   <li>Fotos de colaboradores: voce recebe {commissionPct || 0}% de comissao</li>
-                  <li>Repasses gerados toda segunda-feira com valor minimo de R$10,00</li>
+                  <li>Repasses gerados toda sexta-feira com valor mínimo de R$10,00</li>
                 </ul>
               </div>
 

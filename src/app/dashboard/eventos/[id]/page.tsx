@@ -1106,7 +1106,7 @@ export default function EventoDetailPage() {
             </div>
           </div>
           <p className="text-xs text-muted">
-            Repasses semanais via Pix (toda segunda-feira, minimo R$10,00).
+            Repasses semanais via Pix (toda sexta-feira, mínimo R$10,00).
           </p>
         </div>
       )}
