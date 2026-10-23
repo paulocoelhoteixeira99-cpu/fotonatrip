@@ -58,8 +58,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback((item: CartItem) => {
     setItems((prev) => {
       if (prev.some((i) => i.photo_id === item.photo_id)) return prev;
-      // Don't add individual if package for same event exists
-      if (prev.some((i) => i.is_package && i.event_id === item.event_id)) return prev;
+      // Don't add if already covered by a package
+      if (prev.some((i) => i.is_package && i.event_id === item.event_id && i.package_photo_ids?.includes(item.photo_id))) return prev;
       return [...prev, item];
     });
   }, []);
