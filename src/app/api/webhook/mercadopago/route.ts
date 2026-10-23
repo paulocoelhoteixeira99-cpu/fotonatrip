@@ -2,6 +2,7 @@ import { MercadoPagoConfig, Payment } from "mercadopago";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { notifySale } from "@/lib/email";
 
 // GET endpoint to test if webhook is accessible
 export async function GET() {
@@ -157,6 +158,11 @@ export async function POST(req: NextRequest) {
       console.error("Webhook: order update error:", error);
     } else {
       console.log(`Webhook: order ${orderId} updated to ${orderStatus}`);
+
+      // Notify photographer(s) by email (fire-and-forget)
+      if (orderStatus === "paid") {
+        notifySale(orderId).catch(() => {});
+      }
     }
 
     return NextResponse.json({ received: true });

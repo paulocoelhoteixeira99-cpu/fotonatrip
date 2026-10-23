@@ -1,6 +1,7 @@
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { notifySale } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -163,6 +164,11 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId);
+
+    // Notify photographer(s) by email (fire-and-forget)
+    if (orderStatus === "paid") {
+      notifySale(orderId).catch(() => {});
+    }
 
     // Build response
     const response: Record<string, unknown> = {
