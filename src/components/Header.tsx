@@ -110,6 +110,18 @@ export default function Header() {
 
         {/* Desktop right side */}
         <div className="hidden md:flex items-center gap-3">
+          <Link
+            href="/carrinho"
+            className="relative p-2 text-foreground/70 hover:text-foreground transition-colors"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
+          </Link>
+
           {user ? (
             <>
               <Link
@@ -117,18 +129,6 @@ export default function Header() {
                 className="text-sm bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-full transition-colors font-medium"
               >
                 Buscar fotos
-              </Link>
-
-              <Link
-                href="/carrinho"
-                className="relative p-2 text-foreground/70 hover:text-foreground transition-colors"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {cartCount > 9 ? "9+" : cartCount}
-                  </span>
-                )}
               </Link>
 
               {/* User dropdown */}
