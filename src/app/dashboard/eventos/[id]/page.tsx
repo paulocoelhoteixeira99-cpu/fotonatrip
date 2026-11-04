@@ -1286,12 +1286,42 @@ export default function EventoDetailPage() {
               />
             </div>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const canvas = document.querySelector(".glass canvas") as HTMLCanvasElement;
                 if (!canvas) return;
+
+                // Create new canvas with white margin
+                const margin = 48;
+                const padded = document.createElement("canvas");
+                padded.width = canvas.width + margin * 2;
+                padded.height = canvas.height + margin * 2;
+                const ctx = padded.getContext("2d");
+                if (!ctx) return;
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, padded.width, padded.height);
+                ctx.drawImage(canvas, margin, margin);
+
+                const fileName = `qrcode-${event.title.toLowerCase().replace(/\s+/g, "-")}.png`;
+
+                // iOS Safari: link.click() doesn't trigger download — use Share API
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                if (isIOS && navigator.share) {
+                  try {
+                    const blob = await new Promise<Blob>((resolve) =>
+                      padded.toBlob((b) => resolve(b!), "image/png")
+                    );
+                    const file = new File([blob], fileName, { type: "image/png" });
+                    await navigator.share({ files: [file] });
+                    return;
+                  } catch {
+                    // User cancelled share — do nothing
+                    return;
+                  }
+                }
+
                 const link = document.createElement("a");
-                link.download = `qrcode-${event.title.toLowerCase().replace(/\s+/g, "-")}.png`;
-                link.href = canvas.toDataURL("image/png");
+                link.download = fileName;
+                link.href = padded.toDataURL("image/png");
                 link.click();
               }}
               className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-light transition-colors"
