@@ -23,6 +23,7 @@ interface Event {
   city: string | null;
   state: string | null;
   event_date: string | null;
+  event_date_end: string | null;
   photo_count: number;
   cover_url: string | null;
 }
@@ -65,13 +66,13 @@ export default function EventosPage() {
     let query = supabase
       .from("events")
       .select(
-        "id, title, description, location, city, state, event_date, photo_count, cover_url",
+        "id, title, description, location, city, state, event_date, event_date_end, photo_count, cover_url",
         { count: "exact" }
       )
       .eq("status", "active");
 
     if (fotografoId) query = query.eq("photographer_id", fotografoId);
-    if (dateFrom) query = query.gte("event_date", dateFrom);
+    if (dateFrom) query = query.or(`event_date_end.gte.${dateFrom},and(event_date_end.is.null,event_date.gte.${dateFrom})`);
     if (dateTo) query = query.lte("event_date", dateTo);
 
     const { data, count } = await query
@@ -233,9 +234,8 @@ export default function EventosPage() {
                           {event.event_date && (
                             <span className="flex items-center gap-1">
                               <CalendarDays className="w-3.5 h-3.5 shrink-0" />
-                              {new Date(
-                                event.event_date + "T00:00:00"
-                              ).toLocaleDateString("pt-BR")}
+                              {new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")}
+                              {event.event_date_end && ` a ${new Date(event.event_date_end + "T00:00:00").toLocaleDateString("pt-BR")}`}
                             </span>
                           )}
                         </div>

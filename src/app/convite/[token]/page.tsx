@@ -22,6 +22,7 @@ interface EventInfo {
   city: string | null;
   state: string | null;
   event_date: string | null;
+  event_date_end: string | null;
   collaborator_commission_pct: number;
   price_per_photo_cents: number;
   photographer_id: string;
@@ -49,7 +50,7 @@ export default function ConvitePage() {
       // Fetch event by invite_code
       const { data: eventData } = await supabase
         .from("events")
-        .select("id, title, location, city, state, event_date, collaborator_commission_pct, price_per_photo_cents, photographer_id, is_shared")
+        .select("id, title, location, city, state, event_date, event_date_end, collaborator_commission_pct, price_per_photo_cents, photographer_id, is_shared")
         .eq("invite_code", token)
         .eq("is_shared", true)
         .single();
@@ -238,6 +239,7 @@ export default function ConvitePage() {
               <span className="flex items-center gap-1">
                 <CalendarDays className="w-4 h-4" />
                 {new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")}
+                {event.event_date_end && ` a ${new Date(event.event_date_end + "T00:00:00").toLocaleDateString("pt-BR")}`}
               </span>
             )}
           </div>

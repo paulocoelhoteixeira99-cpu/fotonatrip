@@ -40,6 +40,7 @@ interface EventOption {
   city: string | null;
   state: string | null;
   event_date: string | null;
+  event_date_end: string | null;
   photo_count: number;
   cover_url: string | null;
 }
@@ -101,7 +102,7 @@ function BuscarContent() {
     setLoadingEvents(true);
     const { data } = await supabase
       .from("events")
-      .select("id, title, location, city, state, event_date, photo_count, cover_url")
+      .select("id, title, location, city, state, event_date, event_date_end, photo_count, cover_url")
       .eq("status", "active")
       .order("event_date", { ascending: false, nullsFirst: false });
 
@@ -313,6 +314,7 @@ function BuscarContent() {
                             <span className="flex items-center gap-1">
                               <CalendarDays className="w-3.5 h-3.5" />
                               {new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")}
+                              {event.event_date_end && ` a ${new Date(event.event_date_end + "T00:00:00").toLocaleDateString("pt-BR")}`}
                             </span>
                           )}
                         </div>

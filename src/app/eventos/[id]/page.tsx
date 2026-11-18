@@ -32,6 +32,7 @@ interface Event {
   city: string | null;
   state: string | null;
   event_date: string | null;
+  event_date_end: string | null;
   photo_count: number;
 }
 
@@ -303,13 +304,16 @@ export default function EventoPublicPage() {
                   {event.event_date && (
                     <span className="flex items-center gap-1.5">
                       <CalendarDays className="w-4 h-4" />
-                      {new Date(
-                        event.event_date + "T00:00:00"
-                      ).toLocaleDateString("pt-BR", {
+                      {new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR", {
                         day: "numeric",
                         month: "long",
                         year: "numeric",
                       })}
+                      {event.event_date_end && ` a ${new Date(event.event_date_end + "T00:00:00").toLocaleDateString("pt-BR", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}`}
                     </span>
                   )}
                   <span className="flex items-center gap-1.5">

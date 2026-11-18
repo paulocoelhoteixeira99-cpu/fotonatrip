@@ -21,7 +21,7 @@ export default function DashboardPage() {
     totalSalesCount: 0,
   });
   const [recentEvents, setRecentEvents] = useState<
-    { id: string; title: string; event_date: string; photo_count: number; status: string }[]
+    { id: string; title: string; event_date: string; event_date_end: string | null; photo_count: number; status: string }[]
   >([]);
   const supabase = createClient();
 
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-xs text-muted">
                       {event.event_date
-                        ? new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")
+                        ? new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR") + (event.event_date_end ? ` a ${new Date(event.event_date_end + "T00:00:00").toLocaleDateString("pt-BR")}` : "")
                         : "Sem data"}{" "}
                       · {event.photo_count} fotos
                     </p>

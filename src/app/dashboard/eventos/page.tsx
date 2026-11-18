@@ -12,6 +12,7 @@ interface Event {
   description: string | null;
   location: string | null;
   event_date: string | null;
+  event_date_end: string | null;
   photo_count: number;
   cover_url: string | null;
   status: string;
@@ -296,7 +297,7 @@ export default function EventosPage() {
                 <div className="flex items-center gap-4 text-xs text-muted">
                   <span>
                     {event.event_date
-                      ? new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")
+                      ? new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR") + (event.event_date_end ? ` a ${new Date(event.event_date_end + "T00:00:00").toLocaleDateString("pt-BR")}` : "")
                       : "Sem data"}
                   </span>
                   <span>{event.photo_count} fotos</span>

@@ -28,6 +28,7 @@ export default function NovoEventoPage() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [eventDateEnd, setEventDateEnd] = useState("");
   const [status, setStatus] = useState<EventStatus>("active");
   const [scheduledAt, setScheduledAt] = useState("");
   const [priceInput, setPriceInput] = useState("15,00");
@@ -104,6 +105,7 @@ export default function NovoEventoPage() {
       city: city || null,
       state: state || null,
       event_date: eventDate || null,
+      event_date_end: eventDateEnd || null,
       status,
       scheduled_at: status === "scheduled" ? new Date(scheduledAt).toISOString() : null,
       price_per_photo_cents: priceCents,
@@ -204,16 +206,29 @@ export default function NovoEventoPage() {
           </div>
         </div>
 
-        <div>
-          <label className="text-sm text-muted mb-2 block">
-            Data do evento
-          </label>
-          <input
-            type="date"
-            value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
-            className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm text-muted mb-2 block">
+              Data início
+            </label>
+            <input
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-muted mb-2 block">
+              Data fim
+            </label>
+            <input
+              type="date"
+              value={eventDateEnd}
+              onChange={(e) => setEventDateEnd(e.target.value)}
+              className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+            />
+          </div>
         </div>
 
         {/* Status */}

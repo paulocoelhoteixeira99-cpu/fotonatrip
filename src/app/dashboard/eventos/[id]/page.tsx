@@ -57,6 +57,7 @@ interface Event {
   city: string | null;
   state: string | null;
   event_date: string | null;
+  event_date_end: string | null;
   photo_count: number;
   status: string;
   scheduled_at: string | null;
@@ -104,7 +105,7 @@ export default function EventoDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
-  const [editForm, setEditForm] = useState({ description: "", location: "", city: "", state: "", event_date: "" });
+  const [editForm, setEditForm] = useState({ description: "", location: "", city: "", state: "", event_date: "", event_date_end: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
   const [pendingUploadFiles, setPendingUploadFiles] = useState<File[]>([]);
@@ -220,6 +221,7 @@ export default function EventoDetailPage() {
       city: event.city || "",
       state: event.state || "",
       event_date: event.event_date || "",
+      event_date_end: event.event_date_end || "",
     });
     if (event.state) fetchCities(event.state);
     setEditing(true);
@@ -234,6 +236,7 @@ export default function EventoDetailPage() {
       city: editForm.city.trim() || null,
       state: editForm.state || null,
       event_date: editForm.event_date || null,
+      event_date_end: editForm.event_date_end || null,
     }).eq("id", event.id);
     setEvent({
       ...event,
@@ -242,6 +245,7 @@ export default function EventoDetailPage() {
       city: editForm.city.trim() || null,
       state: editForm.state || null,
       event_date: editForm.event_date || null,
+      event_date_end: editForm.event_date_end || null,
     });
     setSavingEdit(false);
     setEditing(false);
@@ -699,6 +703,7 @@ export default function EventoDetailPage() {
                   <span className="flex items-center gap-1">
                     <CalendarDays className="w-4 h-4" />
                     {new Date(event.event_date + "T00:00:00").toLocaleDateString("pt-BR")}
+                    {event.event_date_end && ` a ${new Date(event.event_date_end + "T00:00:00").toLocaleDateString("pt-BR")}`}
                   </span>
                 )}
                 <span className="flex items-center gap-1">
@@ -820,14 +825,25 @@ export default function EventoDetailPage() {
                 </datalist>
               </div>
             </div>
-            <div>
-              <label className="text-xs text-muted mb-1 block">Data do evento</label>
-              <input
-                type="date"
-                value={editForm.event_date}
-                onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
-                className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted mb-1 block">Data início</label>
+                <input
+                  type="date"
+                  value={editForm.event_date}
+                  onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
+                  className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted mb-1 block">Data fim</label>
+                <input
+                  type="date"
+                  value={editForm.event_date_end}
+                  onChange={(e) => setEditForm({ ...editForm, event_date_end: e.target.value })}
+                  className="w-full bg-white/5 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors [color-scheme:dark]"
+                />
+              </div>
             </div>
             <div className="flex gap-3 pt-2">
               <button
