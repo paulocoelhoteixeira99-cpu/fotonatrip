@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { Plus, CalendarDays, Search, CalendarClock, Users } from "lucide-react";
+import { Plus, CalendarDays, Search, CalendarClock, Users, Link2, Check, QrCode, Download } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 
 interface Event {
   id: string;
@@ -24,6 +25,9 @@ export default function EventosPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -32,6 +36,7 @@ export default function EventosPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
 
       // Own events
       const { data: ownEvents } = await supabase
@@ -118,6 +123,99 @@ export default function EventosPage() {
           className="w-full bg-white/5 border border-border rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-muted/50"
         />
       </div>
+
+      {/* Share all events link & QR Code */}
+      {userId && (
+        <div className="glass rounded-2xl p-5 mb-6">
+          <div className="flex items-center gap-2 text-sm font-medium mb-1">
+            <Link2 className="w-4 h-4 text-primary" />
+            Compartilhar seus eventos
+          </div>
+          <p className="text-xs text-muted mb-3">Link direto para a página com todos os seus eventos. Ideal para cartões físicos.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              readOnly
+              value={`${typeof window !== "undefined" ? window.location.origin : "https://www.fotonatrip.com.br"}/eventos?fotografo=${userId}`}
+              className="flex-1 min-w-0 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-muted focus:outline-none select-all"
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/eventos?fotografo=${userId}`;
+                navigator.clipboard.writeText(url);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="flex items-center gap-1.5 text-sm bg-primary/15 hover:bg-primary/25 text-primary px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+            >
+              {copied ? (<><Check className="w-4 h-4" />Copiado!</>) : (<><Link2 className="w-4 h-4" />Copiar link</>)}
+            </button>
+            <button
+              onClick={() => setShowQR(!showQR)}
+              className={`flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${showQR ? "bg-primary/10 text-primary" : "bg-white/10 hover:bg-white/15"}`}
+            >
+              <QrCode className="w-4 h-4" />
+              QR Code
+            </button>
+          </div>
+          {showQR && (
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="bg-white p-4 rounded-xl" id="qr-all-events">
+                <QRCodeCanvas
+                  value={`${typeof window !== "undefined" ? window.location.origin : "https://www.fotonatrip.com.br"}/eventos?fotografo=${userId}`}
+                  size={200}
+                  level="H"
+                  includeMargin={false}
+                />
+              </div>
+              <button
+                onClick={async () => {
+                  const canvas = document.querySelector("#qr-all-events canvas") as HTMLCanvasElement;
+                  if (!canvas) return;
+
+                  const margin = 48;
+                  const padded = document.createElement("canvas");
+                  padded.width = canvas.width + margin * 2;
+                  padded.height = canvas.height + margin * 2;
+                  const ctx = padded.getContext("2d");
+                  if (!ctx) return;
+                  ctx.fillStyle = "#ffffff";
+                  ctx.fillRect(0, 0, padded.width, padded.height);
+                  ctx.drawImage(canvas, margin, margin);
+
+                  const fileName = "qrcode-meus-eventos.png";
+
+                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                  if (isIOS && navigator.share) {
+                    try {
+                      const blob = await new Promise<Blob>((resolve) =>
+                        padded.toBlob((b) => resolve(b!), "image/png")
+                      );
+                      const file = new File([blob], fileName, { type: "image/png" });
+                      await navigator.share({ files: [file] });
+                      return;
+                    } catch {
+                      return;
+                    }
+                  }
+
+                  const link = document.createElement("a");
+                  link.download = fileName;
+                  link.href = padded.toDataURL("image/png");
+                  link.click();
+                }}
+                className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-light transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Baixar QR Code
+              </button>
+              <p className="text-xs text-muted text-center">
+                Imprima o QR Code em cartões físicos para seus clientes acessarem todos os seus eventos.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import Header from "@/components/Header";
@@ -36,11 +37,24 @@ export default function EventosPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
+  const [photographerName, setPhotographerName] = useState<string | null>(null);
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const fotografoId = searchParams.get("fotografo");
 
   useEffect(() => {
     loadEvents();
-  }, [page, dateFrom, dateTo]);
+  }, [page, dateFrom, dateTo, fotografoId]);
+
+  useEffect(() => {
+    if (!fotografoId) { setPhotographerName(null); return; }
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", fotografoId)
+      .single()
+      .then(({ data }) => setPhotographerName(data?.full_name || null));
+  }, [fotografoId]);
 
   async function loadEvents() {
     setLoading(true);
@@ -56,6 +70,7 @@ export default function EventosPage() {
       )
       .eq("status", "active");
 
+    if (fotografoId) query = query.eq("photographer_id", fotografoId);
     if (dateFrom) query = query.gte("event_date", dateFrom);
     if (dateTo) query = query.lte("event_date", dateTo);
 
@@ -87,12 +102,25 @@ export default function EventosPage() {
           {/* Page header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Eventos e <span className="gradient-text">galerias</span>
+              {photographerName ? (
+                <>Eventos de <span className="gradient-text">{photographerName}</span></>
+              ) : (
+                <>Eventos e <span className="gradient-text">galerias</span></>
+              )}
             </h1>
             <p className="text-muted text-lg max-w-xl mx-auto">
-              Explore os eventos fotografados pelos nossos parceiros. Encontre
-              suas fotos e leve a recordação para casa.
+              {photographerName
+                ? "Encontre suas fotos nos eventos deste fotógrafo."
+                : "Explore os eventos fotografados pelos nossos parceiros. Encontre suas fotos e leve a recordação para casa."}
             </p>
+            {fotografoId && (
+              <Link
+                href="/eventos"
+                className="inline-block mt-4 text-sm text-primary hover:text-primary-light transition-colors"
+              >
+                Ver todos os eventos
+              </Link>
+            )}
           </div>
 
           {/* Search + Date filter */}
