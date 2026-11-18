@@ -254,7 +254,7 @@ function BarChart({
                   return (
                     <div key={b.key} className="flex-1 flex flex-col items-center justify-end" style={{ height: "100%" }}>
                       {showValues && val > 0 && (
-                        <span className="text-[7px] text-muted whitespace-nowrap leading-none mb-0.5">
+                        <span className="text-[14px] text-muted whitespace-nowrap leading-none mb-0.5">
                           {fmtVal(val)}
                         </span>
                       )}
