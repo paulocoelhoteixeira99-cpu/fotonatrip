@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { Plus, CalendarDays, Search, CalendarClock, Users, Link2, Check, QrCode, Download } from "lucide-react";
+import { Plus, CalendarDays, Search, CalendarClock, Users, Link2, Check, QrCode, Download, ImageIcon } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 
 interface Event {
@@ -13,6 +13,7 @@ interface Event {
   location: string | null;
   event_date: string | null;
   photo_count: number;
+  cover_url: string | null;
   status: string;
   scheduled_at: string | null;
   created_at: string;
@@ -249,16 +250,31 @@ export default function EventosPage() {
               <Link
                 key={event.id}
                 href={`/dashboard/eventos/${event.id}`}
-                className="glass rounded-2xl p-6 hover:bg-white/5 transition-all group"
+                className="glass rounded-2xl overflow-hidden hover:bg-white/5 transition-all group"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <CalendarDays className="w-5 h-5 text-primary" />
+                {/* Cover */}
+                <div className="aspect-[16/9] bg-surface-light relative overflow-hidden">
+                  {event.cover_url ? (
+                    <img
+                      src={event.cover_url}
+                      alt={event.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        img.style.display = "none";
+                        img.parentElement!.querySelector(".cover-fallback")?.classList.remove("hidden");
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-transparent cover-fallback ${event.cover_url ? "hidden" : ""}`}>
+                    <ImageIcon className="w-10 h-10 text-muted/20" />
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full ${cfg.className}`}>
+                  <span className={`absolute top-3 right-3 text-xs px-3 py-1 rounded-full backdrop-blur-sm ${cfg.className}`}>
                     {cfg.label}
                   </span>
                 </div>
+
+                <div className="p-5">
                 <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
                   {event.title}
                 </h3>
@@ -293,6 +309,7 @@ export default function EventosPage() {
                     })}
                   </div>
                 )}
+                </div>
               </Link>
             );
           })}
