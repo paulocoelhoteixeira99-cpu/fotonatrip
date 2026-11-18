@@ -42,7 +42,7 @@ src/
     redefinir-senha/            # Redefinir senha (link do email)
     auth/callback/              # OAuth callback (cria profile, trata role)
     buscar/                     # Busca facial 3 etapas (evento > selfie > resultados)
-    eventos/                    # Lista publica de eventos (paginado, filtros)
+    eventos/                    # Lista publica de eventos (paginado, filtros, ?fotografo=ID)
     eventos/[id]/               # Galeria publica do evento (tabs: Todas / Sem rosto)
     carrinho/                   # Carrinho de compras (agrupa por evento)
     checkout/                   # Pagamento (MP Payment Brick, dynamic import ssr:false)
@@ -105,7 +105,7 @@ supabase/
 |--------|-----------|
 | `profiles` | Extensao de auth.users (full_name, role: client/photographer/admin) |
 | `photographers` | Dados extras do fotografo (business_name, phone, city, state, mp_*) |
-| `events` | Eventos com status (active/inactive/scheduled), preco, pacote, is_shared, invite_code, collaborator_commission_pct |
+| `events` | Eventos com status (active/inactive/scheduled), preco, pacote, is_shared, invite_code, collaborator_commission_pct, event_date + event_date_end (range) |
 | `event_collaborators` | Fotografos convidados para eventos compartilhados (event_id, photographer_id, accepted_at) |
 | `photos` | Fotos com paths (storage, watermark), status (processing/ready/failed), preco em centavos |
 | `face_embeddings` | Embeddings 512d (vector) com bounding box por face detectada |
@@ -197,6 +197,10 @@ supabase/
 - Agendamento: `scheduled_at` + RPC `activate_scheduled_events()` chamado nas paginas publicas
 - Campo `is_active` legado (migrado para `status` na migration 011)
 - Cidades carregadas via API do IBGE por estado selecionado
+- Data range: `event_date` (inicio) + `event_date_end` (fim, opcional). Exibido como "dd/mm a dd/mm" quando ambos preenchidos
+- Filtro publico `/eventos`: dateFrom checa `event_date_end >= dateFrom` (ou `event_date` se end é null), dateTo checa `event_date <= dateTo`
+- Pagina `/eventos` aceita `?fotografo=ID` para filtrar eventos de um fotografo especifico (titulo muda para "Eventos de [Nome]")
+- Dashboard `/dashboard/eventos` tem secao "Compartilhar seus eventos" com copiar link + QR Code (aponta para `/eventos?fotografo=ID`)
 
 ### Eventos Compartilhados
 - Dono do evento pode convidar colaboradores via link (`/convite/[token]`)
