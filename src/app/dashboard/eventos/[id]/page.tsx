@@ -92,6 +92,7 @@ export default function EventoDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
+  const [coverToConfirm, setCoverToConfirm] = useState<string | null>(null);
   const [deletingPhoto, setDeletingPhoto] = useState(false);
   const [priceInput, setPriceInput] = useState("");
   const [packagePriceInput, setPackagePriceInput] = useState("");
@@ -450,6 +451,7 @@ export default function EventoDetailPage() {
     const url = getPhotoUrl(storagePath);
     await supabase.from("events").update({ cover_url: url }).eq("id", event.id);
     setEvent({ ...event, cover_url: url });
+    setCoverToConfirm(null);
   }
 
   async function confirmDeletePhoto() {
@@ -942,6 +944,36 @@ export default function EventoDetailPage() {
                 ) : (
                   "Sim, excluir"
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {coverToConfirm && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="glass rounded-2xl p-8 max-w-sm w-full">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Star className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold text-center mb-2">
+              Alterar capa do evento?
+            </h3>
+            <p className="text-sm text-muted text-center mb-6">
+              Deseja confirmar a alteração da capa?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCoverToConfirm(null)}
+                className="flex-1 glass hover:bg-white/10 py-3 rounded-xl text-sm font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleSetCover(coverToConfirm)}
+                className="flex-1 bg-primary hover:bg-primary-dark text-white py-3 rounded-xl text-sm font-medium transition-colors"
+              >
+                Sim, alterar
               </button>
             </div>
           </div>
@@ -1466,7 +1498,7 @@ export default function EventoDetailPage() {
                   </a>
                   {isOwner && !isCover && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleSetCover(photo.storage_path); }}
+                      onClick={(e) => { e.stopPropagation(); setCoverToConfirm(photo.storage_path); }}
                       className="p-2 bg-primary/80 hover:bg-primary rounded-lg text-white transition-colors"
                       title="Definir como capa"
                     >
@@ -1529,7 +1561,7 @@ export default function EventoDetailPage() {
                 </a>
                 {isOwner && (
                   <button
-                    onClick={() => handleSetCover(previewPhoto.storage_path)}
+                    onClick={() => setCoverToConfirm(previewPhoto.storage_path)}
                     className="flex items-center gap-1.5 bg-primary/80 hover:bg-primary text-white px-4 py-2 rounded-lg text-sm transition-colors"
                   >
                     <Star className="w-4 h-4" />
