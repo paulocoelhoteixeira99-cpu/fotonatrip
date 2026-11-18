@@ -8,7 +8,7 @@ import { ArrowLeft, X, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-rea
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-const PHOTOS_PER_PAGE = 50;
+const PHOTOS_PER_PAGE = 20;
 
 export default function FotosVendidasPage() {
   return (
