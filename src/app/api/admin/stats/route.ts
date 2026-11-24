@@ -162,10 +162,11 @@ async function getSalesByEvent(from: string | null, to: string | null) {
   const supabase = getServiceClient();
 
   // All events with photographer info
-  const { data: events } = await supabase
+  const { data: events, error: eventsError } = await supabase
     .from("events")
     .select("id, title, photo_count, photographer_id, price_per_photo_cents, status")
     .limit(10000);
+  console.log("[getSalesByEvent] events count:", events?.length, "error:", eventsError?.message);
 
   // Photographer names
   const { data: photographers } = await supabase
@@ -186,7 +187,8 @@ async function getSalesByEvent(from: string | null, to: string | null) {
     .limit(10000);
   if (from) itemsQuery = itemsQuery.gte("orders.created_at", `${from}T00:00:00`);
   if (to) itemsQuery = itemsQuery.lte("orders.created_at", `${to}T23:59:59`);
-  const { data: items } = await itemsQuery;
+  const { data: items, error: itemsError } = await itemsQuery;
+  console.log("[getSalesByEvent] items count:", items?.length, "error:", itemsError?.message);
 
   // Aggregate by event
   const byEvent = new Map<string, { items_sold: number; revenue_cents: number; unique_orders: Set<string> }>();
@@ -218,6 +220,8 @@ async function getSalesByEvent(from: string | null, to: string | null) {
     };
   }).sort((a, b) => b.revenue_cents - a.revenue_cents);
 
+  const withSales = eventSales.filter((e) => e.items_sold > 0);
+  console.log("[getSalesByEvent] byEvent keys:", Array.from(byEvent.keys()).length, "events with sales:", withSales.length, "total events:", eventSales.length);
   return { event_sales: eventSales };
 }
 
