@@ -28,6 +28,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Photo not found" }, { status: 404 });
   }
 
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const isAdmin = profile?.role === "admin";
+
   // Allow if user is the photographer who uploaded OR the event owner
   const isPhotographer = photo.photographer_id === user.id;
   const eventData = photo.events as unknown as { photographer_id: string };
@@ -35,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   let orderItem: { id: string } | null = null;
 
-  if (!isPhotographer && !isEventOwner) {
+  if (!isAdmin && !isPhotographer && !isEventOwner) {
     // Otherwise, verify user has a paid order containing this photo
     const { data: item } = await supabase
       .from("order_items")

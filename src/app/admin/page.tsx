@@ -32,6 +32,7 @@ import {
   Power,
   Check,
   Wallet,
+  Download,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
@@ -70,7 +71,7 @@ interface OverviewStats {
     discount_cents: number;
     photo_count: number;
     event_name: string | null;
-    first_photo_path: string | null;
+    event_id: string | null;
     created_at: string;
   }[];
 }
@@ -491,6 +492,47 @@ export default function AdminPage() {
   );
 }
 
+// ─── Download Order Button ───────────────────────────────────
+
+function DownloadOrderButton({ orderId, photoCount }: { orderId: string; photoCount: number }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleDownload() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/order-photos?order_id=${orderId}`);
+      if (!res.ok) return;
+      const { photos } = await res.json();
+
+      for (const photo of photos) {
+        const link = document.createElement("a");
+        link.href = `/api/download?photo_id=${photo.photo_id}`;
+        link.download = photo.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        // Small delay between downloads to avoid browser blocking
+        if (photos.length > 1) await new Promise((r) => setTimeout(r, 500));
+      }
+    } catch {
+      // silent fail
+    }
+    setLoading(false);
+  }
+
+  return (
+    <button
+      onClick={handleDownload}
+      disabled={loading}
+      className="inline-flex items-center gap-1 text-xs text-primary hover:text-green-400 transition-colors disabled:opacity-50"
+      title={`Baixar ${photoCount} foto${photoCount > 1 ? "s" : ""} originais`}
+    >
+      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+      {photoCount > 1 ? `${photoCount}` : ""}
+    </button>
+  );
+}
+
 // ─── Overview Tab ───────────────────────────────────────────
 
 function OverviewTab({ data }: { data: OverviewStats }) {
@@ -596,7 +638,7 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                   <th className="pb-3 font-medium text-right">Total</th>
                   <th className="pb-3 font-medium text-right">Plataforma</th>
                   <th className="pb-3 font-medium text-center">Cupom</th>
-                  <th className="pb-3 font-medium text-center">Link</th>
+                  <th className="pb-3 font-medium text-center">Baixar</th>
                 </tr>
               </thead>
               <tbody>
@@ -621,20 +663,7 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                       )}
                     </td>
                     <td className="py-3 text-center">
-                      {o.first_photo_path ? (
-                        <a
-                          href={`${process.env.NEXT_PUBLIC_CDN_URL}/${o.first_photo_path}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary-light transition-colors"
-                          title="Ver foto original"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Ver
-                        </a>
-                      ) : (
-                        <span className="text-muted text-xs">—</span>
-                      )}
+                      <DownloadOrderButton orderId={o.id} photoCount={o.photo_count} />
                     </td>
                   </tr>
                 ))}

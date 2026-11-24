@@ -1,4 +1,4 @@
--- Add first_photo_path to admin_recent_orders RPC
+-- Add event_id to admin_recent_orders RPC (link to event page)
 DROP FUNCTION IF EXISTS admin_recent_orders(timestamptz, timestamptz, int);
 CREATE OR REPLACE FUNCTION admin_recent_orders(
   p_from timestamptz DEFAULT NULL,
@@ -15,7 +15,7 @@ RETURNS TABLE(
   discount_cents int,
   photo_count bigint,
   event_name text,
-  first_photo_path text,
+  event_id uuid,
   created_at timestamptz
 )
 LANGUAGE sql SECURITY DEFINER AS $$
@@ -32,7 +32,7 @@ LANGUAGE sql SECURITY DEFINER AS $$
     COALESCE(o.discount_cents, 0) AS discount_cents,
     COALESCE(sub.photo_count, 0) AS photo_count,
     sub.event_name,
-    sub.first_photo_path,
+    sub.event_id,
     o.created_at
   FROM orders o
   LEFT JOIN photographers ph ON ph.id = o.photographer_id
@@ -41,7 +41,7 @@ LANGUAGE sql SECURITY DEFINER AS $$
     SELECT
       COUNT(*) AS photo_count,
       MIN(e.title) AS event_name,
-      MIN(p.storage_path) AS first_photo_path
+      MIN(e.id::text)::uuid AS event_id
     FROM order_items oi
     JOIN photos p ON p.id = oi.photo_id
     JOIN events e ON e.id = p.event_id
