@@ -124,6 +124,12 @@ supabase/
 - `search_faces_by_embedding()` — RPC: busca facial por similaridade coseno (512d, threshold 0.4)
 - `activate_scheduled_events()` — RPC: ativa eventos agendados cuja data ja passou
 - `photographer_has_order_items()` — SECURITY DEFINER: verifica se fotografo tem itens no pedido
+- `admin_overview_totals(p_from, p_to)` — RPC: totais financeiros agregados (1 row)
+- `admin_photographer_breakdown(p_from, p_to)` — RPC: vendas agregadas por fotografo
+- `admin_recent_orders(p_from, p_to, p_limit)` — RPC: pedidos recentes com photo_count e event_name
+- `admin_sales_by_event(p_from, p_to)` — RPC: vendas agregadas por evento
+- `admin_orders_by_event()` — RPC: contagem de pedidos por evento (conversao trafego)
+- `admin_monthly_revenue(p_months)` — RPC: receita mensal agregada
 
 ### RLS (Row Level Security)
 
@@ -377,6 +383,8 @@ Mudancas significativas incluem:
 - Pedidos pendentes abandonados (>1h) ficavam para sempre em "minhas compras" — filtrar client-side
 - process-payment verificava apenas orderItems[0] para decidir marketplace — pedidos mistos iam pro fotografo errado. Checkout e process-payment DEVEM ter a mesma logica de roteamento
 - Eventos compartilhados NUNCA devem usar marketplace (mesmo so fotos do host) — necessario para payout tracking correto
+- Supabase tem limite de 1000 rows no nivel do projeto (API settings) — `.limit(10000)` NAO ultrapassa. Solucao: usar RPCs SQL com agregacao ou `.range()` para paginar
+- Admin stats: queries pesadas substituidas por 6 RPCs SQL (migration 023) — agrega no PostgreSQL, retorna dezenas de rows em vez de milhares
 
 ## TODO
 
