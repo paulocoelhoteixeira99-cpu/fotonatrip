@@ -31,6 +31,25 @@ function parseDateFilters(url: URL) {
   };
 }
 
+// Supabase project max rows is 1000 — paginate with .range()
+async function fetchAllPages<T>(
+  buildQuery: (start: number, end: number) => any,
+  pageSize = 1000
+): Promise<T[]> {
+  const all: T[] = [];
+  let page = 0;
+  while (true) {
+    const start = page * pageSize;
+    const { data, error } = await buildQuery(start, start + pageSize - 1);
+    if (error) break;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < pageSize) break;
+    page++;
+  }
+  return all;
+}
+
 function toTimestamp(date: string | null, end = false): string | null {
   if (!date) return null;
   return end ? `${date}T23:59:59+00:00` : `${date}T00:00:00+00:00`;
@@ -210,15 +229,17 @@ function parseUserAgent(ua: string): { browser: string; device: string; os: stri
 async function getTraffic(from: string | null, to: string | null) {
   const supabase = getServiceClient();
 
-  // Page views (user-agent parsing needs raw data — keep client-side)
-  let viewsQuery = supabase
-    .from("page_views")
-    .select("id, path, event_id, user_agent, referrer, session_id, created_at")
-    .order("created_at", { ascending: false })
-    .limit(10000);
-  if (from) viewsQuery = viewsQuery.gte("created_at", `${from}T00:00:00`);
-  if (to) viewsQuery = viewsQuery.lte("created_at", `${to}T23:59:59`);
-  const { data: views } = await viewsQuery;
+  // Page views (user-agent parsing needs raw data — paginate)
+  const views = await fetchAllPages<any>((start, end) => {
+    let q = supabase
+      .from("page_views")
+      .select("id, path, event_id, user_agent, referrer, session_id, created_at")
+      .order("created_at", { ascending: false })
+      .range(start, end);
+    if (from) q = q.gte("created_at", `${from}T00:00:00`);
+    if (to) q = q.lte("created_at", `${to}T23:59:59`);
+    return q;
+  });
 
   if (!views || views.length === 0) {
     return {

@@ -9,6 +9,25 @@ function getServiceSupabase() {
   );
 }
 
+// Supabase project max rows is 1000 — paginate with .range()
+async function fetchAllPages<T>(
+  buildQuery: (start: number, end: number) => any,
+  pageSize = 1000
+): Promise<T[]> {
+  const all: T[] = [];
+  let page = 0;
+  while (true) {
+    const start = page * pageSize;
+    const { data, error } = await buildQuery(start, start + pageSize - 1);
+    if (error) break;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < pageSize) break;
+    page++;
+  }
+  return all;
+}
+
 export async function GET() {
   const supabase = await createClient();
 
@@ -35,14 +54,17 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  // Summary stats — only count payouts from PAID orders
-  const { data: pendingPayouts } = await supa
-    .from("payouts")
-    .select("amount_cents, photographer_id, type, order_items!inner(orders!inner(status))")
-    .eq("status", "pending")
-    .eq("order_items.orders.status", "paid");
+  // Summary stats — only count payouts from PAID orders (paginated)
+  const pendingPayouts = await fetchAllPages<any>((start, end) =>
+    supa
+      .from("payouts")
+      .select("amount_cents, photographer_id, type, order_items!inner(orders!inner(status))")
+      .eq("status", "pending")
+      .eq("order_items.orders.status", "paid")
+      .range(start, end)
+  );
 
-  const validPending = (pendingPayouts || []) as { amount_cents: number; photographer_id: string; type: string }[];
+  const validPending = pendingPayouts as { amount_cents: number; photographer_id: string; type: string }[];
   const totalPending = validPending.reduce((s, p) => s + p.amount_cents, 0);
 
   // Breakdown by photographer (descending by amount), with type split
@@ -86,12 +108,15 @@ export async function GET() {
     })
     .sort((a, b) => b.amount_cents - a.amount_cents);
 
-  const { data: paidBatches } = await supa
-    .from("payout_batches")
-    .select("total_cents")
-    .eq("status", "paid");
+  const paidBatches = await fetchAllPages<any>((start, end) =>
+    supa
+      .from("payout_batches")
+      .select("total_cents")
+      .eq("status", "paid")
+      .range(start, end)
+  );
 
-  const totalPaid = (paidBatches || []).reduce((s, b) => s + b.total_cents, 0);
+  const totalPaid = paidBatches.reduce((s: number, b: any) => s + b.total_cents, 0);
 
   return NextResponse.json({
     batches: batches || [],
@@ -137,15 +162,18 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "generate_batches") {
-    // Only batch payouts from PAID orders
-    const { data: pendingPayouts } = await supa
-      .from("payouts")
-      .select("id, photographer_id, amount_cents, order_items!inner(orders!inner(status))")
-      .eq("status", "pending")
-      .is("payout_batch_id", null)
-      .eq("order_items.orders.status", "paid");
+    // Only batch payouts from PAID orders (paginated)
+    const pendingPayouts = await fetchAllPages<any>((start, end) =>
+      supa
+        .from("payouts")
+        .select("id, photographer_id, amount_cents, order_items!inner(orders!inner(status))")
+        .eq("status", "pending")
+        .is("payout_batch_id", null)
+        .eq("order_items.orders.status", "paid")
+        .range(start, end)
+    );
 
-    if (!pendingPayouts || pendingPayouts.length === 0) {
+    if (pendingPayouts.length === 0) {
       return NextResponse.json({ message: "Nenhum payout pendente", batches_created: 0 });
     }
 
