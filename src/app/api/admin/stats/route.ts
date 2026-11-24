@@ -31,151 +31,66 @@ function parseDateFilters(url: URL) {
   };
 }
 
-// Supabase project-level max rows is 1000 — paginate to fetch all
-async function fetchAllPages<T>(
-  buildQuery: (from: number, to: number) => any,
-  pageSize = 1000
-): Promise<T[]> {
-  const all: T[] = [];
-  let page = 0;
-  while (true) {
-    const start = page * pageSize;
-    const { data, error } = await buildQuery(start, start + pageSize - 1);
-    if (error) break;
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < pageSize) break;
-    page++;
-  }
-  return all;
+function toTimestamp(date: string | null, end = false): string | null {
+  if (!date) return null;
+  return end ? `${date}T23:59:59+00:00` : `${date}T00:00:00+00:00`;
 }
 
 // ─── Overview ───────────────────────────────────────────────
 
 async function getOverview(from: string | null, to: string | null) {
   const supabase = getServiceClient();
+  const p_from = toTimestamp(from);
+  const p_to = toTimestamp(to, true);
 
-  // Paid orders (paginated)
-  const orders = await fetchAllPages<any>((start, end) => {
-    let q = supabase
-      .from("orders")
-      .select("id, client_email, total_cents, platform_fee_cents, status, created_at, photographer_id, coupon_code, discount_cents")
-      .eq("status", "paid")
-      .order("created_at", { ascending: false })
-      .range(start, end);
-    if (from) q = q.gte("created_at", `${from}T00:00:00`);
-    if (to) q = q.lte("created_at", `${to}T23:59:59`);
-    return q;
-  });
+  // All 3 RPCs in parallel + counts
+  const [totalsRes, breakdownRes, recentRes, ...countResults] = await Promise.all([
+    supabase.rpc("admin_overview_totals", { p_from, p_to }),
+    supabase.rpc("admin_photographer_breakdown", { p_from, p_to }),
+    supabase.rpc("admin_recent_orders", { p_from, p_to }),
+    supabase.from("events").select("id", { count: "exact", head: true }),
+    supabase.from("photos").select("id", { count: "exact", head: true }).eq("status", "ready"),
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "photographer"),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "client"),
+  ]);
 
-  // Order items for photographer breakdown (paginated)
-  const items = await fetchAllPages<any>((start, end) => {
-    let q = supabase
-      .from("order_items")
-      .select("id, price_cents, photographer_id, order_id, created_at, orders!inner(status, created_at)")
-      .eq("orders.status", "paid")
-      .range(start, end);
-    if (from) q = q.gte("orders.created_at", `${from}T00:00:00`);
-    if (to) q = q.lte("orders.created_at", `${to}T23:59:59`);
-    return q;
-  });
-
-  // Photographer names
-  const { data: photographers } = await supabase
-    .from("photographers")
-    .select("id, business_name, profiles(full_name)");
-
-  const photographerMap = new Map<string, string>();
-  for (const p of photographers || []) {
-    const profile = p.profiles as unknown as { full_name: string } | null;
-    photographerMap.set(p.id, p.business_name || profile?.full_name || "Sem nome");
-  }
-
-  // Totals
-  const totalRevenue = (orders || []).reduce((sum, o) => sum + o.total_cents, 0);
-  const totalPlatformFee = (orders || []).reduce((sum, o) => sum + (o.platform_fee_cents || 0), 0);
-
-  // Photographer breakdown
-  const byPhotographer = new Map<string, { revenue: number; items: number }>();
-  for (const item of items || []) {
-    if (!item.photographer_id) continue;
-    const current = byPhotographer.get(item.photographer_id) || { revenue: 0, items: 0 };
-    current.revenue += item.price_cents;
-    current.items += 1;
-    byPhotographer.set(item.photographer_id, current);
-  }
-
-  const photographerBreakdown = Array.from(byPhotographer.entries())
-    .map(([id, data]) => ({
-      id,
-      name: photographerMap.get(id) || "Sem nome",
-      revenue_cents: data.revenue,
-      platform_fee_cents: Math.round(data.revenue * 0.07),
-      payout_cents: Math.round(data.revenue * 0.93),
-      items_sold: data.items,
-    }))
-    .sort((a, b) => b.revenue_cents - a.revenue_cents);
-
-  // Recent orders — fetch items + event names for the top 20 only
-  const recentOrderIds = (orders || []).slice(0, 20).map((o) => o.id);
-  const { data: recentItems } = recentOrderIds.length > 0
-    ? await supabase
-        .from("order_items")
-        .select("order_id, photo_id, photos!inner(event_id, events!inner(title))")
-        .in("order_id", recentOrderIds)
-    : { data: [] };
-
-  const itemsByOrder = new Map<string, number>();
-  const eventByOrder = new Map<string, string>();
-  for (const item of recentItems || []) {
-    itemsByOrder.set(item.order_id, (itemsByOrder.get(item.order_id) || 0) + 1);
-    if (!eventByOrder.has(item.order_id)) {
-      const photo = item.photos as unknown as { event_id: string; events: { title: string } } | null;
-      if (photo?.events?.title) {
-        eventByOrder.set(item.order_id, photo.events.title);
-      }
-    }
-  }
-
-  const recentOrders = (orders || []).slice(0, 20).map((o) => ({
-    id: o.id,
-    client_email: o.client_email,
-    total_cents: o.total_cents,
-    platform_fee_cents: o.platform_fee_cents || 0,
-    photographer_name: o.photographer_id ? photographerMap.get(o.photographer_id) || "Sem nome" : "Compartilhado",
-    coupon_code: o.coupon_code || null,
-    discount_cents: o.discount_cents || 0,
-    photo_count: itemsByOrder.get(o.id) || 0,
-    event_name: eventByOrder.get(o.id) || null,
-    created_at: o.created_at,
-  }));
-
-  // Counts
-  const { count: totalEvents } = await supabase.from("events").select("id", { count: "exact", head: true });
-  const { count: totalPhotos } = await supabase.from("photos").select("id", { count: "exact", head: true }).eq("status", "ready");
-  const { count: totalUsers } = await supabase.from("profiles").select("id", { count: "exact", head: true });
-  const { count: totalPhotographers } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "photographer");
-  const { count: totalClients } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "client");
-
-  // Ticket medio
-  const ordersCount = (orders || []).length;
-  const avgTicketCents = ordersCount > 0 ? Math.round(totalRevenue / ordersCount) : 0;
+  const t = totalsRes.data?.[0] || { revenue_cents: 0, platform_fee_cents: 0, orders_count: 0, avg_ticket_cents: 0 };
+  const [eventsCount, photosCount, usersCount, photographersCount, clientsCount] = countResults;
 
   return {
     totals: {
-      revenue_cents: totalRevenue,
-      platform_fee_cents: totalPlatformFee,
-      photographer_payout_cents: totalRevenue - totalPlatformFee,
-      orders_count: ordersCount,
-      events_count: totalEvents || 0,
-      photos_count: totalPhotos || 0,
-      users_count: totalUsers || 0,
-      photographers_count: totalPhotographers || 0,
-      clients_count: totalClients || 0,
-      avg_ticket_cents: avgTicketCents,
+      revenue_cents: Number(t.revenue_cents),
+      platform_fee_cents: Number(t.platform_fee_cents),
+      photographer_payout_cents: Number(t.revenue_cents) - Number(t.platform_fee_cents),
+      orders_count: Number(t.orders_count),
+      events_count: eventsCount.count || 0,
+      photos_count: photosCount.count || 0,
+      users_count: usersCount.count || 0,
+      photographers_count: photographersCount.count || 0,
+      clients_count: clientsCount.count || 0,
+      avg_ticket_cents: Number(t.avg_ticket_cents),
     },
-    photographer_breakdown: photographerBreakdown,
-    recent_orders: recentOrders,
+    photographer_breakdown: (breakdownRes.data || []).map((p: any) => ({
+      id: p.photographer_id,
+      name: p.name,
+      revenue_cents: Number(p.revenue_cents),
+      platform_fee_cents: Number(p.platform_fee_cents),
+      payout_cents: Number(p.payout_cents),
+      items_sold: Number(p.items_sold),
+    })),
+    recent_orders: (recentRes.data || []).map((o: any) => ({
+      id: o.id,
+      client_email: o.client_email,
+      total_cents: o.total_cents,
+      platform_fee_cents: o.platform_fee_cents,
+      photographer_name: o.photographer_name,
+      coupon_code: o.coupon_code || null,
+      discount_cents: o.discount_cents || 0,
+      photo_count: Number(o.photo_count),
+      event_name: o.event_name || null,
+      created_at: o.created_at,
+    })),
   };
 }
 
@@ -183,65 +98,23 @@ async function getOverview(from: string | null, to: string | null) {
 
 async function getSalesByEvent(from: string | null, to: string | null) {
   const supabase = getServiceClient();
+  const p_from = toTimestamp(from);
+  const p_to = toTimestamp(to, true);
 
-  // All events with photographer info
-  const { data: events } = await supabase
-    .from("events")
-    .select("id, title, photo_count, photographer_id, price_per_photo_cents, status")
-    .limit(10000);
+  const { data } = await supabase.rpc("admin_sales_by_event", { p_from, p_to });
 
-  // Photographer names
-  const { data: photographers } = await supabase
-    .from("photographers")
-    .select("id, business_name, profiles(full_name)");
-
-  const photographerMap = new Map<string, string>();
-  for (const p of photographers || []) {
-    const profile = p.profiles as unknown as { full_name: string } | null;
-    photographerMap.set(p.id, p.business_name || profile?.full_name || "Sem nome");
-  }
-
-  // Get all paid order items with photo event info (paginated)
-  const items = await fetchAllPages<any>((start, end) => {
-    let q = supabase
-      .from("order_items")
-      .select("id, price_cents, photo_id, order_id, orders!inner(status, created_at), photos!inner(event_id)")
-      .eq("orders.status", "paid")
-      .range(start, end);
-    if (from) q = q.gte("orders.created_at", `${from}T00:00:00`);
-    if (to) q = q.lte("orders.created_at", `${to}T23:59:59`);
-    return q;
-  });
-
-  // Aggregate by event
-  const byEvent = new Map<string, { items_sold: number; revenue_cents: number; unique_orders: Set<string> }>();
-  for (const item of items || []) {
-    const photo = item.photos as unknown as { event_id: string } | null;
-    if (!photo?.event_id) continue;
-    const eventId = photo.event_id;
-    const current = byEvent.get(eventId) || { items_sold: 0, revenue_cents: 0, unique_orders: new Set<string>() };
-    current.items_sold += 1;
-    current.revenue_cents += item.price_cents;
-    current.unique_orders.add(item.order_id);
-    byEvent.set(eventId, current);
-  }
-
-  // Build response
-  const eventSales = (events || []).map((e) => {
-    const sales = byEvent.get(e.id);
-    return {
-      id: e.id,
-      title: e.title,
-      photographer: photographerMap.get(e.photographer_id) || "Sem nome",
-      photo_count: e.photo_count || 0,
-      price_cents: e.price_per_photo_cents || 0,
-      status: e.status,
-      items_sold: sales?.items_sold || 0,
-      orders_count: sales?.unique_orders.size || 0,
-      revenue_cents: sales?.revenue_cents || 0,
-      platform_fee_cents: Math.round((sales?.revenue_cents || 0) * 0.07),
-    };
-  }).sort((a, b) => b.revenue_cents - a.revenue_cents);
+  const eventSales = (data || []).map((e: any) => ({
+    id: e.event_id,
+    title: e.title,
+    photographer: e.photographer,
+    photo_count: e.photo_count,
+    price_cents: e.price_cents,
+    status: e.status,
+    items_sold: Number(e.items_sold),
+    orders_count: Number(e.orders_count),
+    revenue_cents: Number(e.revenue_cents),
+    platform_fee_cents: Number(e.platform_fee_cents),
+  }));
 
   return { event_sales: eventSales };
 }
@@ -251,7 +124,7 @@ async function getSalesByEvent(from: string | null, to: string | null) {
 async function getGrowth() {
   const supabase = getServiceClient();
 
-  // All profiles with created_at and role
+  // Profiles still fetched individually (need per-day breakdown for chart)
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, role, created_at")
@@ -260,8 +133,6 @@ async function getGrowth() {
 
   // Daily registration data (last 90 days)
   const now = new Date();
-  const ninetyDaysAgo = new Date(now);
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   const dailyGrowth: { date: string; clients: number; photographers: number }[] = [];
   for (let i = 89; i >= 0; i--) {
@@ -284,7 +155,6 @@ async function getGrowth() {
   // Cumulative totals
   let cumClients = 0;
   let cumPhotographers = 0;
-  // Count users before the 90-day window
   for (const p of profiles || []) {
     const dateStr = new Date(p.created_at).toISOString().split("T")[0];
     if (dateStr < dailyGrowth[0].date) {
@@ -299,39 +169,14 @@ async function getGrowth() {
     return { date: d.date, total_clients: cumClients, total_photographers: cumPhotographers };
   });
 
-  // Monthly revenue (last 6 months)
-  const sixMonthsAgo = new Date(now);
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-  sixMonthsAgo.setDate(1);
-  const sixMonthsAgoStr = sixMonthsAgo.toISOString().split("T")[0];
+  // Monthly revenue via RPC
+  const { data: monthlyData } = await supabase.rpc("admin_monthly_revenue", { p_months: 6 });
 
-  const { data: paidOrders } = await supabase
-    .from("orders")
-    .select("total_cents, platform_fee_cents, created_at")
-    .eq("status", "paid")
-    .gte("created_at", `${sixMonthsAgoStr}T00:00:00`);
-
-  const monthlyMap = new Map<string, { revenue_cents: number; platform_fee_cents: number; orders_count: number }>();
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(now);
-    d.setMonth(d.getMonth() - (5 - i));
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    monthlyMap.set(key, { revenue_cents: 0, platform_fee_cents: 0, orders_count: 0 });
-  }
-
-  for (const o of paidOrders || []) {
-    const key = o.created_at.slice(0, 7);
-    const entry = monthlyMap.get(key);
-    if (entry) {
-      entry.revenue_cents += o.total_cents || 0;
-      entry.platform_fee_cents += o.platform_fee_cents || 0;
-      entry.orders_count += 1;
-    }
-  }
-
-  const monthlyRevenue = [...monthlyMap.entries()].map(([month, data]) => ({
-    month: `${month}-01`,
-    ...data,
+  const monthlyRevenue = (monthlyData || []).map((m: any) => ({
+    month: m.month,
+    revenue_cents: Number(m.revenue_cents),
+    platform_fee_cents: Number(m.platform_fee_cents),
+    orders_count: Number(m.orders_count),
   }));
 
   return { daily_growth: dailyGrowth, cumulative_growth: cumulativeGrowth, monthly_revenue: monthlyRevenue };
@@ -344,21 +189,18 @@ function parseUserAgent(ua: string): { browser: string; device: string; os: stri
   let device = "Desktop";
   let os = "Outro";
 
-  // Browser
   if (/edg\//i.test(ua)) browser = "Edge";
   else if (/opr\//i.test(ua) || /opera/i.test(ua)) browser = "Opera";
   else if (/chrome\//i.test(ua) && !/edg/i.test(ua)) browser = "Chrome";
   else if (/safari\//i.test(ua) && !/chrome/i.test(ua)) browser = "Safari";
   else if (/firefox\//i.test(ua)) browser = "Firefox";
 
-  // OS
   if (/windows/i.test(ua)) os = "Windows";
   else if (/macintosh|mac os/i.test(ua)) os = "macOS";
   else if (/android/i.test(ua)) os = "Android";
   else if (/iphone|ipad|ipod/i.test(ua)) os = "iOS";
   else if (/linux/i.test(ua)) os = "Linux";
 
-  // Device
   if (/mobile|android|iphone|ipod/i.test(ua)) device = "Mobile";
   else if (/ipad|tablet/i.test(ua)) device = "Tablet";
 
@@ -368,7 +210,7 @@ function parseUserAgent(ua: string): { browser: string; device: string; os: stri
 async function getTraffic(from: string | null, to: string | null) {
   const supabase = getServiceClient();
 
-  // Get page views
+  // Page views (user-agent parsing needs raw data — keep client-side)
   let viewsQuery = supabase
     .from("page_views")
     .select("id, path, event_id, user_agent, referrer, session_id, created_at")
@@ -468,34 +310,22 @@ async function getTraffic(from: string | null, to: string | null) {
   let eventConversion: { event_id: string; title: string; views: number; visitors: number; orders: number; conversion_rate: number }[] = [];
 
   if (eventIds.length > 0) {
-    const { data: events } = await supabase
-      .from("events")
-      .select("id, title")
-      .in("id", eventIds);
+    // Event names + orders via RPC in parallel
+    const [eventsRes, ordersRes] = await Promise.all([
+      supabase.from("events").select("id, title").in("id", eventIds),
+      supabase.rpc("admin_orders_by_event"),
+    ]);
 
-    // Count orders per event (photos in paid orders grouped by event, paginated)
-    const orderItems = await fetchAllPages<any>((start, end) =>
-      supabase
-        .from("order_items")
-        .select("id, photo_id, order_id, orders!inner(status), photos!inner(event_id)")
-        .eq("orders.status", "paid")
-        .range(start, end)
-    );
-
-    const ordersByEvent = new Map<string, Set<string>>();
-    for (const item of orderItems) {
-      const photo = item.photos as unknown as { event_id: string } | null;
-      if (!photo?.event_id) continue;
-      const set = ordersByEvent.get(photo.event_id) || new Set<string>();
-      set.add(item.order_id);
-      ordersByEvent.set(photo.event_id, set);
+    const ordersByEvent = new Map<string, number>();
+    for (const row of ordersRes.data || []) {
+      ordersByEvent.set(row.event_id, Number(row.orders_count));
     }
 
-    const eventNameMap = new Map((events || []).map((e) => [e.id, e.title]));
+    const eventNameMap = new Map((eventsRes.data || []).map((e: any) => [e.id, e.title]));
 
     eventConversion = eventIds.map((eventId) => {
       const viewData = eventViewMap.get(eventId)!;
-      const ordersCount = ordersByEvent.get(eventId)?.size || 0;
+      const ordersCount = ordersByEvent.get(eventId) || 0;
       const visitors = viewData.sessions.size;
       return {
         event_id: eventId,
