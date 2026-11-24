@@ -180,7 +180,8 @@ async function getSalesByEvent(from: string | null, to: string | null) {
   let itemsQuery = supabase
     .from("order_items")
     .select("id, price_cents, photo_id, order_id, orders!inner(status, created_at), photos!inner(event_id)")
-    .eq("orders.status", "paid");
+    .eq("orders.status", "paid")
+    .limit(10000);
   if (from) itemsQuery = itemsQuery.gte("orders.created_at", `${from}T00:00:00`);
   if (to) itemsQuery = itemsQuery.lte("orders.created_at", `${to}T23:59:59`);
   const { data: items } = await itemsQuery;
