@@ -70,6 +70,7 @@ interface OverviewStats {
     discount_cents: number;
     photo_count: number;
     event_name: string | null;
+    first_photo_path: string | null;
     created_at: string;
   }[];
 }
@@ -595,6 +596,7 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                   <th className="pb-3 font-medium text-right">Total</th>
                   <th className="pb-3 font-medium text-right">Plataforma</th>
                   <th className="pb-3 font-medium text-center">Cupom</th>
+                  <th className="pb-3 font-medium text-center">Link</th>
                 </tr>
               </thead>
               <tbody>
@@ -614,6 +616,22 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                         <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full" title={`-${formatPrice(o.discount_cents)}`}>
                           {o.coupon_code}
                         </span>
+                      ) : (
+                        <span className="text-muted text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 text-center">
+                      {o.first_photo_path ? (
+                        <a
+                          href={`${process.env.NEXT_PUBLIC_CDN_URL}/${o.first_photo_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary-light transition-colors"
+                          title="Ver foto original"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Ver
+                        </a>
                       ) : (
                         <span className="text-muted text-xs">—</span>
                       )}
