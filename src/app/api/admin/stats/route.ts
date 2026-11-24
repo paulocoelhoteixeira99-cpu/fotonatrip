@@ -41,7 +41,8 @@ async function getOverview(from: string | null, to: string | null) {
     .from("orders")
     .select("id, client_email, total_cents, platform_fee_cents, status, created_at, photographer_id, coupon_code, discount_cents")
     .eq("status", "paid")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(10000);
   if (from) ordersQuery = ordersQuery.gte("created_at", `${from}T00:00:00`);
   if (to) ordersQuery = ordersQuery.lte("created_at", `${to}T23:59:59`);
   const { data: orders } = await ordersQuery;
@@ -163,7 +164,8 @@ async function getSalesByEvent(from: string | null, to: string | null) {
   // All events with photographer info
   const { data: events } = await supabase
     .from("events")
-    .select("id, title, photo_count, photographer_id, price_per_photo_cents, status");
+    .select("id, title, photo_count, photographer_id, price_per_photo_cents, status")
+    .limit(10000);
 
   // Photographer names
   const { data: photographers } = await supabase
@@ -228,7 +230,8 @@ async function getGrowth() {
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, role, created_at")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(10000);
 
   // Daily registration data (last 90 days)
   const now = new Date();
@@ -449,7 +452,8 @@ async function getTraffic(from: string | null, to: string | null) {
     const { data: orderItems } = await supabase
       .from("order_items")
       .select("id, photo_id, order_id, orders!inner(status), photos!inner(event_id)")
-      .eq("orders.status", "paid");
+      .eq("orders.status", "paid")
+      .limit(10000);
 
     const ordersByEvent = new Map<string, Set<string>>();
     for (const item of orderItems || []) {
