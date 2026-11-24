@@ -31,31 +31,54 @@ function parseDateFilters(url: URL) {
   };
 }
 
+// Supabase project-level max rows is 1000 — paginate to fetch all
+async function fetchAllPages<T>(
+  buildQuery: (from: number, to: number) => any,
+  pageSize = 1000
+): Promise<T[]> {
+  const all: T[] = [];
+  let page = 0;
+  while (true) {
+    const start = page * pageSize;
+    const { data, error } = await buildQuery(start, start + pageSize - 1);
+    if (error) break;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < pageSize) break;
+    page++;
+  }
+  return all;
+}
+
 // ─── Overview ───────────────────────────────────────────────
 
 async function getOverview(from: string | null, to: string | null) {
   const supabase = getServiceClient();
 
-  // Paid orders
-  let ordersQuery = supabase
-    .from("orders")
-    .select("id, client_email, total_cents, platform_fee_cents, status, created_at, photographer_id, coupon_code, discount_cents")
-    .eq("status", "paid")
-    .order("created_at", { ascending: false })
-    .limit(10000);
-  if (from) ordersQuery = ordersQuery.gte("created_at", `${from}T00:00:00`);
-  if (to) ordersQuery = ordersQuery.lte("created_at", `${to}T23:59:59`);
-  const { data: orders } = await ordersQuery;
+  // Paid orders (paginated)
+  const orders = await fetchAllPages<any>((start, end) => {
+    let q = supabase
+      .from("orders")
+      .select("id, client_email, total_cents, platform_fee_cents, status, created_at, photographer_id, coupon_code, discount_cents")
+      .eq("status", "paid")
+      .order("created_at", { ascending: false })
+      .range(start, end);
+    if (from) q = q.gte("created_at", `${from}T00:00:00`);
+    if (to) q = q.lte("created_at", `${to}T23:59:59`);
+    return q;
+  });
 
-  // Order items for photographer breakdown
-  let itemsQuery = supabase
-    .from("order_items")
-    .select("id, price_cents, photographer_id, order_id, created_at, orders!inner(status, created_at)")
-    .eq("orders.status", "paid")
-    .limit(10000);
-  if (from) itemsQuery = itemsQuery.gte("orders.created_at", `${from}T00:00:00`);
-  if (to) itemsQuery = itemsQuery.lte("orders.created_at", `${to}T23:59:59`);
-  const { data: items } = await itemsQuery;
+  // Order items for photographer breakdown (paginated)
+  const items = await fetchAllPages<any>((start, end) => {
+    let q = supabase
+      .from("order_items")
+      .select("id, price_cents, photographer_id, order_id, created_at, orders!inner(status, created_at)")
+      .eq("orders.status", "paid")
+      .range(start, end);
+    if (from) q = q.gte("orders.created_at", `${from}T00:00:00`);
+    if (to) q = q.lte("orders.created_at", `${to}T23:59:59`);
+    return q;
+  });
 
   // Photographer names
   const { data: photographers } = await supabase
@@ -162,11 +185,10 @@ async function getSalesByEvent(from: string | null, to: string | null) {
   const supabase = getServiceClient();
 
   // All events with photographer info
-  const { data: events, error: eventsError } = await supabase
+  const { data: events } = await supabase
     .from("events")
     .select("id, title, photo_count, photographer_id, price_per_photo_cents, status")
     .limit(10000);
-  console.log("[getSalesByEvent] events count:", events?.length, "error:", eventsError?.message);
 
   // Photographer names
   const { data: photographers } = await supabase
@@ -179,16 +201,17 @@ async function getSalesByEvent(from: string | null, to: string | null) {
     photographerMap.set(p.id, p.business_name || profile?.full_name || "Sem nome");
   }
 
-  // Get all paid order items with photo event info
-  let itemsQuery = supabase
-    .from("order_items")
-    .select("id, price_cents, photo_id, order_id, orders!inner(status, created_at), photos!inner(event_id)")
-    .eq("orders.status", "paid")
-    .limit(10000);
-  if (from) itemsQuery = itemsQuery.gte("orders.created_at", `${from}T00:00:00`);
-  if (to) itemsQuery = itemsQuery.lte("orders.created_at", `${to}T23:59:59`);
-  const { data: items, error: itemsError } = await itemsQuery;
-  console.log("[getSalesByEvent] items count:", items?.length, "error:", itemsError?.message);
+  // Get all paid order items with photo event info (paginated)
+  const items = await fetchAllPages<any>((start, end) => {
+    let q = supabase
+      .from("order_items")
+      .select("id, price_cents, photo_id, order_id, orders!inner(status, created_at), photos!inner(event_id)")
+      .eq("orders.status", "paid")
+      .range(start, end);
+    if (from) q = q.gte("orders.created_at", `${from}T00:00:00`);
+    if (to) q = q.lte("orders.created_at", `${to}T23:59:59`);
+    return q;
+  });
 
   // Aggregate by event
   const byEvent = new Map<string, { items_sold: number; revenue_cents: number; unique_orders: Set<string> }>();
@@ -220,8 +243,6 @@ async function getSalesByEvent(from: string | null, to: string | null) {
     };
   }).sort((a, b) => b.revenue_cents - a.revenue_cents);
 
-  const withSales = eventSales.filter((e) => e.items_sold > 0);
-  console.log("[getSalesByEvent] byEvent keys:", Array.from(byEvent.keys()).length, "events with sales:", withSales.length, "total events:", eventSales.length);
   return { event_sales: eventSales };
 }
 
@@ -452,15 +473,17 @@ async function getTraffic(from: string | null, to: string | null) {
       .select("id, title")
       .in("id", eventIds);
 
-    // Count orders per event (photos in paid orders grouped by event)
-    const { data: orderItems } = await supabase
-      .from("order_items")
-      .select("id, photo_id, order_id, orders!inner(status), photos!inner(event_id)")
-      .eq("orders.status", "paid")
-      .limit(10000);
+    // Count orders per event (photos in paid orders grouped by event, paginated)
+    const orderItems = await fetchAllPages<any>((start, end) =>
+      supabase
+        .from("order_items")
+        .select("id, photo_id, order_id, orders!inner(status), photos!inner(event_id)")
+        .eq("orders.status", "paid")
+        .range(start, end)
+    );
 
     const ordersByEvent = new Map<string, Set<string>>();
-    for (const item of orderItems || []) {
+    for (const item of orderItems) {
       const photo = item.photos as unknown as { event_id: string } | null;
       if (!photo?.event_id) continue;
       const set = ordersByEvent.get(photo.event_id) || new Set<string>();
