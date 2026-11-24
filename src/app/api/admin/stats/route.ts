@@ -50,7 +50,8 @@ async function getOverview(from: string | null, to: string | null) {
   let itemsQuery = supabase
     .from("order_items")
     .select("id, price_cents, photographer_id, order_id, created_at, orders!inner(status, created_at)")
-    .eq("orders.status", "paid");
+    .eq("orders.status", "paid")
+    .limit(10000);
   if (from) itemsQuery = itemsQuery.gte("orders.created_at", `${from}T00:00:00`);
   if (to) itemsQuery = itemsQuery.lte("orders.created_at", `${to}T23:59:59`);
   const { data: items } = await itemsQuery;
@@ -91,13 +92,27 @@ async function getOverview(from: string | null, to: string | null) {
     }))
     .sort((a, b) => b.revenue_cents - a.revenue_cents);
 
-  // Count items per order
+  // Recent orders — fetch items + event names for the top 20 only
+  const recentOrderIds = (orders || []).slice(0, 20).map((o) => o.id);
+  const { data: recentItems } = recentOrderIds.length > 0
+    ? await supabase
+        .from("order_items")
+        .select("order_id, photo_id, photos!inner(event_id, events!inner(title))")
+        .in("order_id", recentOrderIds)
+    : { data: [] };
+
   const itemsByOrder = new Map<string, number>();
-  for (const item of items || []) {
+  const eventByOrder = new Map<string, string>();
+  for (const item of recentItems || []) {
     itemsByOrder.set(item.order_id, (itemsByOrder.get(item.order_id) || 0) + 1);
+    if (!eventByOrder.has(item.order_id)) {
+      const photo = item.photos as unknown as { event_id: string; events: { title: string } } | null;
+      if (photo?.events?.title) {
+        eventByOrder.set(item.order_id, photo.events.title);
+      }
+    }
   }
 
-  // Recent orders
   const recentOrders = (orders || []).slice(0, 20).map((o) => ({
     id: o.id,
     client_email: o.client_email,
@@ -107,6 +122,7 @@ async function getOverview(from: string | null, to: string | null) {
     coupon_code: o.coupon_code || null,
     discount_cents: o.discount_cents || 0,
     photo_count: itemsByOrder.get(o.id) || 0,
+    event_name: eventByOrder.get(o.id) || null,
     created_at: o.created_at,
   }));
 

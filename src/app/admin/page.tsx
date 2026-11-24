@@ -69,6 +69,7 @@ interface OverviewStats {
     coupon_code: string | null;
     discount_cents: number;
     photo_count: number;
+    event_name: string | null;
     created_at: string;
   }[];
 }
@@ -588,7 +589,8 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                 <tr className="text-left text-muted border-b border-border">
                   <th className="pb-3 font-medium">Data</th>
                   <th className="pb-3 font-medium">Cliente</th>
-                  <th className="pb-3 font-medium">Fotografo</th>
+                  <th className="pb-3 font-medium">Evento</th>
+                  <th className="pb-3 font-medium">Fotógrafo</th>
                   <th className="pb-3 font-medium text-center">Fotos</th>
                   <th className="pb-3 font-medium text-right">Total</th>
                   <th className="pb-3 font-medium text-right">Plataforma</th>
@@ -600,6 +602,9 @@ function OverviewTab({ data }: { data: OverviewStats }) {
                   <tr key={o.id} className="border-b border-border/50 last:border-0">
                     <td className="py-3 text-muted">{new Date(o.created_at).toLocaleDateString("pt-BR")}</td>
                     <td className="py-3">{o.client_email}</td>
+                    <td className="py-3 text-muted max-w-[160px] truncate" title={o.event_name || "—"}>
+                      {o.event_name ? (o.event_name.length > 25 ? o.event_name.slice(0, 25) + "…" : o.event_name) : "—"}
+                    </td>
                     <td className="py-3 text-muted">{o.photographer_name}</td>
                     <td className="py-3 text-center">{o.photo_count}</td>
                     <td className="py-3 text-right text-green-400">{formatPrice(o.total_cents)}</td>
