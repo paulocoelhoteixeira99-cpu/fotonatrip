@@ -470,9 +470,9 @@ function BuscarContent() {
                   <div className="mt-6 pt-6 border-t border-border">
                     <Link
                       href={`/eventos/${selectedEvent.id}`}
-                      className="text-sm text-muted hover:text-primary transition-colors"
+                      className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
                     >
-                      Ver todas as fotos do evento, incluindo fotos sem rosto identificado
+                      Ver todas as fotos do evento
                     </Link>
                   </div>
                 </div>
