@@ -1664,12 +1664,6 @@ function FinanceiroTab({ data, onRefresh }: { data: FinanceiroData; onRefresh: (
     setFormLoading(false);
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("Excluir este custo?")) return;
-    await fetch(`/api/admin/costs?id=${id}`, { method: "DELETE" });
-    onRefresh();
-  }
-
   // Running balance (oldest first)
   const monthlyWithRunning = data.monthly_summary.map((m, i, arr) => {
     const runningBalance = arr.slice(0, i + 1).reduce((s, x) => s + x.balance_cents, 0);
@@ -1846,7 +1840,6 @@ function FinanceiroTab({ data, onRefresh }: { data: FinanceiroData; onRefresh: (
                   <th className="pb-3 font-medium">Data</th>
                   <th className="pb-3 font-medium">Categoria</th>
                   <th className="pb-3 font-medium text-right">Valor</th>
-                  <th className="pb-3 font-medium text-right">Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -1857,15 +1850,6 @@ function FinanceiroTab({ data, onRefresh }: { data: FinanceiroData; onRefresh: (
                       <span className="text-xs bg-white/10 px-2 py-1 rounded-full">{c.category}</span>
                     </td>
                     <td className="py-3 text-right text-red-400 font-medium">{formatPrice(c.amount_cents)}</td>
-                    <td className="py-3 text-right">
-                      <button
-                        onClick={() => handleDelete(c.id)}
-                        className="p-1.5 rounded-lg text-red-400 hover:bg-red-400/10 transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>

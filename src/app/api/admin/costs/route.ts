@@ -60,10 +60,11 @@ export async function GET() {
       totalCostsCents += amountCents;
     }
 
-    // Revenue aggregated by month
+    // Revenue aggregated by month (normalize to YYYY-MM)
     const monthlyRevenueMap = new Map<string, number>();
     for (const m of monthlyRevenue) {
-      monthlyRevenueMap.set(m.month, Number(m.platform_fee_cents));
+      const key = String(m.month).slice(0, 7);
+      monthlyRevenueMap.set(key, (monthlyRevenueMap.get(key) || 0) + Number(m.platform_fee_cents));
     }
 
     // Merge all months
