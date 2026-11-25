@@ -878,22 +878,58 @@ function GrowthTab({ data }: { data: GrowthData }) {
           <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-primary" /> Receita e comissão por mês (últimos 6 meses)
           </h2>
-          <BarChart
-            data={data.monthly_revenue}
-            bars={[
-              { key: "revenue_cents", color: "bg-green-400", label: "Receita total" },
-              { key: "platform_fee_cents", color: "bg-primary", label: "Comissão plataforma (7%)" },
-            ]}
-            labelKey="month"
-            height={200}
-            showValues
-            formatValue={(v) => `R$${(v / 100).toFixed(0)}`}
-            formatLabel={(val) => {
-              const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-              const m = parseInt(val.slice(5, 7), 10);
-              return MONTHS[m - 1] || val;
-            }}
-          />
+          {(() => {
+            const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+            const maxVal = Math.max(...data.monthly_revenue!.flatMap((x) => [x.revenue_cents, x.platform_fee_cents]), 1);
+            return (
+              <>
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-green-400" />
+                    <span className="text-xs text-muted">Receita total</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-primary" />
+                    <span className="text-xs text-muted">Comissão plataforma (7%)</span>
+                  </div>
+                </div>
+                <div className="flex items-end justify-evenly" style={{ minHeight: 200 }}>
+                  {data.monthly_revenue!.map((m) => {
+                    const revPct = Math.max((m.revenue_cents / maxVal) * 100, m.revenue_cents > 0 ? 6 : 2);
+                    const feePct = Math.max((m.platform_fee_cents / maxVal) * 100, m.platform_fee_cents > 0 ? 6 : 2);
+                    const mo = parseInt(m.month.slice(5, 7), 10);
+                    return (
+                      <div key={m.month} className="flex flex-col items-center gap-1 flex-1 max-w-[120px]">
+                        <div className="flex items-end gap-2 w-full" style={{ height: 160 }}>
+                          <div className="flex-1 flex flex-col items-center justify-end h-full">
+                            {m.revenue_cents > 0 && (
+                              <span className="text-[11px] text-muted mb-0.5">R${(m.revenue_cents / 100).toFixed(0)}</span>
+                            )}
+                            <div
+                              className="w-full rounded-t bg-green-400 hover:opacity-80 transition-opacity"
+                              style={{ height: `${revPct}%` }}
+                              title={`Receita: R$${(m.revenue_cents / 100).toFixed(2)}`}
+                            />
+                          </div>
+                          <div className="flex-1 flex flex-col items-center justify-end h-full">
+                            {m.platform_fee_cents > 0 && (
+                              <span className="text-[11px] text-muted mb-0.5">R${(m.platform_fee_cents / 100).toFixed(0)}</span>
+                            )}
+                            <div
+                              className="w-full rounded-t bg-primary hover:opacity-80 transition-opacity"
+                              style={{ height: `${feePct}%` }}
+                              title={`Comissão: R$${(m.platform_fee_cents / 100).toFixed(2)}`}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted font-medium">{MONTHS[mo - 1]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 
