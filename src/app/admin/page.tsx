@@ -256,7 +256,7 @@ function BarChart({
           const dd = dateStr.slice(8, 10);
           const mm = dateStr.slice(5, 7);
           return (
-            <div key={dateStr} className="flex flex-col items-center gap-0.5 flex-1 min-w-[18px]">
+            <div key={dateStr} className="flex flex-col items-center gap-0.5 flex-1 min-w-[18px] max-w-[80px]">
               <div className="w-full flex items-end gap-[1px]" style={{ height: barAreaH }}>
                 {bars.map((b) => {
                   const val = (d[b.key] as number) || 0;
