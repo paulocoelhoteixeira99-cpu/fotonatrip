@@ -256,7 +256,7 @@ function BarChart({
           const dd = dateStr.slice(8, 10);
           const mm = dateStr.slice(5, 7);
           return (
-            <div key={dateStr} className="flex flex-col items-center gap-0.5 flex-1 min-w-[18px] max-w-[80px]">
+            <div key={dateStr} className="flex flex-col items-center gap-0.5 flex-1 min-w-[18px]">
               <div className="w-full flex items-end gap-[1px]" style={{ height: barAreaH }}>
                 {bars.map((b) => {
                   const val = (d[b.key] as number) || 0;
@@ -1767,21 +1767,23 @@ function FinanceiroTab({ data, onRefresh }: { data: FinanceiroData; onRefresh: (
           <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary" /> Receita vs Custos por mês
           </h2>
-          <BarChart
-            data={data.monthly_summary}
-            bars={[
-              { key: "revenue_cents", color: "bg-primary", label: "Receita (7%)" },
-              { key: "costs_cents", color: "bg-red-400", label: "Custos" },
-            ]}
-            labelKey="month"
-            height={200}
-            showValues
-            formatValue={(v) => `R$${(v / 100).toFixed(0)}`}
-            formatLabel={(val) => {
-              const m = parseInt(val.slice(5, 7), 10);
-              return MONTHS_LABEL[m - 1] || val;
-            }}
-          />
+          <div className="max-w-xl">
+            <BarChart
+              data={data.monthly_summary}
+              bars={[
+                { key: "revenue_cents", color: "bg-primary", label: "Receita (7%)" },
+                { key: "costs_cents", color: "bg-red-400", label: "Custos" },
+              ]}
+              labelKey="month"
+              height={200}
+              showValues
+              formatValue={(v) => `R$${(v / 100).toFixed(0)}`}
+              formatLabel={(val) => {
+                const m = parseInt(val.slice(5, 7), 10);
+                return MONTHS_LABEL[m - 1] || val;
+              }}
+            />
+          </div>
         </div>
       )}
 
