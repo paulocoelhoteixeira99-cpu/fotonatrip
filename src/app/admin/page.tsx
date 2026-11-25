@@ -33,11 +33,12 @@ import {
   Check,
   Wallet,
   Download,
+  Receipt,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
 
-type Tab = "overview" | "sales" | "growth" | "traffic" | "coupons" | "payouts";
+type Tab = "overview" | "sales" | "growth" | "traffic" | "coupons" | "payouts" | "financeiro";
 type Period = "all" | "month" | "week" | "custom";
 
 interface OverviewStats {
@@ -132,6 +133,12 @@ interface Coupon {
   active: boolean;
   expires_at: string | null;
   created_at: string;
+}
+
+interface FinanceiroData {
+  costs: { id: number; amount_cents: number; category: string; created_at: string }[];
+  monthly_summary: { month: string; revenue_cents: number; costs_cents: number; balance_cents: number }[];
+  totals: { revenue_cents: number; costs_cents: number; balance_cents: number };
 }
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -312,6 +319,7 @@ export default function AdminPage() {
       items_count: number;
     }[];
   } | null>(null);
+  const [financeiroData, setFinanceiroData] = useState<FinanceiroData | null>(null);
 
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -351,6 +359,9 @@ export default function AdminPage() {
         const json = await res.json();
         setPayoutsData(json);
       }
+    } else if (tab === "financeiro") {
+      const res = await fetch("/api/admin/costs");
+      if (res.ok) setFinanceiroData(await res.json());
     } else {
       const params = buildParams();
       params.set("section", tab);
@@ -399,6 +410,7 @@ export default function AdminPage() {
     { key: "traffic", label: "Trafego", icon: Globe },
     { key: "coupons", label: "Cupons", icon: Tag },
     { key: "payouts", label: "Repasses", icon: Wallet },
+    { key: "financeiro", label: "Financeiro", icon: Receipt },
   ];
 
   return (
@@ -485,6 +497,7 @@ export default function AdminPage() {
             {activeTab === "traffic" && trafficData && <TrafficTab data={trafficData} />}
             {activeTab === "coupons" && <CouponsTab coupons={couponsData} onRefresh={loadCoupons} />}
             {activeTab === "payouts" && payoutsData && <PayoutsTab data={payoutsData} onRefresh={async () => { const res = await fetch("/api/admin/payouts"); if (res.ok) setPayoutsData(await res.json()); }} />}
+            {activeTab === "financeiro" && financeiroData && <FinanceiroTab data={financeiroData} onRefresh={async () => { const res = await fetch("/api/admin/costs"); if (res.ok) setFinanceiroData(await res.json()); }} />}
           </>
         )}
       </main>
@@ -1600,6 +1613,258 @@ function PayoutsTab({ data, onRefresh }: { data: { batches: any[]; total_pending
                           {new Date(batch.paid_at).toLocaleDateString("pt-BR")}
                         </span>
                       )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── Financeiro Tab ─────────────────────────────────────────
+
+function FinanceiroTab({ data, onRefresh }: { data: FinanceiroData; onRefresh: () => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [costDate, setCostDate] = useState("");
+
+  const MONTHS_LABEL = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+  function formatMonth(m: string) {
+    const month = parseInt(m.slice(5, 7), 10);
+    const year = m.slice(0, 4);
+    return `${MONTHS_LABEL[month - 1]}/${year}`;
+  }
+
+  async function handleAddCost() {
+    if (!amount || !category.trim()) return;
+    setFormLoading(true);
+    const res = await fetch("/api/admin/costs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: parseFloat(amount),
+        category: category.trim(),
+        date: costDate || undefined,
+      }),
+    });
+    if (res.ok) {
+      setAmount("");
+      setCategory("");
+      setCostDate("");
+      setShowForm(false);
+      onRefresh();
+    }
+    setFormLoading(false);
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("Excluir este custo?")) return;
+    await fetch(`/api/admin/costs?id=${id}`, { method: "DELETE" });
+    onRefresh();
+  }
+
+  // Running balance (oldest first)
+  const monthlyWithRunning = data.monthly_summary.map((m, i, arr) => {
+    const runningBalance = arr.slice(0, i + 1).reduce((s, x) => s + x.balance_cents, 0);
+    return { ...m, running_balance_cents: runningBalance };
+  });
+  const monthlyReversed = [...monthlyWithRunning].reverse();
+
+  // Unique categories for autocomplete
+  const categories = Array.from(new Set(data.costs.map((c) => c.category)));
+
+  const t = data.totals;
+  const balanceColor = t.balance_cents >= 0 ? "text-green-400" : "text-red-400";
+
+  return (
+    <>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard icon={TrendingUp} label="Receita (comissão 7%)" value={formatPrice(t.revenue_cents)} accent="text-primary" />
+        <StatCard icon={Receipt} label="Custos totais" value={formatPrice(t.costs_cents)} accent="text-red-400" />
+        <StatCard icon={DollarSign} label="Saldo atual" value={formatPrice(t.balance_cents)} accent={balanceColor} />
+        <div className="glass rounded-2xl p-5 flex items-center justify-center">
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Adicionar custo
+          </button>
+        </div>
+      </div>
+
+      {/* Add cost form */}
+      {showForm && (
+        <div className="glass rounded-2xl p-6 mb-8">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <Plus className="w-4 h-4 text-primary" /> Novo custo
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs text-muted block mb-1">Valor (R$)</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted block mb-1">Categoria</label>
+              <input
+                type="text"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="Ex: Servidor, Domínio, Marketing"
+                list="cost-categories"
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+              />
+              {categories.length > 0 && (
+                <datalist id="cost-categories">
+                  {categories.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              )}
+            </div>
+            <div>
+              <label className="text-xs text-muted block mb-1">Data (opcional, padrão: hoje)</label>
+              <input
+                type="date"
+                value={costDate}
+                onChange={(e) => setCostDate(e.target.value)}
+                className="w-full bg-white/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary [color-scheme:dark]"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-5">
+            <button
+              onClick={handleAddCost}
+              disabled={formLoading || !amount || !category.trim()}
+              className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Salvar
+            </button>
+            <button
+              onClick={() => setShowForm(false)}
+              className="px-5 py-2.5 text-sm text-muted hover:text-white transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Monthly chart */}
+      {data.monthly_summary.length > 0 && (
+        <div className="glass rounded-2xl p-6 mb-8">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-primary" /> Receita vs Custos por mês
+          </h2>
+          <BarChart
+            data={data.monthly_summary}
+            bars={[
+              { key: "revenue_cents", color: "bg-primary", label: "Receita (7%)" },
+              { key: "costs_cents", color: "bg-red-400", label: "Custos" },
+            ]}
+            labelKey="month"
+            height={200}
+            showValues
+            formatValue={(v) => `R$${(v / 100).toFixed(0)}`}
+            formatLabel={(val) => {
+              const m = parseInt(val.slice(5, 7), 10);
+              return MONTHS_LABEL[m - 1] || val;
+            }}
+          />
+        </div>
+      )}
+
+      {/* Monthly table */}
+      {monthlyReversed.length > 0 && (
+        <div className="glass rounded-2xl p-6 mb-8">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-primary" /> Resumo mensal
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted border-b border-border">
+                  <th className="pb-3 font-medium">Mês</th>
+                  <th className="pb-3 font-medium text-right">Receita (7%)</th>
+                  <th className="pb-3 font-medium text-right">Custos</th>
+                  <th className="pb-3 font-medium text-right">Resultado</th>
+                  <th className="pb-3 font-medium text-right">Saldo acumulado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyReversed.map((m) => (
+                  <tr key={m.month} className="border-b border-border/50 last:border-0">
+                    <td className="py-3 font-medium">{formatMonth(m.month)}</td>
+                    <td className="py-3 text-right text-primary">{m.revenue_cents > 0 ? formatPrice(m.revenue_cents) : "—"}</td>
+                    <td className="py-3 text-right text-red-400">{m.costs_cents > 0 ? formatPrice(m.costs_cents) : "—"}</td>
+                    <td className={`py-3 text-right font-medium ${m.balance_cents >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {formatPrice(m.balance_cents)}
+                    </td>
+                    <td className={`py-3 text-right font-semibold ${m.running_balance_cents >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {formatPrice(m.running_balance_cents)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Individual costs */}
+      <div className="glass rounded-2xl p-6">
+        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+          <Receipt className="w-4 h-4 text-primary" /> Custos registrados ({data.costs.length})
+        </h2>
+        {data.costs.length === 0 ? (
+          <div className="text-center py-10">
+            <Receipt className="w-12 h-12 text-muted/30 mx-auto mb-4" />
+            <p className="text-muted">Nenhum custo registrado ainda.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted border-b border-border">
+                  <th className="pb-3 font-medium">Data</th>
+                  <th className="pb-3 font-medium">Categoria</th>
+                  <th className="pb-3 font-medium text-right">Valor</th>
+                  <th className="pb-3 font-medium text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.costs.map((c) => (
+                  <tr key={c.id} className="border-b border-border/50 last:border-0">
+                    <td className="py-3 text-muted">{new Date(c.created_at).toLocaleDateString("pt-BR")}</td>
+                    <td className="py-3">
+                      <span className="text-xs bg-white/10 px-2 py-1 rounded-full">{c.category}</span>
+                    </td>
+                    <td className="py-3 text-right text-red-400 font-medium">{formatPrice(c.amount_cents)}</td>
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="p-1.5 rounded-lg text-red-400 hover:bg-red-400/10 transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
