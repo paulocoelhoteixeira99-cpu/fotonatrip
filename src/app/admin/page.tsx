@@ -1767,22 +1767,50 @@ function FinanceiroTab({ data, onRefresh }: { data: FinanceiroData; onRefresh: (
           <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary" /> Receita vs Custos por mês
           </h2>
-          <div className="max-w-xl">
-            <BarChart
-              data={data.monthly_summary}
-              bars={[
-                { key: "revenue_cents", color: "bg-primary", label: "Receita (7%)" },
-                { key: "costs_cents", color: "bg-red-400", label: "Custos" },
-              ]}
-              labelKey="month"
-              height={200}
-              showValues
-              formatValue={(v) => `R$${(v / 100).toFixed(0)}`}
-              formatLabel={(val) => {
-                const m = parseInt(val.slice(5, 7), 10);
-                return MONTHS_LABEL[m - 1] || val;
-              }}
-            />
+          <div className="flex items-end justify-center gap-6" style={{ minHeight: 200 }}>
+            {data.monthly_summary.map((m) => {
+              const maxVal = Math.max(...data.monthly_summary.flatMap((x) => [x.revenue_cents, x.costs_cents]), 1);
+              const revPct = Math.max((m.revenue_cents / maxVal) * 100, m.revenue_cents > 0 ? 6 : 2);
+              const costPct = Math.max((m.costs_cents / maxVal) * 100, m.costs_cents > 0 ? 6 : 2);
+              const mo = parseInt(m.month.slice(5, 7), 10);
+              return (
+                <div key={m.month} className="flex flex-col items-center gap-1" style={{ width: 64 }}>
+                  <div className="flex items-end gap-1 w-full" style={{ height: 160 }}>
+                    <div className="flex-1 flex flex-col items-center justify-end h-full">
+                      {m.revenue_cents > 0 && (
+                        <span className="text-[11px] text-muted mb-0.5">R${(m.revenue_cents / 100).toFixed(0)}</span>
+                      )}
+                      <div
+                        className="w-full rounded-t bg-primary"
+                        style={{ height: `${revPct}%` }}
+                        title={`Receita: R$${(m.revenue_cents / 100).toFixed(2)}`}
+                      />
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-end h-full">
+                      {m.costs_cents > 0 && (
+                        <span className="text-[11px] text-muted mb-0.5">R${(m.costs_cents / 100).toFixed(0)}</span>
+                      )}
+                      <div
+                        className="w-full rounded-t bg-red-400"
+                        style={{ height: `${costPct}%` }}
+                        title={`Custos: R$${(m.costs_cents / 100).toFixed(2)}`}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted">{MONTHS_LABEL[mo - 1]}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-center gap-4 mt-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm bg-primary" />
+              <span className="text-xs text-muted">Receita (7%)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm bg-red-400" />
+              <span className="text-xs text-muted">Custos</span>
+            </div>
           </div>
         </div>
       )}
