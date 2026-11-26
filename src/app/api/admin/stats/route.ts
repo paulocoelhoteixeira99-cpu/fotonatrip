@@ -108,6 +108,7 @@ async function getOverview(from: string | null, to: string | null) {
       discount_cents: o.discount_cents || 0,
       photo_count: Number(o.photo_count),
       event_name: o.event_name || null,
+      event_id: o.event_id || null,
       created_at: o.created_at,
     })),
   };
@@ -150,12 +151,13 @@ async function getGrowth() {
     .order("created_at", { ascending: true })
     .limit(10000);
 
-  // Daily registration data (last 90 days)
-  const now = new Date();
+  // Daily registration data (last 60 days)
+  // Use São Paulo timezone so "today" matches Brazil's date
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 
   const dailyGrowth: { date: string; clients: number; photographers: number }[] = [];
-  for (let i = 89; i >= 0; i--) {
-    const d = new Date(now);
+  for (let i = 59; i >= 0; i--) {
+    const d = new Date(todayStr + "T12:00:00");
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split("T")[0];
     dailyGrowth.push({ date: dateStr, clients: 0, photographers: 0 });

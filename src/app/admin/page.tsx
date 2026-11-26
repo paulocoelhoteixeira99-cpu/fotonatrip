@@ -936,7 +936,7 @@ function GrowthTab({ data }: { data: GrowthData }) {
       {/* Daily new signups chart */}
       <div className="glass rounded-2xl p-6 mb-8">
         <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <UserPlus className="w-4 h-4 text-primary" /> Novos cadastros por dia (últimos 90 dias)
+          <UserPlus className="w-4 h-4 text-primary" /> Novos cadastros por dia (últimos 60 dias)
         </h2>
         <BarChart
           data={data.daily_growth}
@@ -953,7 +953,7 @@ function GrowthTab({ data }: { data: GrowthData }) {
       {/* Cumulative growth chart */}
       <div className="glass rounded-2xl p-6">
         <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-primary" /> Crescimento acumulado (últimos 90 dias)
+          <TrendingUp className="w-4 h-4 text-primary" /> Crescimento acumulado (últimos 60 dias)
         </h2>
         <BarChart
           data={data.cumulative_growth}
