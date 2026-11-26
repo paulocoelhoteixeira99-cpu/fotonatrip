@@ -48,11 +48,27 @@ export async function GET() {
   const supa = getServiceSupabase();
 
   // Fetch payout batches
-  const { data: batches } = await supa
+  const { data: rawBatches } = await supa
     .from("payout_batches")
     .select("*, photographers(id, business_name, pix_key, pix_key_type)")
     .order("created_at", { ascending: false })
     .limit(100);
+
+  // Enrich batches with profile first name fallback
+  const batchPhotographerIds = [...new Set((rawBatches || []).map((b: any) => b.photographer_id).filter(Boolean))];
+  const { data: batchProfiles } = batchPhotographerIds.length > 0
+    ? await supa.from("profiles").select("id, full_name").in("id", batchPhotographerIds)
+    : { data: [] };
+  const batchProfileMap = new Map((batchProfiles || []).map((p: any) => [p.id, p]));
+
+  const batches = (rawBatches || []).map((b: any) => {
+    if (!b.photographers?.business_name) {
+      const prof = batchProfileMap.get(b.photographer_id);
+      const firstName = prof?.full_name?.split(" ")[0] || null;
+      return { ...b, photographers: { ...b.photographers, business_name: firstName } };
+    }
+    return b;
+  });
 
   // Summary stats — only count payouts from PAID orders (paginated)
   const pendingPayouts = await fetchAllPages<any>((start, end) =>
@@ -89,14 +105,25 @@ export async function GET() {
         .in("id", photographerIds)
     : { data: [] };
 
+  // Fallback: fetch first name from profiles for photographers without business_name
+  const { data: profileRows } = photographerIds.length > 0
+    ? await supa
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", photographerIds)
+    : { data: [] };
+
   const photographerMap = new Map((photographerRows || []).map((p: any) => [p.id, p]));
+  const profileMap = new Map((profileRows || []).map((p: any) => [p.id, p]));
 
   const pending_breakdown = [...byPhotographer.entries()]
     .map(([id, group]) => {
       const ph = photographerMap.get(id);
+      const profile = profileMap.get(id);
+      const firstName = profile?.full_name?.split(" ")[0] || null;
       return {
         photographer_id: id,
-        business_name: ph?.business_name || "Fotografo",
+        business_name: ph?.business_name || firstName || "Fotografo",
         pix_key: ph?.pix_key || null,
         pix_key_type: ph?.pix_key_type || null,
         amount_cents: group.total,
