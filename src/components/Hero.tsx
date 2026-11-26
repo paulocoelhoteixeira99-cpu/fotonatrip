@@ -94,7 +94,7 @@ export default function Hero() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="mt-5 text-lg md:text-xl text-foreground/90 font-medium"
             >
-              Sua viagem, eternizada em cada detalhe.
+              Suas lembranças, eternizadas em cada detalhe.
             </motion.p>
 
             {/* Description */}
@@ -105,7 +105,7 @@ export default function Hero() {
               className="mt-3 text-base md:text-lg text-muted leading-relaxed"
             >
               Tire uma selfie e encontre, em segundos, todas as fotos
-              profissionais feitas de você durante a viagem. Simples,{" "}
+              profissionais feitas de você. Simples,{" "}
               <strong className="text-foreground">rápido e mágico</strong>.
             </motion.p>
 
