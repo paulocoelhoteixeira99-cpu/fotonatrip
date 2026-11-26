@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useCart, formatPrice } from "@/lib/cart";
 import { createClient } from "@/lib/supabase/client";
 import Header from "@/components/Header";
@@ -19,6 +19,9 @@ import {
   Tag,
   X,
   Check,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
 } from "lucide-react";
 
 export default function CarrinhoPage() {
@@ -34,8 +37,39 @@ export default function CarrinhoPage() {
     discount_cents: number;
     label: string;
   } | null>(null);
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const supabase = createClient();
   const router = useRouter();
+
+  // Flat list of photo items (no packages) for lightbox navigation
+  const photoItems = items.filter((i) => !i.is_package);
+
+  const navigatePreview = useCallback((direction: "prev" | "next") => {
+    setPreviewIdx((cur) => {
+      if (cur === null) return null;
+      if (direction === "next") return cur < photoItems.length - 1 ? cur + 1 : cur;
+      return cur > 0 ? cur - 1 : cur;
+    });
+  }, [photoItems.length]);
+
+  useEffect(() => {
+    if (previewIdx === null) return;
+    window.history.pushState({ cartPreview: true }, "");
+    const onPop = () => setPreviewIdx(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") window.history.back();
+      if (e.key === "ArrowRight") navigatePreview("next");
+      if (e.key === "ArrowLeft") navigatePreview("prev");
+    };
+    window.addEventListener("popstate", onPop);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [previewIdx, navigatePreview]);
 
   const discountCents = appliedCoupon?.discount_cents || 0;
   const finalTotalCents = totalCents - discountCents;
@@ -173,13 +207,13 @@ export default function CarrinhoPage() {
       <Header />
       <main className="min-h-screen pt-28 pb-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <Link
-            href="/eventos"
+          <button
+            onClick={() => router.back()}
             className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-8"
           >
             <ArrowLeft className="w-4 h-4" />
             Continuar comprando
-          </Link>
+          </button>
 
           <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-3">
             <ShoppingCart className="w-6 sm:w-7 h-6 sm:h-7 text-primary" />
@@ -337,13 +371,26 @@ export default function CarrinhoPage() {
                           key={item.photo_id}
                           className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4"
                         >
-                          <div className={`rounded-lg overflow-hidden bg-surface-light flex-shrink-0 ${
-                            item.is_package ? "w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center bg-primary/10" : "w-12 h-15 sm:w-16 sm:h-20"
-                          }`}>
+                          <div
+                            className={`rounded-lg overflow-hidden bg-surface-light flex-shrink-0 relative group/thumb ${
+                              item.is_package ? "w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center bg-primary/10" : "w-12 h-15 sm:w-16 sm:h-20 cursor-pointer"
+                            }`}
+                            onClick={() => {
+                              if (!item.is_package) {
+                                const idx = photoItems.findIndex((p) => p.photo_id === item.photo_id);
+                                if (idx >= 0) setPreviewIdx(idx);
+                              }
+                            }}
+                          >
                             {item.is_package ? (
                               <Package className="w-6 h-6 text-primary" />
                             ) : (
-                              <img src={item.watermark_url} alt="" className="w-full h-full object-cover" />
+                              <>
+                                <img src={item.watermark_url} alt="" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ZoomIn className="w-4 h-4 text-white" />
+                                </div>
+                              </>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -408,6 +455,81 @@ export default function CarrinhoPage() {
           </div>
         )}
       </main>
+
+      {/* Photo preview lightbox */}
+      {previewIdx !== null && photoItems[previewIdx] && (() => {
+        const item = photoItems[previewIdx];
+        const hasPrev = previewIdx > 0;
+        const hasNext = previewIdx < photoItems.length - 1;
+        return (
+          <div
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => window.history.back()}
+          >
+            <button
+              onClick={(e) => { e.stopPropagation(); window.history.back(); }}
+              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {hasPrev && (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigatePreview("prev"); }}
+                className="absolute left-2 md:left-4 top-[38%] -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {hasNext && (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigatePreview("next"); }}
+                className="absolute right-2 md:right-4 top-[38%] -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
+            <div
+              className="relative max-w-2xl w-full"
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => {
+                touchStartX.current = e.touches[0].clientX;
+                touchStartY.current = e.touches[0].clientY;
+              }}
+              onTouchEnd={(e) => {
+                const dx = e.changedTouches[0].clientX - touchStartX.current;
+                const dy = e.changedTouches[0].clientY - touchStartY.current;
+                if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+                  if (dx < 0) navigatePreview("next");
+                  else navigatePreview("prev");
+                }
+              }}
+            >
+              <img
+                src={item.watermark_url}
+                alt=""
+                className="w-full max-h-[80vh] object-contain rounded-xl"
+              />
+              <div className="mt-2 flex items-center justify-between glass rounded-xl p-3">
+                <div>
+                  <p className="text-xs text-muted">{item.event_title}</p>
+                  <p className="text-sm font-semibold">{formatPrice(item.price_cents)}</p>
+                </div>
+                <span className="flex items-center gap-1.5 text-sm text-primary bg-primary/10 px-4 py-2 rounded-xl">
+                  <Check className="w-4 h-4" />
+                  No carrinho
+                </span>
+              </div>
+              <p className="text-xs text-muted text-center mt-2">
+                {previewIdx + 1} de {photoItems.length}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
+
       <Footer />
     </>
   );
