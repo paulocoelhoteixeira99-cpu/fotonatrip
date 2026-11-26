@@ -550,30 +550,30 @@ export default function EventoPublicPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-10">
+                <div className="flex items-center justify-center gap-1.5 sm:gap-2 mt-10 px-2">
                   <button
                     onClick={() => {
                       setPage((p) => Math.max(0, p - 1));
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     disabled={page === 0}
-                    className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm glass hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1 px-2.5 sm:px-4 py-2 rounded-xl text-sm glass hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Anterior
+                    <span className="hidden sm:inline">Anterior</span>
                   </button>
 
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  <div className="flex items-center gap-1 overflow-x-auto">
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                       let pageNum: number;
-                      if (totalPages <= 7) {
+                      if (totalPages <= 5) {
                         pageNum = i;
-                      } else if (page < 3) {
+                      } else if (page < 2) {
                         pageNum = i;
-                      } else if (page > totalPages - 4) {
-                        pageNum = totalPages - 7 + i;
+                      } else if (page > totalPages - 3) {
+                        pageNum = totalPages - 5 + i;
                       } else {
-                        pageNum = page - 3 + i;
+                        pageNum = page - 2 + i;
                       }
 
                       return (
@@ -583,7 +583,7 @@ export default function EventoPublicPage() {
                             setPage(pageNum);
                             window.scrollTo({ top: 0, behavior: "smooth" });
                           }}
-                          className={`w-10 h-10 rounded-xl text-sm font-medium transition-colors ${
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-sm font-medium transition-colors shrink-0 ${
                             pageNum === page
                               ? "bg-primary text-white"
                               : "glass hover:bg-white/10 text-muted"
@@ -601,9 +601,9 @@ export default function EventoPublicPage() {
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     disabled={page >= totalPages - 1}
-                    className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm glass hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1 px-2.5 sm:px-4 py-2 rounded-xl text-sm glass hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                   >
-                    Próximo
+                    <span className="hidden sm:inline">Próximo</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -717,12 +717,32 @@ export default function EventoPublicPage() {
               </div>
 
               {/* Pagination indicator */}
-              <p className="text-xs text-muted text-center mt-2">
-                {showUnidentified
+              <div className="flex items-center justify-center gap-3 mt-2 text-xs text-muted">
+                <span>{showUnidentified
                   ? `${currentIdx + 1} de ${currentList.length}`
                   : `${page * PHOTOS_PER_PAGE + currentIdx + 1} de ${totalPhotos}`
-                }
-              </p>
+                }</span>
+                {!showUnidentified && totalPages > 1 && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-muted/50">·</span>
+                    <button
+                      disabled={page === 0}
+                      onClick={() => { pendingNavRef.current = "last"; setPage(page - 1); }}
+                      className="text-muted hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span>Pág {page + 1}/{totalPages}</span>
+                    <button
+                      disabled={page >= totalPages - 1}
+                      onClick={() => { pendingNavRef.current = "first"; setPage(page + 1); }}
+                      className="text-muted hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                )}
+              </div>
 
             </div>
           </div>
