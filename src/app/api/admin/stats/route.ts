@@ -231,14 +231,21 @@ function parseUserAgent(ua: string): { browser: string; device: string; os: stri
 async function getTraffic(from: string | null, to: string | null) {
   const supabase = getServiceClient();
 
+  // Default to last 60 days if no date filter provided
+  const effectiveFrom = from || (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 60);
+    return d.toISOString().split("T")[0];
+  })();
+
   // Page views (user-agent parsing needs raw data — paginate)
   const views = await fetchAllPages<any>((start, end) => {
     let q = supabase
       .from("page_views")
       .select("id, path, event_id, user_agent, referrer, session_id, created_at")
       .order("created_at", { ascending: false })
+      .gte("created_at", `${effectiveFrom}T00:00:00`)
       .range(start, end);
-    if (from) q = q.gte("created_at", `${from}T00:00:00`);
     if (to) q = q.lte("created_at", `${to}T23:59:59`);
     return q;
   });

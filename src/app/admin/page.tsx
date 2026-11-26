@@ -975,6 +975,8 @@ function GrowthTab({ data }: { data: GrowthData }) {
 
 function TrafficTab({ data }: { data: TrafficData }) {
   const totalDevices = data.devices.reduce((s, d) => s + d.count, 0);
+  const [showAllUa, setShowAllUa] = useState(false);
+  const visibleUa = showAllUa ? data.user_agents : data.user_agents.slice(0, 20);
 
   return (
     <>
@@ -1161,7 +1163,7 @@ function TrafficTab({ data }: { data: TrafficData }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.user_agents.map((ua, i) => (
+                    {visibleUa.map((ua, i) => (
                       <tr key={i} className="border-b border-border/50 last:border-0">
                         <td className="py-3 font-medium">{ua.browser}</td>
                         <td className="py-3 text-muted">{ua.os}</td>
@@ -1183,6 +1185,14 @@ function TrafficTab({ data }: { data: TrafficData }) {
                   </tbody>
                 </table>
               </div>
+              {data.user_agents.length > 20 && (
+                <button
+                  onClick={() => setShowAllUa(!showAllUa)}
+                  className="mt-3 text-xs text-primary hover:underline"
+                >
+                  {showAllUa ? "Mostrar menos" : `Mostrar todos (${data.user_agents.length})`}
+                </button>
+              )}
             </div>
           )}
         </>
