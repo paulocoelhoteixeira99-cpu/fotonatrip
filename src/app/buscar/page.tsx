@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getEmbeddingFromFile } from "@/lib/face-recognition";
 import { getPhotoUrl } from "@/lib/photos";
@@ -19,6 +19,8 @@ import {
   Image as ImageLucide,
   X,
   ZoomIn,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useCart, formatPrice, type CartItem } from "@/lib/cart";
 import Link from "next/link";
@@ -75,22 +77,43 @@ function BuscarContent() {
   const [loadingModels, setLoadingModels] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<SearchResult | null>(null);
 
+  // Lightbox navigation
+  const navigatePreview = useCallback((direction: "prev" | "next") => {
+    if (!previewPhoto) return;
+    const idx = results.findIndex((r) => r.photo_id === previewPhoto.photo_id);
+    if (direction === "next" && idx < results.length - 1) {
+      setPreviewPhoto(results[idx + 1]);
+    } else if (direction === "prev" && idx > 0) {
+      setPreviewPhoto(results[idx - 1]);
+    }
+  }, [previewPhoto, results]);
+
   // Handle Android back button for preview lightbox
   useEffect(() => {
     if (!previewPhoto) return;
     window.history.pushState({ preview: true }, "");
     const onPopState = (e: PopStateEvent) => {
-      // Only close preview if we're actually in preview state
       if (previewPhoto) {
         e.preventDefault();
         setPreviewPhoto(null);
       }
     };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { window.history.back(); return; }
+      if (e.key === "ArrowRight") navigatePreview("next");
+      if (e.key === "ArrowLeft") navigatePreview("prev");
+    };
     window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [previewPhoto]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [previewPhoto, navigatePreview]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const { addItem, addPackage, isInCart, isPackageInCart } = useCart();
   const supabase = createClient();
 
@@ -601,9 +624,12 @@ function BuscarContent() {
       {/* Photo preview lightbox */}
       {previewPhoto && (() => {
         const previewUrl = getPhotoUrl(previewPhoto.watermark_path || previewPhoto.storage_path);
+        const previewIdx = results.findIndex((r) => r.photo_id === previewPhoto.photo_id);
+        const hasPrev = previewIdx > 0;
+        const hasNext = previewIdx < results.length - 1;
         const closePreview = () => {
           if (window.history.state?.preview) {
-            window.history.back(); // triggers popstate listener which sets previewPhoto to null
+            window.history.back();
           } else {
             setPreviewPhoto(null);
           }
@@ -620,9 +646,41 @@ function BuscarContent() {
               <X className="w-6 h-6" />
             </button>
 
+            {/* Prev arrow */}
+            {hasPrev && (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigatePreview("prev"); }}
+                className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Next arrow */}
+            {hasNext && (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigatePreview("next"); }}
+                className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
             <div
               className="relative max-w-2xl w-full"
               onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => {
+                touchStartX.current = e.touches[0].clientX;
+                touchStartY.current = e.touches[0].clientY;
+              }}
+              onTouchEnd={(e) => {
+                const dx = e.changedTouches[0].clientX - touchStartX.current;
+                const dy = e.changedTouches[0].clientY - touchStartY.current;
+                if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+                  if (dx < 0) navigatePreview("next");
+                  else navigatePreview("prev");
+                }
+              }}
             >
               <img
                 src={previewUrl}

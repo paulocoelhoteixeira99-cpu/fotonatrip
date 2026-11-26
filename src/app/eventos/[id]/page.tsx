@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -68,6 +68,9 @@ export default function EventoPublicPage() {
   const [loadingUnidentified, setLoadingUnidentified] = useState(false);
   const { addItem, isInCart } = useCart();
   const supabase = createClient();
+  const pendingNavRef = useRef<"first" | "last" | null>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
 
   useEffect(() => {
     loadEvent();
@@ -153,6 +156,12 @@ export default function EventoPublicPage() {
         setPhotographerNames(nameMap);
       }
     }
+
+    // Handle pending lightbox navigation (cross-page arrow nav)
+    if (pendingNavRef.current && data && data.length > 0) {
+      setSelectedPhoto(pendingNavRef.current === "first" ? data[0] : data[data.length - 1]);
+      pendingNavRef.current = null;
+    }
   }
 
   async function loadUnidentifiedPhotos() {
@@ -209,27 +218,42 @@ export default function EventoPublicPage() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [selectedPhoto]);
 
+  const totalPages = Math.ceil(totalPhotos / PHOTOS_PER_PAGE);
+
+  // Lightbox navigation (supports both tabs + cross-page)
+  const navigateLightbox = useCallback((direction: "prev" | "next") => {
+    if (!selectedPhoto) return;
+    const currentList = showUnidentified ? unidentifiedPhotos : photos;
+    const idx = currentList.findIndex((p) => p.id === selectedPhoto.id);
+
+    if (direction === "next") {
+      if (idx < currentList.length - 1) {
+        setSelectedPhoto(currentList[idx + 1]);
+      } else if (!showUnidentified && page < totalPages - 1) {
+        pendingNavRef.current = "first";
+        setPage(page + 1);
+      }
+    } else {
+      if (idx > 0) {
+        setSelectedPhoto(currentList[idx - 1]);
+      } else if (!showUnidentified && page > 0) {
+        pendingNavRef.current = "last";
+        setPage(page - 1);
+      }
+    }
+  }, [selectedPhoto, showUnidentified, unidentifiedPhotos, photos, page, totalPages]);
+
   // Keyboard nav for lightbox
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (!selectedPhoto) return;
-      if (e.key === "Escape") {
-        window.history.back();
-      }
-      if (e.key === "ArrowRight") {
-        const idx = photos.findIndex((p) => p.id === selectedPhoto.id);
-        if (idx < photos.length - 1) setSelectedPhoto(photos[idx + 1]);
-      }
-      if (e.key === "ArrowLeft") {
-        const idx = photos.findIndex((p) => p.id === selectedPhoto.id);
-        if (idx > 0) setSelectedPhoto(photos[idx - 1]);
-      }
+      if (e.key === "Escape") window.history.back();
+      if (e.key === "ArrowRight") navigateLightbox("next");
+      if (e.key === "ArrowLeft") navigateLightbox("prev");
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedPhoto, photos]);
-
-  const totalPages = Math.ceil(totalPhotos / PHOTOS_PER_PAGE);
+  }, [selectedPhoto, navigateLightbox]);
 
   if (loading) {
     return (
@@ -594,6 +618,8 @@ export default function EventoPublicPage() {
         const currentList = showUnidentified ? unidentifiedPhotos : photos;
         const currentIdx = currentList.findIndex((p) => p.id === selectedPhoto.id);
         const photoUrl = getPhotoUrl(selectedPhoto.watermark_path || selectedPhoto.storage_path);
+        const hasPrev = currentIdx > 0 || (!showUnidentified && page > 0);
+        const hasNext = currentIdx < currentList.length - 1 || (!showUnidentified && page < totalPages - 1);
 
         return (
           <div
@@ -607,9 +633,41 @@ export default function EventoPublicPage() {
               <X className="w-6 h-6" />
             </button>
 
+            {/* Prev arrow */}
+            {hasPrev && (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigateLightbox("prev"); }}
+                className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Next arrow */}
+            {hasNext && (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigateLightbox("next"); }}
+                className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
             <div
               className="relative max-w-2xl w-full"
               onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => {
+                touchStartX.current = e.touches[0].clientX;
+                touchStartY.current = e.touches[0].clientY;
+              }}
+              onTouchEnd={(e) => {
+                const dx = e.changedTouches[0].clientX - touchStartX.current;
+                const dy = e.changedTouches[0].clientY - touchStartY.current;
+                if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+                  if (dx < 0) navigateLightbox("next");
+                  else navigateLightbox("prev");
+                }
+              }}
             >
               <img
                 src={photoUrl}
