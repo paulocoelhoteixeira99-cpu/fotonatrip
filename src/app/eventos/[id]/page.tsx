@@ -637,7 +637,7 @@ export default function EventoPublicPage() {
             {hasPrev && (
               <button
                 onClick={(e) => { e.stopPropagation(); navigateLightbox("prev"); }}
-                className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
+                className="absolute left-2 md:left-4 top-[38%] -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
@@ -647,7 +647,7 @@ export default function EventoPublicPage() {
             {hasNext && (
               <button
                 onClick={(e) => { e.stopPropagation(); navigateLightbox("next"); }}
-                className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
+                className="absolute right-2 md:right-4 top-[38%] -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-all z-10"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
@@ -684,12 +684,9 @@ export default function EventoPublicPage() {
 
               {/* Info bar */}
               <div className="mt-2 flex items-center justify-between glass rounded-xl p-3">
-                <div>
-                  <p className="text-xs text-muted">{event.title}</p>
-                  <p className="text-sm font-semibold">
-                    {formatPrice(selectedPhoto.price_cents)}
-                  </p>
-                </div>
+                <p className="text-sm font-semibold">
+                  {formatPrice(selectedPhoto.price_cents)}
+                </p>
                 {isInCart(selectedPhoto.id) ? (
                   <span className="flex items-center gap-1.5 text-sm text-primary bg-primary/10 px-4 py-2 rounded-xl">
                     <Check className="w-4 h-4" />
@@ -718,6 +715,14 @@ export default function EventoPublicPage() {
                   </button>
                 )}
               </div>
+
+              {/* Pagination indicator */}
+              <p className="text-xs text-muted text-center mt-2">
+                {showUnidentified
+                  ? `${currentIdx + 1} de ${currentList.length}`
+                  : `${page * PHOTOS_PER_PAGE + currentIdx + 1} de ${totalPhotos}`
+                }
+              </p>
 
             </div>
           </div>
