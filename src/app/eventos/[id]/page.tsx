@@ -171,26 +171,40 @@ export default function EventoPublicPage() {
     }
     setLoadingUnidentified(true);
 
-    // Single query with LEFT JOIN — avoids .in() URL limit with many photo IDs
-    const { data: eventPhotos } = await supabase
-      .from("photos")
-      .select("id, storage_path, watermark_path, price_cents, status, photographer_id, face_embeddings(photo_id)")
-      .eq("event_id", id)
-      .eq("status", "ready")
-      .order("created_at", { ascending: false });
-
-    if (!eventPhotos?.length) {
-      setUnidentifiedPhotos([]);
-      setShowUnidentified(true);
-      setLoadingUnidentified(false);
-      return;
+    // Step 1: Get IDs of photos that HAVE embeddings (paginated, 1 row per photo via !inner)
+    const withEmbeddings = new Set<string>();
+    let embOffset = 0;
+    while (true) {
+      const { data } = await supabase
+        .from("photos")
+        .select("id, face_embeddings!inner(photo_id)")
+        .eq("event_id", id)
+        .eq("status", "ready")
+        .range(embOffset, embOffset + 999);
+      if (!data || data.length === 0) break;
+      data.forEach((p) => withEmbeddings.add(p.id));
+      if (data.length < 1000) break;
+      embOffset += 1000;
     }
 
-    // Filter to only photos without any face embedding
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unidentified = (eventPhotos as any[])
-      .filter((p) => !p.face_embeddings || p.face_embeddings.length === 0)
-      .map(({ face_embeddings: _, ...photo }) => photo as Photo);
+    // Step 2: Get ALL photos (paginated) and filter out the ones with embeddings
+    const unidentified: Photo[] = [];
+    let photoOffset = 0;
+    while (true) {
+      const { data } = await supabase
+        .from("photos")
+        .select("id, storage_path, watermark_path, price_cents, status, photographer_id")
+        .eq("event_id", id)
+        .eq("status", "ready")
+        .order("created_at", { ascending: false })
+        .range(photoOffset, photoOffset + 999);
+      if (!data || data.length === 0) break;
+      for (const p of data) {
+        if (!withEmbeddings.has(p.id)) unidentified.push(p as Photo);
+      }
+      if (data.length < 1000) break;
+      photoOffset += 1000;
+    }
 
     setUnidentifiedPhotos(unidentified);
     setShowUnidentified(true);
