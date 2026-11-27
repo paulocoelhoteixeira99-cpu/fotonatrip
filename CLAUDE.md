@@ -94,7 +94,7 @@ src/
     CopyEmailButton.tsx         # Botao copiar email (desktop) / mailto (mobile)
   middleware.ts                 # Protege /dashboard e /admin, exclui webhooks
 supabase/
-  migrations/                   # 15 migrations SQL (001-015)
+  migrations/                   # 28 migrations SQL (001-028)
 ```
 
 ## Banco de Dados (Supabase PostgreSQL + pgvector)
@@ -114,6 +114,9 @@ supabase/
 | `coupons` | Cupons de desconto (code, discount_type, discount_value, max_uses, expires_at) |
 | `payouts` | Repasses individuais por venda (photographer_id, order_item_id, amount_cents, type, status) |
 | `payout_batches` | Lotes de pagamento agrupados por fotografo (total_cents, pix_key, status) |
+| `page_views` | Tracking de page views (path, event_id, session_id, user_agent, referrer) |
+| `face_search_logs` | Log de buscas faciais (session_id, event_id, results_count) |
+| `cart_events` | Log de acoes do carrinho (session_id, event_id, photo_id, action, price_cents) |
 
 ### Funcoes e Triggers
 
@@ -140,6 +143,9 @@ supabase/
 - Event owner pode deletar fotos de colaboradores no proprio evento (policy 019)
 - Clients criam orders e order_items (INSERT com check de auth.uid)
 - Payouts: INSERT via service role (sem policy para users), SELECT por photographer_id
+- page_views: INSERT via service role (/api/track), SELECT via service role
+- face_search_logs: INSERT publico, SELECT via service role
+- cart_events: INSERT publico, SELECT via service role
 
 ## Regras de Negocio
 
@@ -156,12 +162,15 @@ supabase/
 - Threshold de similaridade: 0.4 (cosine)
 - Similaridade normalizada para exibicao: 0.4-0.8 mapeado para 70-100%
 - Maximo 50 resultados por busca
+- Buscas logadas em `face_search_logs` para analytics
+- Upload: INSERT individual de embeddings (nao batch) para evitar timeout no HNSW
 
 ### Carrinho
 - Persistido em localStorage (chave: `fotonatrip_cart`)
 - Flag `hydrated` previne mismatch SSR
 - Logica pacote vs individual: pacote remove individuais do mesmo evento
 - Login so e exigido no checkout, nao para adicionar ao carrinho
+- Acoes logadas em `cart_events` (add, remove, add_package, clear) para analytics
 
 ### Pagamento (Mercado Pago)
 - Checkout cria order (pending) + MP Preference
@@ -215,9 +224,17 @@ supabase/
 - Split financeiro: plataforma 7% + comissao anfitriao X% + restante para colaborador
 - Checkout cria payouts via service role (type: host_own_photos, host_commission, collaborator_payout)
 - Admin gera lotes de pagamento (`payout_batches`) agrupados por fotografo (minimo R$1)
+- Email automatico ao fotografo quando repasse e marcado como pago (`notifyPayout` em lib/email.ts)
 - Pagina do evento: convite (amarelo) vs compartilhar (verde) diferenciados visualmente
 - Colaborador ve condicoes financeiras mas nao edita preco/status/comissao do evento
 - Dono pode deletar fotos de qualquer colaborador; colaborador so deleta as proprias
+
+### Analytics (Admin)
+- Trafego: page_views com filtro de bots (isBot no admin stats + BOT_PATTERNS no /api/track)
+- Buscas faciais: face_search_logs (logado no /buscar apos cada busca)
+- Carrinho: cart_events (add, remove, add_package, clear)
+- Conversao por evento: views vs compras (humanos only)
+- Admin stats sections: overview, sales, growth, traffic
 
 ### Retencao de Dados
 - Cron no DO Droplet a cada 6 horas para limpeza de dados antigos
