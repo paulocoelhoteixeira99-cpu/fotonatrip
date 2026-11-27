@@ -405,6 +405,47 @@ async function getTraffic(from: string | null, to: string | null) {
   // Totals (humans only)
   const allSessions = new Set(humanViews.map((v) => v.session_id));
 
+  // Face search logs
+  const searchLogs = await fetchAllPages<any>((start, end) => {
+    let q = supabase
+      .from("face_search_logs")
+      .select("id, session_id, event_id, results_count, created_at")
+      .order("created_at", { ascending: false })
+      .gte("created_at", `${effectiveFrom}T00:00:00`)
+      .range(start, end);
+    if (to) q = q.lte("created_at", `${to}T23:59:59`);
+    return q;
+  });
+
+  // Searches by event
+  const searchByEvent = new Map<string, { searches: number; sessions: Set<string>; total_results: number }>();
+  for (const s of searchLogs) {
+    if (!s.event_id) continue;
+    const entry = searchByEvent.get(s.event_id) || { searches: 0, sessions: new Set<string>(), total_results: 0 };
+    entry.searches += 1;
+    entry.sessions.add(s.session_id);
+    entry.total_results += s.results_count;
+    searchByEvent.set(s.event_id, entry);
+  }
+
+  // Merge event names
+  const searchEventIds = Array.from(searchByEvent.keys());
+  let faceSearchByEvent: { event_id: string; title: string; searches: number; unique_users: number; avg_results: number }[] = [];
+  if (searchEventIds.length > 0) {
+    const { data: evNames } = await supabase.from("events").select("id, title").in("id", searchEventIds);
+    const nameMap = new Map((evNames || []).map((e: any) => [e.id, e.title]));
+    faceSearchByEvent = searchEventIds.map((eid) => {
+      const d = searchByEvent.get(eid)!;
+      return {
+        event_id: eid,
+        title: nameMap.get(eid) || "Evento removido",
+        searches: d.searches,
+        unique_users: d.sessions.size,
+        avg_results: d.searches > 0 ? Math.round(d.total_results / d.searches * 10) / 10 : 0,
+      };
+    }).sort((a, b) => b.searches - a.searches);
+  }
+
   return {
     daily_views: dailyViews,
     top_pages: topPages,
@@ -413,7 +454,8 @@ async function getTraffic(from: string | null, to: string | null) {
     referrers,
     event_conversion: eventConversion,
     user_agents: userAgents,
-    totals: { views: humanViews.length, sessions: allSessions.size, bot_views: botCount },
+    face_searches: faceSearchByEvent,
+    totals: { views: humanViews.length, sessions: allSessions.size, bot_views: botCount, face_searches: searchLogs.length },
   };
 }
 

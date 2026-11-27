@@ -34,6 +34,7 @@ import {
   Wallet,
   Download,
   Receipt,
+  ScanFace,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
@@ -119,7 +120,14 @@ interface TrafficData {
     views: number;
     last_seen: string;
   }[];
-  totals: { views: number; sessions: number; bot_views?: number };
+  face_searches: {
+    event_id: string;
+    title: string;
+    searches: number;
+    unique_users: number;
+    avg_results: number;
+  }[];
+  totals: { views: number; sessions: number; bot_views?: number; face_searches?: number };
 }
 
 interface Coupon {
@@ -985,9 +993,9 @@ function TrafficTab({ data }: { data: TrafficData }) {
         <StatCard icon={Eye} label="Page views" value={data.totals.views.toLocaleString("pt-BR")} accent="text-blue-400" sub={data.totals.bot_views ? `+${data.totals.bot_views.toLocaleString("pt-BR")} bots filtrados` : undefined} />
         <StatCard icon={Users} label="Sessoes unicas" value={data.totals.sessions.toLocaleString("pt-BR")} accent="text-primary" />
         <StatCard
-          icon={MousePointerClick}
-          label="Paginas/sessao"
-          value={data.totals.sessions > 0 ? (data.totals.views / data.totals.sessions).toFixed(1) : "0"}
+          icon={ScanFace}
+          label="Buscas faciais"
+          value={(data.totals.face_searches || 0).toLocaleString("pt-BR")}
           accent="text-yellow-400"
         />
         <StatCard
@@ -1133,6 +1141,41 @@ function TrafficTab({ data }: { data: TrafficData }) {
                         <td className="py-3 text-right">
                           <span className={`font-medium ${e.conversion_rate > 0 ? "text-primary" : "text-muted"}`}>
                             {e.conversion_rate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Face searches by event */}
+          {data.face_searches && data.face_searches.length > 0 && (
+            <div className="glass rounded-2xl p-6 mb-8">
+              <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <ScanFace className="w-4 h-4 text-primary" /> Buscas faciais por evento
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-muted border-b border-border">
+                      <th className="pb-3 font-medium">Evento</th>
+                      <th className="pb-3 font-medium text-right">Buscas</th>
+                      <th className="pb-3 font-medium text-right">Usuarios</th>
+                      <th className="pb-3 font-medium text-right">Media resultados</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.face_searches.map((s) => (
+                      <tr key={s.event_id} className="border-b border-border/50 last:border-0">
+                        <td className="py-3 font-medium max-w-[250px] truncate">{s.title}</td>
+                        <td className="py-3 text-right text-blue-400">{s.searches}</td>
+                        <td className="py-3 text-right text-primary">{s.unique_users}</td>
+                        <td className="py-3 text-right">
+                          <span className={s.avg_results > 0 ? "text-green-400" : "text-muted"}>
+                            {s.avg_results}
                           </span>
                         </td>
                       </tr>

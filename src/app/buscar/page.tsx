@@ -194,9 +194,20 @@ function BuscarContent() {
         seen.set(item.photo_id, item);
       }
     }
-    setResults(Array.from(seen.values()));
+    const dedupedResults = Array.from(seen.values());
+    setResults(dedupedResults);
     setSearching(false);
     setSearched(true);
+
+    // Log facial search for analytics
+    try {
+      const sid = sessionStorage.getItem("fnt_sid") || "unknown";
+      supabase.from("face_search_logs").insert({
+        session_id: sid,
+        event_id: selectedEvent.id,
+        results_count: dedupedResults.length,
+      }).then(() => {});
+    } catch {}
   }
 
   function reset() {
