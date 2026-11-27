@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { notifyPayout } from "@/lib/email";
 
 function getServiceSupabase() {
   return createServiceClient(
@@ -184,6 +185,9 @@ export async function POST(req: NextRequest) {
       .from("payouts")
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("payout_batch_id", batch_id);
+
+    // Fire-and-forget email notification
+    notifyPayout(batch_id).catch(() => {});
 
     return NextResponse.json({ success: true });
   }

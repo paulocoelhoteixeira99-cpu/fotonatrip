@@ -175,3 +175,77 @@ export async function notifySale(orderId: string) {
     // Never throw — email failure must not break payment flow
   }
 }
+
+export async function notifyPayout(batchId: string) {
+  try {
+    if (!process.env.RESEND_API_KEY) {
+      console.warn("Email: RESEND_API_KEY not set, skipping payout notification");
+      return;
+    }
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+
+    // Get batch info
+    const { data: batch } = await supabase
+      .from("payout_batches")
+      .select("id, photographer_id, total_cents, items_count, pix_key")
+      .eq("id", batchId)
+      .single();
+
+    if (!batch) return;
+
+    // Get photographer name and email
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", batch.photographer_id)
+      .single();
+
+    const { data: authUser } = await supabase.auth.admin.getUserById(batch.photographer_id);
+    const email = authUser?.user?.email;
+    if (!email) return;
+
+    const nome = profile?.full_name?.split(" ")[0] || "Fotógrafo";
+
+    await resend.emails.send({
+      from: "Fotonatrip <vendas@fotonatrip.com.br>",
+      to: email,
+      subject: "Repasse realizado!",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #0d9668; margin: 0; font-size: 24px;">Fotonatrip</h1>
+          </div>
+          <p style="font-size: 16px;">Olá, <strong>${nome}</strong>!</p>
+          <p style="font-size: 16px;">Seu repasse foi realizado com sucesso! 💸</p>
+          <div style="background: #f5f5f5; border-radius: 12px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 8px 0; color: #0d9668; font-size: 22px; text-align: center;"><strong>${formatCents(batch.total_cents)}</strong></p>
+            <p style="margin: 8px 0; text-align: center; color: #666;">${batch.items_count} foto${batch.items_count !== 1 ? "s" : ""} vendida${batch.items_count !== 1 ? "s" : ""}</p>
+            ${batch.pix_key ? `<p style="margin: 8px 0; text-align: center; font-size: 13px; color: #999;">Pix: ${batch.pix_key}</p>` : ""}
+          </div>
+          <p style="font-size: 14px; color: #666; text-align: center;">
+            O valor foi enviado para sua chave Pix cadastrada. Verifique sua conta bancária.
+          </p>
+          <div style="text-align: center; margin-top: 24px;">
+            <a href="https://www.fotonatrip.com.br/dashboard/vendas"
+               style="background: #0d9668; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+              Ver minhas vendas
+            </a>
+          </div>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #eee;" />
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            Fotonatrip — Suas fotos, sua história<br/>
+            www.fotonatrip.com.br
+          </p>
+        </div>
+      `,
+    });
+
+    console.log(`Email: notified payout for batch ${batchId}`);
+  } catch (err) {
+    console.error("Payout email notification error:", err);
+  }
+}
