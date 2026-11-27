@@ -494,20 +494,22 @@ function BuscarContent() {
               {results.length === 0 ? (
                 <div className="glass rounded-3xl p-10 text-center">
                   <ImageIcon className="w-12 h-12 text-muted/30 mx-auto mb-4" />
-                  <p className="text-muted text-sm mb-6 max-w-sm mx-auto">
-                    Não encontramos fotos suas neste evento. Tente com outra selfie ou verifique se selecionou o evento correto.
+                  <p className="text-muted text-sm mb-4 max-w-sm mx-auto">
+                    Não encontramos fotos suas neste evento. Isso pode acontecer se as fotos foram tiradas de costas, de longe ou com o rosto parcialmente coberto.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <p className="text-muted text-xs mb-6 max-w-sm mx-auto">
+                    Tente com outra selfie ou navegue pela galeria completa do evento. Suas fotos podem estar lá!
+                  </p>
+                  <Link
+                    href={`/eventos/${selectedEvent.id}`}
+                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white rounded-xl px-6 py-3 text-sm font-medium transition-colors mb-4"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    Ver todas as fotos do evento
+                  </Link>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
                     <button onClick={reset} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Tentar outra selfie</button>
                     <button onClick={resetAll} className="text-sm text-primary hover:text-primary-light transition-colors font-medium">Trocar evento</button>
-                  </div>
-                  <div className="mt-6 pt-6 border-t border-border">
-                    <Link
-                      href={`/eventos/${selectedEvent.id}`}
-                      className="text-sm text-primary hover:text-primary-light transition-colors font-medium"
-                    >
-                      Ver todas as fotos do evento
-                    </Link>
                   </div>
                 </div>
               ) : (
