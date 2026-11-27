@@ -487,15 +487,17 @@ export default function EventoDetailPage() {
         .single();
 
       if (photoData && result.embeddings.length > 0) {
-        const rows = result.embeddings.map((face) => ({
-          photo_id: photoData.id,
-          embedding: `[${face.embedding.join(",")}]`,
-          bbox_x: face.bbox[0],
-          bbox_y: face.bbox[1],
-          bbox_w: face.bbox[2] - face.bbox[0],
-          bbox_h: face.bbox[3] - face.bbox[1],
-        }));
-        await supabase.from("face_embeddings").insert(rows);
+        // Insert one at a time to avoid HNSW index timeout on batch inserts
+        for (const face of result.embeddings) {
+          await supabase.from("face_embeddings").insert({
+            photo_id: photoData.id,
+            embedding: `[${face.embedding.join(",")}]`,
+            bbox_x: face.bbox[0],
+            bbox_y: face.bbox[1],
+            bbox_w: face.bbox[2] - face.bbox[0],
+            bbox_h: face.bbox[3] - face.bbox[1],
+          });
+        }
       }
 
       doneCount++;
