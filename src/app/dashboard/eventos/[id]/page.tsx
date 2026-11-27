@@ -49,6 +49,8 @@ const BRAZILIAN_STATES = [
   { uf: "TO", name: "Tocantins" },
 ];
 
+const PHOTOS_PER_PAGE = 60;
+
 interface Event {
   id: string;
   title: string;
@@ -120,6 +122,10 @@ export default function EventoDetailPage() {
   const [regeneratingLink, setRegeneratingLink] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [photoFilter, setPhotoFilter] = useState<string>("all");
+  const [totalPhotos, setTotalPhotos] = useState(0);
+  const [page, setPage] = useState(0);
+  const [photographerCounts, setPhotographerCounts] = useState<Map<string, number>>(new Map());
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const supabase = createClient();
   const router = useRouter();
@@ -154,27 +160,8 @@ export default function EventoDetailPage() {
         setScheduledAt(`${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}`);
       }
 
-      const { data: photosData } = await supabase
-        .from("photos")
-        .select("*")
-        .eq("event_id", id)
-        .order("created_at", { ascending: false });
-
-      setPhotos(photosData || []);
-
-      // Load photographer names for all photos
-      if (photosData && photosData.length > 0) {
-        const uniqueIds = [...new Set(photosData.map((p: Photo) => p.photographer_id))];
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", uniqueIds);
-        if (profiles) {
-          setPhotographerNames(new Map(profiles.map((p) => [p.id, p.full_name || "Fotógrafo"])));
-        }
-      }
-
-      // Load collaborators if shared event
+      // Load collaborators first (needed for counts and names)
+      let collabList: typeof collaborators = [];
       if (eventData.is_shared) {
         const { data: collabs } = await supabase
           .from("event_collaborators")
@@ -189,15 +176,61 @@ export default function EventoDetailPage() {
             .in("id", photographerIds);
 
           const profileMap = new Map((profiles || []).map((p) => [p.id, p.full_name]));
-          setCollaborators(
-            collabs.map((c) => ({
-              id: c.id,
-              photographer_id: c.photographer_id,
-              name: profileMap.get(c.photographer_id) || null,
-              accepted_at: c.accepted_at,
-            }))
-          );
+          collabList = collabs.map((c) => ({
+            id: c.id,
+            photographer_id: c.photographer_id,
+            name: profileMap.get(c.photographer_id) || null,
+            accepted_at: c.accepted_at,
+          }));
+          setCollaborators(collabList);
         }
+      }
+
+      // Total photo count (bypasses Supabase 1000 row limit)
+      const { count: totalCount } = await supabase
+        .from("photos")
+        .select("*", { count: "exact", head: true })
+        .eq("event_id", id);
+      setTotalPhotos(totalCount || 0);
+
+      // First page of photos
+      const { data: photosData } = await supabase
+        .from("photos")
+        .select("*")
+        .eq("event_id", id)
+        .order("created_at", { ascending: false })
+        .range(0, PHOTOS_PER_PAGE - 1);
+      setPhotos(photosData || []);
+
+      // Load photographer names for all relevant photographers
+      const nameIds = eventData.is_shared
+        ? [...new Set([eventData.photographer_id, ...collabList.map(c => c.photographer_id)])]
+        : photosData && photosData.length > 0
+          ? [...new Set(photosData.map((p: Photo) => p.photographer_id))]
+          : [];
+      if (nameIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", nameIds);
+        if (profiles) {
+          setPhotographerNames(new Map(profiles.map((p) => [p.id, p.full_name || "Fotógrafo"])));
+        }
+      }
+
+      // Per-photographer counts for shared events (for filter tabs)
+      if (eventData.is_shared) {
+        const pIds = [...new Set([eventData.photographer_id, ...collabList.map(c => c.photographer_id)])];
+        const counts = new Map<string, number>();
+        await Promise.all(pIds.map(async (pid) => {
+          const { count } = await supabase
+            .from("photos")
+            .select("*", { count: "exact", head: true })
+            .eq("event_id", id)
+            .eq("photographer_id", pid);
+          counts.set(pid, count || 0);
+        }));
+        setPhotographerCounts(counts);
       }
 
       setLoading(false);
@@ -205,6 +238,62 @@ export default function EventoDetailPage() {
 
     load();
   }, [id]);
+
+  async function fetchPhotosPage(pageNum: number, filter: string) {
+    setLoadingPhotos(true);
+    const from = pageNum * PHOTOS_PER_PAGE;
+    const to = from + PHOTOS_PER_PAGE - 1;
+
+    let query = supabase
+      .from("photos")
+      .select("*")
+      .eq("event_id", id)
+      .order("created_at", { ascending: false });
+
+    if (filter !== "all") {
+      query = query.eq("photographer_id", filter);
+    }
+
+    const { data } = await query.range(from, to);
+    setPhotos(data || []);
+    setPage(pageNum);
+    setLoadingPhotos(false);
+  }
+
+  async function reloadPhotosAndCounts() {
+    // Refresh total count
+    const { count: total } = await supabase
+      .from("photos")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", id);
+    setTotalPhotos(total || 0);
+
+    // Refresh per-photographer counts for shared events
+    if (event?.is_shared) {
+      const pIds = [...new Set([event.photographer_id, ...collaborators.map(c => c.photographer_id)])];
+      const counts = new Map<string, number>();
+      await Promise.all(pIds.map(async (pid) => {
+        const { count } = await supabase
+          .from("photos")
+          .select("*", { count: "exact", head: true })
+          .eq("event_id", id)
+          .eq("photographer_id", pid);
+        counts.set(pid, count || 0);
+      }));
+      setPhotographerCounts(counts);
+    }
+
+    // Reset to page 0 with "all" filter
+    setPhotoFilter("all");
+    setPage(0);
+    const { data } = await supabase
+      .from("photos")
+      .select("*")
+      .eq("event_id", id)
+      .order("created_at", { ascending: false })
+      .range(0, PHOTOS_PER_PAGE - 1);
+    setPhotos(data || []);
+  }
 
   async function saveTitle() {
     if (!event || !titleInput.trim()) return;
@@ -433,14 +522,8 @@ export default function EventoDetailPage() {
     await Promise.all(workers);
     abortRef.current = null;
 
-    // Reload photos
-    const { data: photosData } = await supabase
-      .from("photos")
-      .select("*")
-      .eq("event_id", id)
-      .order("created_at", { ascending: false });
-
-    setPhotos(photosData || []);
+    // Reload photos with correct counts
+    await reloadPhotosAndCounts();
     setUploading(false);
   }
 
@@ -497,7 +580,25 @@ export default function EventoDetailPage() {
         setEvent({ ...event, cover_url: newCoverUrl });
       }
     }
-    setPhotos((prev) => prev.filter((p) => p.id !== photoToDelete));
+    // Update counts
+    setTotalPhotos((prev) => Math.max(0, prev - 1));
+    if (photo && event?.is_shared) {
+      setPhotographerCounts((prev) => {
+        const next = new Map(prev);
+        const cur = next.get(photo.photographer_id) || 0;
+        next.set(photo.photographer_id, Math.max(0, cur - 1));
+        return next;
+      });
+    }
+
+    const remaining = photos.filter((p) => p.id !== photoToDelete);
+    setPhotos(remaining);
+
+    // If page becomes empty, go to previous page
+    if (remaining.length === 0 && page > 0) {
+      fetchPhotosPage(page - 1, photoFilter);
+    }
+
     if (previewPhoto?.id === photoToDelete) setPreviewPhoto(null);
     setPhotoToDelete(null);
     setDeletingPhoto(false);
@@ -507,10 +608,11 @@ export default function EventoDetailPage() {
 
   async function checkSoldPhotos() {
     if (!event) return false;
+    // Use inner join to check ALL photos in event (bypasses 1000 row limit)
     const { count } = await supabase
-      .from("order_items")
-      .select("id", { count: "exact", head: true })
-      .in("photo_id", photos.map((p) => p.id));
+      .from("photos")
+      .select("id, order_items!inner(id)", { count: "exact", head: true })
+      .eq("event_id", event.id);
     const hasSales = (count || 0) > 0;
     setHasSoldPhotos(hasSales);
     return hasSales;
@@ -525,19 +627,29 @@ export default function EventoDetailPage() {
 
     setDeleting(true);
 
-    const { data: allPhotos } = await supabase
-      .from("photos")
-      .select("id, storage_path, watermark_path")
-      .eq("event_id", event.id);
+    // Fetch ALL photos (paginated to bypass 1000 limit)
+    const allEventPhotos: { id: string; storage_path: string; watermark_path: string | null }[] = [];
+    let delOffset = 0;
+    while (true) {
+      const { data: batch } = await supabase
+        .from("photos")
+        .select("id, storage_path, watermark_path")
+        .eq("event_id", event.id)
+        .range(delOffset, delOffset + 499);
+      if (!batch || batch.length === 0) break;
+      allEventPhotos.push(...batch);
+      if (batch.length < 500) break;
+      delOffset += 500;
+    }
 
-    if (allPhotos && allPhotos.length > 0) {
+    if (allEventPhotos.length > 0) {
       const paths: string[] = [];
-      for (const photo of allPhotos) {
+      for (const photo of allEventPhotos) {
         paths.push(photo.storage_path);
         if (photo.watermark_path) paths.push(photo.watermark_path);
       }
 
-      for (const photo of allPhotos) {
+      for (const photo of allEventPhotos) {
         await supabase.from("face_embeddings").delete().eq("photo_id", photo.id);
         await supabase.from("photos").delete().eq("id", photo.id);
       }
@@ -569,12 +681,29 @@ export default function EventoDetailPage() {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
       const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 
+      // Fetch ALL photos for reprocessing (paginated to bypass 1000 limit)
+      const allPhotos: Photo[] = [];
+      let offset = 0;
+      const batchSize = 500;
+      while (true) {
+        const { data: batch } = await supabase
+          .from("photos")
+          .select("*")
+          .eq("event_id", event.id)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + batchSize - 1);
+        if (!batch || batch.length === 0) break;
+        allPhotos.push(...batch);
+        if (batch.length < batchSize) break;
+        offset += batchSize;
+      }
+
       let totalFaces = 0;
       let successCount = 0;
       let errors = 0;
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        setReprocessStatus(`Reprocessando foto ${i + 1} de ${photos.length}...`);
+      for (let i = 0; i < allPhotos.length; i++) {
+        const photo = allPhotos[i];
+        setReprocessStatus(`Reprocessando foto ${i + 1} de ${allPhotos.length}...`);
 
         try {
           // Generate new watermark path with timestamp to bust CDN cache
@@ -624,12 +753,7 @@ export default function EventoDetailPage() {
       setReprocessStatus(`Concluido! ${successCount} watermark(s) atualizadas, ${totalFaces} rosto(s) detectado(s).${errorMsg}`);
 
       // Reload photos to reflect updated watermarks
-      const { data: photosData } = await supabase
-        .from("photos")
-        .select("*")
-        .eq("event_id", id)
-        .order("created_at", { ascending: false });
-      setPhotos(photosData || []);
+      await reloadPhotosAndCounts();
     } catch (err) {
       console.error("Reprocess error:", err);
       setReprocessStatus("Erro ao reprocessar. Tente novamente.");
@@ -708,7 +832,7 @@ export default function EventoDetailPage() {
                 )}
                 <span className="flex items-center gap-1">
                   <ImageIcon className="w-4 h-4" />
-                  {photos.length} fotos
+                  {totalPhotos} fotos
                 </span>
               </div>
               {event.description && (
@@ -733,7 +857,7 @@ export default function EventoDetailPage() {
                 <Pencil className="w-4 h-4" />
                 Editar
               </button>
-              {photos.length > 0 && (
+              {totalPhotos > 0 && (
                 <button
                   onClick={handleReprocessAll}
                   disabled={reprocessing}
@@ -894,7 +1018,7 @@ export default function EventoDetailPage() {
               <>
                 <p className="text-sm text-muted text-center mb-6">
                   Tem certeza que deseja excluir <strong className="text-foreground">{event.title}</strong>?
-                  Todas as <strong className="text-foreground">{photos.length} fotos</strong> serao
+                  Todas as <strong className="text-foreground">{totalPhotos} fotos</strong> serao
                   removidas permanentemente. Essa acao nao pode ser desfeita.
                 </p>
                 <div className="flex gap-3">
@@ -1433,29 +1557,30 @@ export default function EventoDetailPage() {
       )}
 
       {/* Photographer filter tabs for shared events */}
-      {event.is_shared && photos.length > 0 && (() => {
-        const photographerIds = [...new Set(photos.map((p) => p.photographer_id))];
-        if (photographerIds.length <= 1) return null;
+      {event.is_shared && totalPhotos > 0 && (() => {
+        const pIds = [...new Set([event.photographer_id, ...collaborators.map(c => c.photographer_id)])];
+        const withPhotos = pIds.filter(pid => (photographerCounts.get(pid) || 0) > 0);
+        if (withPhotos.length <= 1) return null;
         return (
           <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
             <button
-              onClick={() => setPhotoFilter("all")}
+              onClick={() => { setPhotoFilter("all"); setPage(0); fetchPhotosPage(0, "all"); }}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 photoFilter === "all"
                   ? "bg-primary text-white"
                   : "bg-white/5 text-muted hover:text-white hover:bg-white/10"
               }`}
             >
-              Todas ({photos.length})
+              Todas ({totalPhotos})
             </button>
-            {photographerIds.map((pid) => {
-              const count = photos.filter((p) => p.photographer_id === pid).length;
+            {withPhotos.map((pid) => {
+              const count = photographerCounts.get(pid) || 0;
               const name = photographerNames.get(pid) || "Fotógrafo";
               const isMe = pid === currentUserId;
               return (
                 <button
                   key={pid}
-                  onClick={() => setPhotoFilter(pid)}
+                  onClick={() => { setPhotoFilter(pid); setPage(0); fetchPhotosPage(0, pid); }}
                   className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                     photoFilter === pid
                       ? "bg-primary text-white"
@@ -1471,7 +1596,7 @@ export default function EventoDetailPage() {
       })()}
 
       {/* Photos grid */}
-      {photos.length === 0 ? (
+      {totalPhotos === 0 && photos.length === 0 ? (
         <div className="glass rounded-2xl text-center py-16">
           <ImageIcon className="w-12 h-12 text-muted/30 mx-auto mb-4" />
           <p className="text-muted mb-1">Nenhuma foto neste evento.</p>
@@ -1480,8 +1605,8 @@ export default function EventoDetailPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {(photoFilter === "all" ? photos : photos.filter((p) => p.photographer_id === photoFilter)).map((photo) => {
+        <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 transition-opacity ${loadingPhotos ? "opacity-50 pointer-events-none" : ""}`}>
+          {photos.map((photo) => {
             const url = getPhotoUrl(photo.storage_path);
             const isCover = event.cover_url === url;
             const isOwnPhoto = photo.photographer_id === currentUserId;
@@ -1542,6 +1667,38 @@ export default function EventoDetailPage() {
           })}
         </div>
       )}
+
+      {/* Pagination */}
+      {(() => {
+        const currentFilterTotal = photoFilter === "all"
+          ? totalPhotos
+          : (photographerCounts.get(photoFilter) || 0);
+        const totalPages = Math.ceil(currentFilterTotal / PHOTOS_PER_PAGE);
+        if (totalPages <= 1) return null;
+        return (
+          <div className="flex items-center justify-center gap-4 mt-8 mb-4">
+            <button
+              onClick={() => { setPage(page - 1); fetchPhotosPage(page - 1, photoFilter); }}
+              disabled={page === 0 || loadingPhotos}
+              className="flex items-center gap-1.5 text-sm text-muted hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Anterior
+            </button>
+            <span className="text-sm text-muted">
+              Página {page + 1} de {totalPages}
+            </span>
+            <button
+              onClick={() => { setPage(page + 1); fetchPhotosPage(page + 1, photoFilter); }}
+              disabled={page >= totalPages - 1 || loadingPhotos}
+              className="flex items-center gap-1.5 text-sm text-muted hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Próxima
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Photo preview lightbox */}
       {previewPhoto && (
