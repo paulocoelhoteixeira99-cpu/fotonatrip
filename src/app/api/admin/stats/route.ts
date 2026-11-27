@@ -205,6 +205,10 @@ async function getGrowth() {
 
 // ─── Traffic ────────────────────────────────────────────────
 
+function isBot(ua: string): boolean {
+  return /bot|crawl|spider|slurp|bingpreview|mediapartners|facebookexternalhit|linkedinbot|twitterbot|whatsapp|telegrambot|googlebot|yandex|baidu|duckduck|semrush|ahrefs|mj12bot|bytespider|gptbot|claudebot|amazonbot|applebot|petalbot|dataforseo|dotbot|zoominfobot|headlesschrome|puppeteer|phantom|curl|wget|python|node-fetch|axios|go-http|java\/|okhttp|httpx|scrapy/i.test(ua);
+}
+
 function parseUserAgent(ua: string): { browser: string; device: string; os: string } {
   let browser = "Outro";
   let device = "Desktop";
@@ -263,9 +267,13 @@ async function getTraffic(from: string | null, to: string | null) {
     };
   }
 
-  // Daily views
+  // Separate bots from real users (bots only shown in user_agents table)
+  const humanViews = views.filter((v) => !isBot(v.user_agent || ""));
+  const botCount = views.length - humanViews.length;
+
+  // Daily views (humans only)
   const dailyMap = new Map<string, { views: number; sessions: Set<string> }>();
-  for (const v of views) {
+  for (const v of humanViews) {
     const dateStr = new Date(v.created_at).toISOString().split("T")[0];
     const entry = dailyMap.get(dateStr) || { views: 0, sessions: new Set<string>() };
     entry.views += 1;
@@ -276,9 +284,9 @@ async function getTraffic(from: string | null, to: string | null) {
     .map(([date, d]) => ({ date, views: d.views, sessions: d.sessions.size }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Top pages
+  // Top pages (humans only)
   const pageMap = new Map<string, number>();
-  for (const v of views) {
+  for (const v of humanViews) {
     pageMap.set(v.path, (pageMap.get(v.path) || 0) + 1);
   }
   const topPages = Array.from(pageMap.entries())
@@ -286,10 +294,10 @@ async function getTraffic(from: string | null, to: string | null) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 15);
 
-  // User agent breakdown
+  // User agent breakdown (humans only)
   const browserMap = new Map<string, { views: number; sessions: Set<string> }>();
   const deviceMap = new Map<string, number>();
-  for (const v of views) {
+  for (const v of humanViews) {
     if (!v.user_agent) continue;
     const parsed = parseUserAgent(v.user_agent);
 
@@ -309,9 +317,9 @@ async function getTraffic(from: string | null, to: string | null) {
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
 
-  // Referrers
+  // Referrers (humans only)
   const refMap = new Map<string, number>();
-  for (const v of views) {
+  for (const v of humanViews) {
     if (!v.referrer) continue;
     try {
       const hostname = new URL(v.referrer).hostname || "Direto";
@@ -325,9 +333,9 @@ async function getTraffic(from: string | null, to: string | null) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
 
-  // Event conversion: views per event vs purchases
+  // Event conversion: views per event vs purchases (humans only)
   const eventViewMap = new Map<string, { views: number; sessions: Set<string> }>();
-  for (const v of views) {
+  for (const v of humanViews) {
     if (!v.event_id) continue;
     const entry = eventViewMap.get(v.event_id) || { views: 0, sessions: new Set<string>() };
     entry.views += 1;
@@ -394,8 +402,8 @@ async function getTraffic(from: string | null, to: string | null) {
     .sort((a, b) => b.sessions - a.sessions)
     .slice(0, 50);
 
-  // Totals
-  const allSessions = new Set(views.map((v) => v.session_id));
+  // Totals (humans only)
+  const allSessions = new Set(humanViews.map((v) => v.session_id));
 
   return {
     daily_views: dailyViews,
@@ -405,7 +413,7 @@ async function getTraffic(from: string | null, to: string | null) {
     referrers,
     event_conversion: eventConversion,
     user_agents: userAgents,
-    totals: { views: views.length, sessions: allSessions.size },
+    totals: { views: humanViews.length, sessions: allSessions.size, bot_views: botCount },
   };
 }
 

@@ -119,7 +119,7 @@ interface TrafficData {
     views: number;
     last_seen: string;
   }[];
-  totals: { views: number; sessions: number };
+  totals: { views: number; sessions: number; bot_views?: number };
 }
 
 interface Coupon {
@@ -982,7 +982,7 @@ function TrafficTab({ data }: { data: TrafficData }) {
     <>
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Eye} label="Page views" value={data.totals.views.toLocaleString("pt-BR")} accent="text-blue-400" />
+        <StatCard icon={Eye} label="Page views" value={data.totals.views.toLocaleString("pt-BR")} accent="text-blue-400" sub={data.totals.bot_views ? `+${data.totals.bot_views.toLocaleString("pt-BR")} bots filtrados` : undefined} />
         <StatCard icon={Users} label="Sessoes unicas" value={data.totals.sessions.toLocaleString("pt-BR")} accent="text-primary" />
         <StatCard
           icon={MousePointerClick}
