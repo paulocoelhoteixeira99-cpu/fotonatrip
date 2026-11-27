@@ -1,6 +1,22 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+function trackCart(action: string, event_id?: string, photo_id?: string, price_cents?: number) {
+  try {
+    const sid = sessionStorage.getItem("fnt_sid");
+    if (!sid) return;
+    const supabase = createClient();
+    supabase.from("cart_events").insert({
+      session_id: sid,
+      event_id: event_id || null,
+      photo_id: photo_id || null,
+      action,
+      price_cents: price_cents || null,
+    }).then(() => {});
+  } catch {}
+}
 
 export interface CartItem {
   photo_id: string;
@@ -58,25 +74,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback((item: CartItem) => {
     setItems((prev) => {
       if (prev.some((i) => i.photo_id === item.photo_id)) return prev;
-      // Don't add if already covered by a package
       if (prev.some((i) => i.is_package && i.event_id === item.event_id && i.package_photo_ids?.includes(item.photo_id))) return prev;
+      trackCart("add", item.event_id, item.photo_id, item.price_cents);
       return [...prev, item];
     });
   }, []);
 
   const addPackage = useCallback((pkg: CartItem) => {
     setItems((prev) => {
-      // Remove individual photos from same event
       const filtered = prev.filter((i) => i.event_id !== pkg.event_id);
+      trackCart("add_package", pkg.event_id, pkg.photo_id, pkg.price_cents);
       return [...filtered, { ...pkg, is_package: true }];
     });
   }, []);
 
   const removeItem = useCallback((photo_id: string) => {
-    setItems((prev) => prev.filter((i) => i.photo_id !== photo_id));
+    setItems((prev) => {
+      const item = prev.find((i) => i.photo_id === photo_id);
+      if (item) trackCart("remove", item.event_id, item.photo_id, item.price_cents);
+      return prev.filter((i) => i.photo_id !== photo_id);
+    });
   }, []);
 
   const clearCart = useCallback(() => {
+    trackCart("clear");
     setItems([]);
   }, []);
 
