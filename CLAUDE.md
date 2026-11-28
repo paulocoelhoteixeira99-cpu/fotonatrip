@@ -158,7 +158,7 @@ supabase/
 
 ### Reconhecimento Facial
 - InsightFace buffalo_l, embeddings 512 dimensoes
-- Index HNSW (vector_cosine_ops) para busca rapida
+- Index HNSW (vector_cosine_ops, m=32, ef_construction=200, ef_search=400) para busca rapida
 - Threshold de similaridade: 0.4 (cosine)
 - Similaridade normalizada para exibicao: 0.4-0.8 mapeado para 70-100%
 - Maximo 50 resultados por busca
