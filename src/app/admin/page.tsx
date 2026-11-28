@@ -95,6 +95,7 @@ interface GrowthData {
   daily_growth: { date: string; clients: number; photographers: number }[];
   cumulative_growth: { date: string; total_clients: number; total_photographers: number }[];
   monthly_revenue?: { month: string; revenue_cents: number; platform_fee_cents: number; orders_count: number }[];
+  hourly_sales?: { hour: string; revenue_cents: number; orders_count: number; platform_fee_cents: number }[];
 }
 
 interface TrafficData {
@@ -879,6 +880,65 @@ function GrowthTab({ data }: { data: GrowthData }) {
           sub={`${lastCum?.total_clients || 0} clientes`}
         />
       </div>
+
+      {/* Hourly sales chart (last 48h) */}
+      {data.hourly_sales && data.hourly_sales.length > 0 && (
+        <div className="glass rounded-2xl p-6 mb-8">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 text-primary" /> Vendas hora a hora (últimas 48h)
+          </h2>
+          {(() => {
+            const sales = data.hourly_sales!;
+            const totalRevenue = sales.reduce((s, h) => s + h.revenue_cents, 0);
+            const totalOrders = sales.reduce((s, h) => s + h.orders_count, 0);
+            const totalFee = sales.reduce((s, h) => s + h.platform_fee_cents, 0);
+            const maxVal = Math.max(...sales.map((h) => h.revenue_cents), 1);
+            return (
+              <>
+                <div className="flex items-center gap-4 mb-3 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-green-400" />
+                    <span className="text-xs text-muted">Receita</span>
+                  </div>
+                  <span className="text-xs text-muted">
+                    Total: <span className="text-white font-medium">{formatPrice(totalRevenue)}</span> · {totalOrders} pedido{totalOrders !== 1 ? "s" : ""} · Comissão: <span className="text-primary font-medium">{formatPrice(totalFee)}</span>
+                  </span>
+                </div>
+                <div className="flex items-end gap-[1px] overflow-x-auto pb-1" style={{ minHeight: 200 }}>
+                  {sales.map((h, i) => {
+                    const pct = Math.max((h.revenue_cents / maxVal) * 100, h.revenue_cents > 0 ? 6 : 2);
+                    const isNow = i === sales.length - 1;
+                    const showLabel = i % 6 === 0 || isNow;
+                    return (
+                      <div key={h.hour} className="flex flex-col items-center gap-0.5 flex-1 min-w-[12px]">
+                        <div className="w-full flex flex-col items-center justify-end" style={{ height: 160 }}>
+                          {h.orders_count > 0 && (
+                            <span className="text-[9px] text-muted whitespace-nowrap leading-none mb-0.5">
+                              {h.orders_count}
+                            </span>
+                          )}
+                          <div
+                            className={`w-full rounded-t transition-colors ${h.revenue_cents > 0 ? "bg-green-400" : "bg-white/5"} hover:opacity-80`}
+                            style={{ height: `${pct}%` }}
+                            title={`${h.hour}\n${formatPrice(h.revenue_cents)} · ${h.orders_count} pedido(s)`}
+                          />
+                        </div>
+                        {showLabel ? (
+                          <span className={`text-[7px] whitespace-nowrap ${isNow ? "text-primary font-semibold" : "text-muted"}`}>
+                            {h.hour}
+                          </span>
+                        ) : (
+                          <span className="text-[7px] invisible">.</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Monthly revenue chart */}
       {data.monthly_revenue && data.monthly_revenue.length > 0 && (

@@ -200,7 +200,37 @@ async function getGrowth() {
     orders_count: Number(m.orders_count),
   }));
 
-  return { daily_growth: dailyGrowth, cumulative_growth: cumulativeGrowth, monthly_revenue: monthlyRevenue };
+  // Hourly sales (last 48 hours) — São Paulo timezone
+  const h48ago = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const { data: recentOrders } = await supabase
+    .from("orders")
+    .select("total_cents, platform_fee_cents, created_at")
+    .eq("status", "paid")
+    .gte("created_at", h48ago)
+    .order("created_at", { ascending: true });
+
+  const hourlySales: { hour: string; revenue_cents: number; orders_count: number; platform_fee_cents: number }[] = [];
+  const nowSP = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  for (let i = 47; i >= 0; i--) {
+    const d = new Date(nowSP);
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() - i);
+    const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}h`;
+    hourlySales.push({ hour: label, revenue_cents: 0, orders_count: 0, platform_fee_cents: 0 });
+  }
+
+  for (const o of recentOrders || []) {
+    const orderDate = new Date(new Date(o.created_at).toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const label = `${String(orderDate.getDate()).padStart(2, "0")}/${String(orderDate.getMonth() + 1).padStart(2, "0")} ${String(orderDate.getHours()).padStart(2, "0")}h`;
+    const slot = hourlySales.find((h) => h.hour === label);
+    if (slot) {
+      slot.revenue_cents += o.total_cents || 0;
+      slot.platform_fee_cents += o.platform_fee_cents || 0;
+      slot.orders_count += 1;
+    }
+  }
+
+  return { daily_growth: dailyGrowth, cumulative_growth: cumulativeGrowth, monthly_revenue: monthlyRevenue, hourly_sales: hourlySales };
 }
 
 // ─── Traffic ────────────────────────────────────────────────
